@@ -1,52 +1,66 @@
 package com.github.kputnam.fifth
 
-class Runtime
+import collection.immutable.{Queue, Stack}
+import parser.{Word, Quotation, Node}
 
-  // [q] infer
-  // - infers the type of the quote
-  //    [ 1 2 3 ] infer     ( -- x y z )
-  //    [ 2 + ] infer       ( n -- n )
+object Runtime {
+  def empty: Runtime =
+    Runtime(Queue.empty, Stack.empty)
+}
 
-  // compose ( [f] [g] -- [h] )
-  // curry   ( [f] x   -- [g] )
-  // 
+case class Runtime(input: Queue[Node], output: Stack[Node]) {
 
-  // drop  ( x -- )
-  // copy  ( x -- x )
-  // clone ( x -- y )
-  // over  ( x y -- x y x )
-  // swap  ( x y -- y x )
-  // nip   ( x y -- y )
-  // pick  ( x y z -- x y z x )
+  /** Add a single input token
+   */
+  def read(node: Node): Runtime =
+    new Runtime(input.enqueue(node), output)
 
-  // cleave ( x #[f] -- @y )
-  // - input single value and array of quotations
-  // - calls each quote on the single value
+  /** Read and interpret a single input token
+   */
+  def step: Runtime = input.dequeue match {
+    case (Word("id"),      rest) => this
+    case (Word("halt"),    rest) => Runtime.empty
+    case (Word("pop"),     rest) => pop(rest)
+    case (Word("dup"),     rest) => dup(rest)
+    case (Word("swap"),    rest) => swap(rest)
+    case (Word("compose"), rest) => compose(rest)
+    case (Word("apply"),   rest) => apply(rest)
+    case (Word("quote"),   rest) => quote(rest)
+    case (word,            rest) => new Runtime(rest, output.push(word))
+  }
 
-  // spread ( @x #[f] -- @x )
-  // - input series of objects and equal-length array of quotations
-  // - calls each quotation on its corresponding object
+  // A a pop :: A
+  private def pop(input: Queue[Node]) =
+    new Runtime(input, output.pop)
 
-  // napply ( @x [f] n -- @n )
-  // - input series of objects with single quotation and limit
-  // - calls quotation on top n objects on the stack
+  // A a dup :: A a a
+  private def dup(input: Queue[Node]) =
+    new Runtime(input, output.push(output.top))
 
-  // Collections
-  // [ ...  list ]
-  // [ ... assoc ]
-  // [ ... array ]
-  // collection [op] each
-  // collection [op] map
-  // collection [op] find-first
-  // collection [op] find-last
-  // collection [predicate] select
-  // collection [predicate] reject
-  // collection [op] reduce-left
-  // collection [op] reduce-right
-  // collection [op] init fold-left
-  // collection [op] init fold-right
-  // collection collection zip
-  // collection collection [op] zip-with
-  // collection collection concat
-  // collection length
-  // collection reverse
+  // A b a swap :: A a b
+  private def swap(input: Queue[Node]) = {
+    val (a, outputB) = output.pop2
+    val (b, outputC) = outputB.pop2
+    new Runtime(input, outputC.push(a).push(b))
+  }
+
+  // A (A -> B) apply :: B
+  private def apply(input: Queue[Node]): Runtime = {
+    val (a: Quotation, outputB) = output.pop2
+    new Runtime(Queue(a.nodes : _*) ++ input, outputB)
+  }
+
+  // A a quote :: A (B -> B a)
+  private def quote(input: Queue[Node]): Runtime = {
+    val (a, outputB) = output.pop2
+    new Runtime(input, outputB.push(Quotation(List(a))))
+  }
+
+  // A (B -> C) (C -> D) compose :: A (B -> D)
+  private def compose(input: Queue[Node]): Runtime = {
+    val (a: Quotation, outputB) = output.pop2
+    val (b: Quotation, outputC) = outputB.pop2
+    new Runtime(input, outputC.push(new Quotation(b.nodes ++ a.nodes)))
+  }
+
+}
