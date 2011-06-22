@@ -1,28 +1,62 @@
 package com.github.kputnam.fifth
 
-class SymbolTable
-abstract class Symbol
-case class TypeSymbol // definition
-case class VariableSymbol // type
-case class ConstantSymbol // type, value
-case class FunctionSymbol // parameter list, output list
+import types._
 
-abstract class Type
-class IntegerType
-class FloatType
-class BooleanType
-class StringType
-class TupleType
-class RecordType
-class FunctionType
+object SymbolTable {
+  def default =
+    SymbolTable(Map.empty, Map.empty, None).
+      // a pop ::
+      addBinding("pop",
+        WordType(StackType(UnknownType(0)),
+                 StackType())).
 
-abstract class Declaration
-class TypeDeclaration
-class VariableDeclaration
-class ConstantDeclaration
-class FunctionDeclaration
+      // a dup :: a a
+      addBinding("dup",
+        WordType(StackType(UnknownType(0)),
+                 StackType(UnknownType(0), UnknownType(0)))).
 
-abstract class Expression
-class ConstantExpression
-class ApplyExpression
-class QuoteExpression
+      // a id :: a
+      addBinding("id",
+        WordType(StackType(UnknownType(0)),
+                 StackType(UnknownType(0)))).
+
+      // b a swap :: a b
+      addBinding("swap",
+        WordType(StackType(UnknownType(0), UnknownType(1)),
+                 StackType(UnknownType(1), UnknownType(0)))).
+
+      // (S -> T) (T -> U) compose :: (S -> U)
+      addBinding("compose",
+        WordType(StackType(WordType(UnknownType(0), UnknownType(1)),
+                           WordType(UnknownType(1), UnknownType(2))),
+                 StackType(WordType(UnknownType(0), UnknownType(2))))).
+
+      // S (S -> T) apply :: T
+      addBinding("apply",
+        WordType(StackType(UnknownType(0), WordType(UnknownType(0), UnknownType(1))),
+                 StackType(UnknownType(1)))).
+
+      // a quote :: (S -> a)
+      addBinding("quote",
+        WordType(StackType(UnknownType(0)),
+                 StackType(
+                   WordType(UnknownType(1),
+                            StackType(UnknownType(0))))))
+}
+
+case class SymbolTable(ts: Map[String, Type], parent: Option[SymbolTable]) {
+  def isBound(name: String) =
+    ts.contains(name)
+
+  def addScope(name: String) =
+    SymbolTable(Map.empty, Some(this))
+
+  def addBinding(name: String, t: Type) =
+    SymbolTable(ts + (name -> t), parent)
+
+  def get(name: String): Option[Type] =
+    ts.get(name).orElse(parent.flatMap(_.get(name)))
+
+  def getOrElse(name: String, default: => Type) =
+    get(name).orElse(Some(default))
+}
