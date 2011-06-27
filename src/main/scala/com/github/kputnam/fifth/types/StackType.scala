@@ -8,11 +8,11 @@ object StackType {
 
   def apply(elements: Type*): StackType =
     if (elements.nonEmpty)
-      elements.last match {
-        case rest: StackType =>
-          elements.init.reverse.foldLeft(rest)((s, t) => t :: s)
+      elements.head match {
+        case top: StackType =>
+          elements.tail.foldLeft(top)((s, t) => t :: s)
         case _ =>
-          elements.reverse.foldLeft(empty)((s, t) => t :: s)
+          elements.foldLeft(empty)((s, t) => t :: s)
       }
     else empty
 }
@@ -103,6 +103,9 @@ case object RestNil extends StackType {
 }
 
 case class RestVariable(id: Int) extends StackType with Variable {
+  val alphabet =
+    upperLatin
+
   def isEmpty =
     false
 

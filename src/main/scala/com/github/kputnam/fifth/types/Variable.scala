@@ -1,9 +1,12 @@
 package com.github.kputnam.fifth.types
 
 trait Variable { self: Type =>
-//val alphabet = "αβγδεζηθικλμνξοπρςστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
-  val alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  val lowerGreek = "αβγδεζηθικλμνξοπρςστυφχψω"
+  val upperGreek = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
+  val lowerLatin = "abcdefghijklmnopqrstuvwxyz"
+  val upperLatin = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+  def alphabet: String
   def id: Int
 
   override def toString = {

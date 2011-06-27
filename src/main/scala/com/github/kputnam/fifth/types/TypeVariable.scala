@@ -1,6 +1,9 @@
 package com.github.kputnam.fifth.types
 
 case class TypeVariable(id: Int) extends Type with Variable {
+  val alphabet =
+    lowerLatin
+
   def unifyWith(t: Type, s: Substitution) = {
     t.substitute(s).flatMap { he =>
       substitute(s) flatMap {
