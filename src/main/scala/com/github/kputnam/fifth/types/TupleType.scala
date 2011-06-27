@@ -5,8 +5,14 @@ object TupleType {
 }
 
 case class TupleType(fields: Map[String, Type]) extends Type {
-  def hasOccurrence(t: UnknownType) =
+  def hasOccurrence(t: Variable) =
     fields.exists(p => p._2.hasOccurrence(t))
+
+  def isMonomorphic =
+    !isPolymorphic
+
+  def isPolymorphic =
+    fields.exists(p => p._2.isPolymorphic)
 
   def substitute(s: Substitution): Option[TupleType] =
     fields.foldLeft(Some(Map.empty): Option[Map[String, Type]]) ((ts, t) =>
@@ -16,7 +22,7 @@ case class TupleType(fields: Map[String, Type]) extends Type {
   def unifyWith(t: Type, s: Substitution) = {
     substitute(s).flatMap { me =>
       t.substitute(s) match {
-        case he: UnknownType =>
+        case he: TypeVariable =>
           if (me.hasOccurrence(he)) None
           else s.addBinding(he, me)
         case he: TupleType =>

@@ -4,44 +4,60 @@ import types._
 
 object SymbolTable {
   def default =
-    SymbolTable(Map.empty, Map.empty, None).
-      // a pop ::
+    SymbolTable(Map.empty, None).
+      // T a pop :: T
       addBinding("pop",
-        WordType(StackType(UnknownType(0)),
-                 StackType())).
+        WordType(StackType(TypeVariable(0),
+                           RestVariable(1)),
+                 StackType(RestVariable(1)))).
 
-      // a dup :: a a
+      // T a dup :: T a a
       addBinding("dup",
-        WordType(StackType(UnknownType(0)),
-                 StackType(UnknownType(0), UnknownType(0)))).
+        WordType(StackType(TypeVariable(0),
+                           RestVariable(1)),
+                 StackType(TypeVariable(0),
+                           TypeVariable(0),
+                           RestVariable(1)))).
 
-      // a id :: a
+      // T id :: T
       addBinding("id",
-        WordType(StackType(UnknownType(0)),
-                 StackType(UnknownType(0)))).
+        WordType(StackType(new RestVariable(0)),
+                 StackType(new RestVariable(0)))).
 
-      // b a swap :: a b
+      // T a b swap :: T b a
       addBinding("swap",
-        WordType(StackType(UnknownType(0), UnknownType(1)),
-                 StackType(UnknownType(1), UnknownType(0)))).
+        WordType(StackType(TypeVariable(0),
+                           TypeVariable(1),
+                           RestVariable(2)),
+                 StackType(TypeVariable(1),
+                           TypeVariable(0),
+                           RestVariable(2)))).
 
-      // (S -> T) (T -> U) compose :: (S -> U)
+      // S (A -> B) (B -> C) compose :: S (A -> B)
       addBinding("compose",
-        WordType(StackType(WordType(UnknownType(0), UnknownType(1)),
-                           WordType(UnknownType(1), UnknownType(2))),
-                 StackType(WordType(UnknownType(0), UnknownType(2))))).
+        WordType(StackType(WordType(StackType(RestVariable(1)),  // B -> C
+                                    StackType(RestVariable(0))),
+                           WordType(StackType(RestVariable(2)),  // A -> B
+                                    StackType(RestVariable(1))),
+                           RestVariable(3)),
+                 StackType(WordType(StackType(RestVariable(2)),  // A -> C
+                                    StackType(RestVariable(0))),
+                           RestVariable(3)))).
 
-      // S (S -> T) apply :: T
+      // A (A -> B) apply :: B
       addBinding("apply",
-        WordType(StackType(UnknownType(0), WordType(UnknownType(0), UnknownType(1))),
-                 StackType(UnknownType(1)))).
+        WordType(StackType(WordType(StackType(RestVariable(0)),   // A -> B
+                                    StackType(RestVariable(1))),
+                           RestVariable(0)),                      // A
+                 StackType(RestVariable(1)))).                    // B
 
-      // a quote :: (S -> a)
+      // A a quote :: A (B -> a)
       addBinding("quote",
-        WordType(StackType(UnknownType(0)),
-                 StackType(
-                   WordType(UnknownType(1),
-                            StackType(UnknownType(0))))))
+        WordType(StackType(TypeVariable(0), RestVariable(1)),
+                 StackType(WordType(StackType(RestVariable(2)),
+                                    StackType(TypeVariable(0),
+                                              RestVariable(2))),
+                           RestVariable(1))))
 }
 
 case class SymbolTable(ts: Map[String, Type], parent: Option[SymbolTable]) {
@@ -58,5 +74,5 @@ case class SymbolTable(ts: Map[String, Type], parent: Option[SymbolTable]) {
     ts.get(name).orElse(parent.flatMap(_.get(name)))
 
   def getOrElse(name: String, default: => Type) =
-    get(name).orElse(Some(default))
+    get(name).orElse(Some(default)) match { case Some(t) => t }
 }

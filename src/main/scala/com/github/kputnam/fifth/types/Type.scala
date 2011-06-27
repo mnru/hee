@@ -20,22 +20,27 @@ package com.github.kputnam.fifth.types
  */
 
 abstract class Type {
-  def hasOccurrence(t: UnknownType): Boolean
+  def hasOccurrence(t: Variable): Boolean
+  def isPolymorphic: Boolean
+  def isMonomorphic: Boolean
+
   def substitute(s: Substitution): Option[Type]
   def unifyWith(t: Type, s: Substitution): Option[Substitution]
 }
 
 sealed abstract class MonomorphicType extends Type {
-  def hasOccurrence(t: UnknownType) = false
+  def hasOccurrence(t: Variable) = false
+  def isPolymorphic = false
+  def isMonomorphic = true
+
   def substitute(s: Substitution) = Some(this)
-  def unifyWith(t: Type, s: Substitution) = {
+
+  def unifyWith(t: Type, s: Substitution) =
     t.substitute(s) match {
-      case he: UnknownType => s.addBinding(he, this)
-      case he =>
-        if (he == this) Some(s)
-        else None
+      case Some(he: TypeVariable)    => s.addBinding(he, this)
+      case Some(he) if (this == he) => Some(s)
+      case _ => None
     }
-  }
 }
 
 case object StringType extends MonomorphicType

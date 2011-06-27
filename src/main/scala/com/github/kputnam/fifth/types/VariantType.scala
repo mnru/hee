@@ -5,8 +5,14 @@ object VariantType {
 }
 
 case class VariantType(variants: List[Type]) extends Type {
-  def hasOccurrence(t: UnknownType) =
+  def hasOccurrence(t: Variable) =
     variants.exists(_.hasOccurrence(t))
+
+  def isMonomorphic =
+    !isPolymorphic
+
+  def isPolymorphic =
+    variants.exists(_.isPolymorphic)
 
   def substitute(s: Substitution) =
     variants.foldLeft(Some(List.empty): Option[List[Type]]) ((ts, t) =>
@@ -16,7 +22,7 @@ case class VariantType(variants: List[Type]) extends Type {
   def unifyWith(t: Type, s: Substitution) = {
     substitute(s).flatMap{ me =>
       t.substitute(s) match {
-        case he: UnknownType =>
+        case he: TypeVariable =>
           if (me.hasOccurrence(he)) None
           else s.addBinding(he, me)
         case he: VariantType =>
