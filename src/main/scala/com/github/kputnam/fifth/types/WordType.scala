@@ -15,6 +15,9 @@ case class WordType(input: StackType, output: StackType) extends Type {
   def isPolymorphic =
     input.isPolymorphic || output.isPolymorphic
 
+  def variables =
+    input.variables ++ output.variables
+
   def substitute(s: Substitution): Option[WordType] =
     input.substitute(s).flatMap(in =>
       output.substitute(s).map(out => WordType(in.asInstanceOf[StackType], out.asInstanceOf[StackType])))

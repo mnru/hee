@@ -22,4 +22,7 @@ case class Substitution(bs: Map[Variable, Type]) {
       bs.flatMap(bs => b._2.substitute(s).map(t => bs + (b._1 -> t)))
     ).map(bs => Substitution(bs + (k -> v)))
   }
+
+  def variables =
+    bs.keys
 }

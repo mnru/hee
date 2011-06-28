@@ -19,6 +19,9 @@ trait Variable { self: Type =>
   def isMonomorphic = false
   def isPolymorphic = true
 
+  def variables =
+    Set(this.asInstanceOf[Variable])
+
   def substitute(s: Substitution) =
     Some(s.getOrElse(this, this))
 
@@ -27,4 +30,9 @@ trait Variable { self: Type =>
 
   def occursIn(t: Type) =
     t.hasOccurrence(this)
+
+  override def equals(that: Any) = that match {
+    case t: Variable => t.id == id
+    case _ => false
+  }
 }

@@ -73,23 +73,17 @@ sealed trait StackType extends Type {
 }
 
 case object RestNil extends StackType {
-  def isEmpty =
-    true
-
   def top: Nothing =
     throw new NoSuchElementException("top of empty stack")
 
   def rest: StackType =
     throw new UnsupportedOperationException("rest of empty stack")
 
-  def hasOccurrence(t: Variable) =
-    false
-
-  def isMonomorphic =
-    true
-
-  def isPolymorphic =
-    false
+  def isEmpty = true
+  def hasOccurrence(t: Variable) = false
+  def isMonomorphic = true
+  def isPolymorphic = false
+  def variables     = Set.empty
 
   def substitute(s: Substitution): Option[StackType] =
     Some(this)
@@ -103,17 +97,10 @@ case object RestNil extends StackType {
 }
 
 case class RestVariable(id: Int) extends StackType with Variable {
-  val alphabet =
-    upperLatin
-
-  def isEmpty =
-    false
-
-  def top =
-    this
-
-  def rest =
-    RestNil
+  val alphabet = upperLatin
+  def isEmpty  = false
+  def top      = this
+  def rest     = RestNil
 
   def unifyWith(t: Type, s: Substitution) = {
     t.substitute(s).flatMap { he =>
@@ -143,6 +130,9 @@ final case class ::(top: Type, rest: StackType) extends StackType {
   
   def isPolymorphic =
     exists(_.isPolymorphic)
+
+  def variables =
+    top.variables ++ rest.variables
 
   def substitute(s: Substitution): Option[StackType] =
     top.substitute(s).flatMap(top =>

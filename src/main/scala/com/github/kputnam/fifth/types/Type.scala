@@ -24,8 +24,26 @@ abstract class Type {
   def isPolymorphic: Boolean
   def isMonomorphic: Boolean
 
+  def variables: Set[Variable]
   def substitute(s: Substitution): Option[Type]
   def unifyWith(t: Type, s: Substitution): Option[Substitution]
+
+  def rename(bound: Set[Variable]): this.type = {
+    var allocated = (variables | bound).map(_.id)
+    val conflicts =  variables & bound
+
+    val substitution = conflicts.foldLeft(Substitution.empty) { (s, t) =>
+      val id = Iterator.from(0).find(id => !allocated.contains(id)).get
+      allocated += id
+
+      t match {
+        case t: TypeVariable => s.addBinding(t, TypeVariable(id)).get
+        case t: RestVariable => s.addBinding(t, RestVariable(id)).get
+      }
+    }
+
+    substitute(substitution).get.asInstanceOf[this.type]
+  }
 }
 
 sealed abstract class MonomorphicType extends Type {
@@ -33,11 +51,12 @@ sealed abstract class MonomorphicType extends Type {
   def isPolymorphic = false
   def isMonomorphic = true
 
+  def variables = Set.empty
   def substitute(s: Substitution) = Some(this)
 
   def unifyWith(t: Type, s: Substitution) =
     t.substitute(s) match {
-      case Some(he: TypeVariable)    => s.addBinding(he, this)
+      case Some(he: TypeVariable)   => s.addBinding(he, this)
       case Some(he) if (this == he) => Some(s)
       case _ => None
     }

@@ -14,6 +14,9 @@ case class VariantType(variants: List[Type]) extends Type {
   def isPolymorphic =
     variants.exists(_.isPolymorphic)
 
+  def variables =
+    variants.flatMap { case t: Variable => Some(t); case _ => None }.toSet
+
   def substitute(s: Substitution) =
     variants.foldLeft(Some(List.empty): Option[List[Type]]) ((ts, t) =>
       ts.flatMap(ts => t.substitute(s).map(t => ts :+ t))

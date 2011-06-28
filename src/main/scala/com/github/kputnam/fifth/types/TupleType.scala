@@ -14,6 +14,9 @@ case class TupleType(fields: Map[String, Type]) extends Type {
   def isPolymorphic =
     fields.exists(p => p._2.isPolymorphic)
 
+  def variables =
+    fields.flatMap { case (k, t: Variable) => Some(t); case _ => None }.toSet
+
   def substitute(s: Substitution): Option[TupleType] =
     fields.foldLeft(Some(Map.empty): Option[Map[String, Type]]) ((ts, t) =>
       ts.flatMap(ts => t._2.substitute(s).map(s => ts + (t._1 -> s)))
