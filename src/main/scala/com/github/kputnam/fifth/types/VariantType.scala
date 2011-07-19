@@ -1,5 +1,6 @@
-package com.github.kputnam.fifth.types
+package com.github.kputnam.bcat.types
 
+/*
 object VariantType {
   def apply(variants: Type*): VariantType = apply(variants.toList)
 }
@@ -37,3 +38,4 @@ case class VariantType(variants: List[Type]) extends Type {
     }
   }
 }
+*/

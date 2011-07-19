@@ -1,13 +1,29 @@
-package com.github.kputnam.fifth.types
+package com.github.kputnam.bcat.types
 
-trait Variable { self: Type =>
+trait Variable { self: AbstractType =>
+
   val lowerGreek = "αβγδεζηθικλμνξοπρςστυφχψω"
   val upperGreek = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
   val lowerLatin = "abcdefghijklmnopqrstuvwxyz"
   val upperLatin = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-  def alphabet: String
   def id: Int
+  def alphabet: String
+
+  def isMonomorphic = false
+  def isPolymorphic = true
+
+  def variables: Set[Variable] =
+    Set(this)
+
+  def substitute(s: Substitution) =
+    s.getOrElse(this, this)
+
+  def hasOccurrence(that: Variable) =
+    this.id == that.id
+
+  def occursIn(that: AbstractType) =
+    that.hasOccurrence(this)
 
   override def toString = {
     val remainder = id % alphabet.length
@@ -16,23 +32,8 @@ trait Variable { self: Type =>
     alphabet.slice(remainder, remainder + 1) + ("'" * dividend)
   }
 
-  def isMonomorphic = false
-  def isPolymorphic = true
-
-  def variables =
-    Set(this.asInstanceOf[Variable])
-
-  def substitute(s: Substitution) =
-    Some(s.getOrElse(this, this))
-
-  def hasOccurrence(t: Variable) =
-    id == t.id
-
-  def occursIn(t: Type) =
-    t.hasOccurrence(this)
-
   override def equals(that: Any) = that match {
-    case t: Variable => t.id == id
+    case that: Variable => this.id == that.id
     case _ => false
   }
 }

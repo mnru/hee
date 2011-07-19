@@ -1,28 +1,32 @@
-package com.github.kputnam.fifth.types
+package com.github.kputnam.bcat.types
 
 object Substitution {
-  def empty = Substitution(Map.empty)
+  def empty = Substitution(Map.empty[Variable, AbstractType])
+  def apply(bindings: Pair[Variable, AbstractType]*): Substitution =
+    Substitution(Map(bindings:_*))
 }
 
-case class Substitution(bs: Map[Variable, Type]) {
+case class Substitution(bindings: Map[Variable, AbstractType]) {
   override def toString =
-    "Substitution(" + bs.foldLeft(new StringBuilder) {(s, b) =>
+    "Substitution(" + bindings.foldLeft(new StringBuilder) {(s, binding) =>
       if (!s.isEmpty)
         s.append(", ")
-      s.append(b._1)
-      s.append(": ")
-      s.append(b._2)} + ")"
+      s.append(binding._1)
+      s.append("/")
+      s.append(binding._2)} + ")"
 
-  def getOrElse(k: Variable, default: Type) =
-    bs.getOrElse(k, default)
+  def getOrElse(k: Variable, default: AbstractType) =
+    bindings.getOrElse(k, default)
 
-  def addBinding(k: Variable, v: Type): Option[Substitution] = {
-    val s = Substitution(Map(k -> v))
-    bs.foldLeft(Some(Map.empty): Option[Map[Variable, Type]]) ((bs, b) =>
-      bs.flatMap(bs => b._2.substitute(s).map(t => bs + (b._1 -> t)))
-    ).map(bs => Substitution(bs + (k -> v)))
+  def addBinding(k: Variable, v: AbstractType): Substitution = {
+    if (k == v)
+      return this
+
+    // Substitute v for all occurrences of k in existing bindings
+    val singleton = Substitution(Map(k -> v))
+    Substitution(bindings.mapValues(v => v.substitute(singleton)) + (k -> v))
   }
 
   def variables =
-    bs.keys
+    bindings.keys
 }

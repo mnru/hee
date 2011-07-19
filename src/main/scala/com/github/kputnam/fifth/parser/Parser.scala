@@ -1,11 +1,13 @@
-package com.github.kputnam.fifth.parser
+package com.github.kputnam.bcat.parser
+
+import com.github.kputnam.bcat.nodes._
 
 class Parser extends scala.util.parsing.combinator.RegexParsers {
-  def topLevel: Parser[Quotation] =
-    rep1(node) ^^ (x => Quotation(x))
+  def topLevel: Parser[QuotationNode] =
+    rep1(node) ^^ (x => QuotationNode(x))
 
-  def quotation: Parser[Quotation] =
-    "[" ~> rep(node) <~ "]" ^^ (x => Quotation(x))
+  def quotation: Parser[QuotationNode] =
+    "[" ~> rep(node) <~ "]" ^^ (x => QuotationNode(x))
 
   def string: Parser[StringLit] =
     "\"" ~> "[^\"]*".r <~ "\"" ^^ (x => StringLit(x))
@@ -17,9 +19,9 @@ class Parser extends scala.util.parsing.combinator.RegexParsers {
   def numeric: Parser[NumericLit] =
     "[+-]?[0-9]+(?:\\.[0-9]*)?".r ^^ (x => NumericLit(BigDecimal(x)))
 
-  def word: Parser[Word] =
-    "[^\\s\\[\\]]+".r ^^ (x => Word(x))
+  def word: Parser[WordNode] =
+    "[^\\s\\[\\]]+".r ^^ (x => WordNode(x))
 
-  def node: Parser[Node] =
+  def node: Parser[AbstractNode] =
     quotation | string | boolean | numeric | word
 }

@@ -1,5 +1,6 @@
 package com.github.kputnam.fifth
 
+/*
 import collection.immutable.{Queue, Stack}
 import parser.{Word, Quotation, Node}
 
@@ -10,13 +11,11 @@ object Runtime {
 
 case class Runtime(input: Queue[Node], output: Stack[Node]) {
 
-  /** Add a single input token
-   */
+  // Add a single input token
   def read(node: Node): Runtime =
     new Runtime(input.enqueue(node), output)
 
-  /** Read and interpret a single input token
-   */
+  // Read and interpret a single input token
   def step: Runtime = input.dequeue match {
     case (Word("id"),      rest) => this
     case (Word("halt"),    rest) => Runtime.empty
@@ -64,3 +63,4 @@ case class Runtime(input: Queue[Node], output: Stack[Node]) {
   }
 
 }
+*/

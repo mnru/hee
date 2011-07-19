@@ -1,6 +1,6 @@
-package com.github.kputnam.fifth
+package com.github.kputnam.bcat
 
-import types._
+import com.github.kputnam.bcat.types._
 
 /**
  * def word(s: Name) = SymbolTable.default.getOrElse(word, null).asInstanceOf[WordType]
@@ -33,245 +33,245 @@ object SymbolTable {
     SymbolTable(Map.empty, None).
       // T a pop :: T
       addBinding("pop",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            TypeVariable(1)),
-                 StackType(RestVariable(0)))).
+                 StackType(Remainder(0)))).
 
       // T a dup :: T a a
       addBinding("dup",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            TypeVariable(1)),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            TypeVariable(1),
                            TypeVariable(1)))).
 
       // T id :: T
       addBinding("id",
-        WordType(StackType(new RestVariable(0)),
-                 StackType(new RestVariable(0)))).
+        WordType(StackType(Remainder(0)),
+                 StackType(Remainder(0)))).
 
       // T a b swap :: T b a
       addBinding("swap",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            TypeVariable(1),
                            TypeVariable(2)),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            TypeVariable(2),
                            TypeVariable(1)))).
 
       // S (A -> B) (B -> C) compose :: S (A -> B)
       addBinding("compose",
-        WordType(StackType(RestVariable(0),
-                           WordType(StackType(RestVariable(1)),  // A -> B
-                                    StackType(RestVariable(2))),
-                           WordType(StackType(RestVariable(2)),  // B -> C
-                                    StackType(RestVariable(3)))),
-                 StackType(RestVariable(0),
-                           WordType(StackType(RestVariable(1)),  // A -> C
-                                    StackType(RestVariable(3)))))).
+        WordType(StackType(Remainder(0),
+                           WordType(StackType(Remainder(1)),  // A -> B
+                                    StackType(Remainder(2))),
+                           WordType(StackType(Remainder(2)),  // B -> C
+                                    StackType(Remainder(3)))),
+                 StackType(Remainder(0),
+                           WordType(StackType(Remainder(1)),  // A -> C
+                                    StackType(Remainder(3)))))).
 
       // A (A -> B) apply :: B
       addBinding("apply",
-        WordType(StackType(RestVariable(0),                       // A
-                           WordType(StackType(RestVariable(0)),   // A -> B
-                                    StackType(RestVariable(1)))),
-                 StackType(RestVariable(1)))).                    // B
+        WordType(StackType(Remainder(0),                       // A
+                           WordType(StackType(Remainder(0)),   // A -> B
+                                    StackType(Remainder(1)))),
+                 StackType(Remainder(1)))).                    // B
 
       // A a quote :: A (B -> B a)
       addBinding("quote",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            TypeVariable(1)),                        // a
-                 StackType(RestVariable(0),
-                           WordType(StackType(RestVariable(2)),     // B -> B a
-                                    StackType(RestVariable(2),
+                 StackType(Remainder(0),
+                           WordType(StackType(Remainder(2)),     // B -> B a
+                                    StackType(Remainder(2),
                                               TypeVariable(1)))))).
 
       // A boolean a a if :: A a
       addBinding("if",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            BooleanType,
                            TypeVariable(1),
                            TypeVariable(1)),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            TypeVariable(1)))).
 
       // Numeric operators
       addBinding("+",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("-",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("*",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("/",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("%",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("**",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
 
       // Numeric relational operators
       addBinding("=",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("!=",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("<",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("<=",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding(">=",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding(">",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
 
       // Bitwise operators
       addBinding("&",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("^",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("~",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("|",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            NumericType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
 
       // Logical operators
       addBinding("&",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            BooleanType,
                            BooleanType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            BooleanType))).
       addBinding("^",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            BooleanType,
                            BooleanType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            BooleanType))).
       addBinding("~",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            BooleanType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            BooleanType))).
       addBinding("|",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            BooleanType,
                            BooleanType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            BooleanType))).
 
       // String operators
       addBinding("+",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            StringType,
                            StringType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            StringType))).
       addBinding("take",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            StringType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            StringType))).
       addBinding("drop",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            StringType,
                            NumericType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            StringType))).
       addBinding("length",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            StringType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            NumericType))).
       addBinding("empty?",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            StringType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            BooleanType))).
       addBinding("includes",
-        WordType(StackType(RestVariable(0),
+        WordType(StackType(Remainder(0),
                            StringType,
                            StringType),
-                 StackType(RestVariable(0),
+                 StackType(Remainder(0),
                            BooleanType)))
 }
 
-case class SymbolTable(ts: Map[String, Type], parent: Option[SymbolTable]) {
+case class SymbolTable(ts: Map[String, AbstractType], parent: Option[SymbolTable]) {
   def isBound(name: String) =
     ts.contains(name)
 
   def addScope(name: String) =
     SymbolTable(Map.empty, Some(this))
 
-  def addBinding(name: String, t: Type) =
+  def addBinding(name: String, t: AbstractType) =
     SymbolTable(ts + (name -> t), parent)
 
-  def get(name: String): Option[Type] =
+  def get(name: String): Option[AbstractType] =
     ts.get(name).orElse(parent.flatMap(_.get(name)))
 
-  def getOrElse(name: String, default: => Type) =
-    get(name).orElse(Some(default)) match { case Some(t) => t }
+  def getOrElse(name: String, default: => AbstractType) =
+    ts.getOrElse(name, default)
 }

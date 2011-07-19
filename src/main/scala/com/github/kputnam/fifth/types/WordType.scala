@@ -1,37 +1,27 @@
-package com.github.kputnam.fifth.types
+package com.github.kputnam.bcat.types
 
-import com.github.kputnam.fifth.misc.union._
-
-case class WordType(input: StackType, output: StackType) extends Type {
+case class WordType(input: StackType, output: StackType) extends AbstractType {
   override def toString =
     "(" + input + " -> " + output + ")"
 
   def hasOccurrence(t: Variable) =
     input.hasOccurrence(t) || output.hasOccurrence(t)
 
-  def isMonomorphic =
-    !isPolymorphic
+  def isMonomorphic = input.isMonomorphic || output.isMonomorphic
+  def isPolymorphic = input.isPolymorphic || output.isPolymorphic
 
-  def isPolymorphic =
-    input.isPolymorphic || output.isPolymorphic
+  def variables = input.variables ++ output.variables
 
-  def variables =
-    input.variables ++ output.variables
+  def substitute(s: Substitution): WordType =
+    WordType(input.substitute(s).asInstanceOf[StackType],
+             output.substitute(s).asInstanceOf[StackType])
 
-  def substitute(s: Substitution): Option[WordType] =
-    input.substitute(s).flatMap(in =>
-      output.substitute(s).map(out => WordType(in.asInstanceOf[StackType], out.asInstanceOf[StackType])))
-
-  def unifyWith(t: Type, s: Substitution) = {
-    substitute(s).flatMap { me =>
-      t.substitute(s).flatMap {
-        case he: TypeVariable =>
-          if (me.hasOccurrence(he)) None
-          else s.addBinding(he, me)
-        case he: WordType =>
-          me.input.unifyWith(he.input, s).flatMap(s => me.output.unifyWith(he.output, s))
-        case _ => None
-      }
+  def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
+    case m: WordType => t.substitute(s) match {
+      case t: WordType =>
+        m.input.unifyWith(t.input, s).flatMap(s => m.output.unifyWith(t.output, s))
+      case _ => None
     }
+    case _ => None
   }
 }

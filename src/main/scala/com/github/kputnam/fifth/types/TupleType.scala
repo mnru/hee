@@ -1,21 +1,22 @@
-package com.github.kputnam.fifth.types
+package com.github.kputnam.bcat.types
 
+/*
 object TupleType {
   def apply(fields: Pair[String, Type]*): TupleType = apply(Map(fields : _*))
 }
 
 case class TupleType(fields: Map[String, Type]) extends Type {
   def hasOccurrence(t: Variable) =
-    fields.exists(p => p._2.hasOccurrence(t))
+    fields.exists(f => f._2.hasOccurrence(t))
 
   def isMonomorphic =
     !isPolymorphic
 
   def isPolymorphic =
-    fields.exists(p => p._2.isPolymorphic)
+    fields.exists(f => f._2.isPolymorphic)
 
   def variables =
-    fields.flatMap { case (k, t: Variable) => Some(t); case _ => None }.toSet
+    fields.flatMap { case (k, v: VariableType) => Some(t); case _ => None }.toSet
 
   def substitute(s: Substitution): Option[TupleType] =
     fields.foldLeft(Some(Map.empty): Option[Map[String, Type]]) ((ts, t) =>
@@ -37,3 +38,4 @@ case class TupleType(fields: Map[String, Type]) extends Type {
     }
   }
 }
+*/

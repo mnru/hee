@@ -1,150 +1,79 @@
-package com.github.kputnam.fifth.types
+package com.github.kputnam.bcat.types
 
 import annotation.tailrec
 
 object StackType {
-  def empty: StackType =
-    RestNil
-
-  def apply(elements: Type*): StackType =
-    if (elements.nonEmpty)
-      elements.head match {
-        case top: StackType =>
-          elements.tail.foldLeft(top)((s, t) => t :: s)
-        case _ =>
-          elements.foldLeft(empty)((s, t) => t :: s)
-      }
-    else empty
+  def empty: StackType = new Empty
+  def apply(elements: AbstractType*): StackType =
+    elements.foldLeft(empty)((stack, e) => e :: stack)
 }
 
-sealed trait StackType extends Type {
-  def isEmpty: Boolean
-
-  def top: Type
-
+sealed abstract class StackType extends AbstractType {
+  def top: AbstractType
   def rest: StackType
-
-  def ::(top: Type): StackType =
-    new ::(top, this)
-
-  def reverse: StackType =
-    reverseOnto(StackType.empty)
-
-  @tailrec
-  final def reverseOnto(suffix: StackType): StackType =
-    if (isEmpty) suffix
-    else rest.reverseOnto(top :: suffix)
-
-  def :+(element: Type): StackType =
-    if (isEmpty) element :: this
-    else top :: (rest :+ element)
-
-  @tailrec
-  final def exists(f: Type => Boolean): Boolean =
-    if (isEmpty) false
-    else f(top) || rest.exists(f)
-
-  @tailrec
-  final def foldLeft[T](value: T)(f: (T, Type) => T): T =
-    if (isEmpty) value
-    else rest.foldLeft(f(value, top))(f)
-
-  def size: Int =
-    foldLeft(0)((s, t) => s + 1)
-
-  def toList: List[Type] =
-    foldLeft(List.empty[Type])((l, t) => t :: l).reverse
-
-  def mkString(prefix: String, separator: String, suffix: String) = {
-    val sb = new StringBuilder
-    sb.append(prefix)
-
-    if (!isEmpty) {
-      reverse.foldLeft(sb)((sb, t) => sb.append(t).append(separator))
-      sb.setLength(sb.length - separator.length)
-    }
-
-    sb.append(suffix)
-    sb.toString
-  }
-
-  override def toString: String =
-    mkString("[", ", ", "]")
+  def ::(top: AbstractType): StackType = new ::(top, this)
 }
 
-case object RestNil extends StackType {
-  def top: Nothing =
-    throw new NoSuchElementException("top of empty stack")
+case class Remainder(id: Int) extends StackType with Variable {
+  def top = throw new NoSuchElementException("top of placeholder stack")
+  def rest = throw new UnsupportedOperationException("rest of placeholder stack")
 
-  def rest: StackType =
-    throw new UnsupportedOperationException("rest of empty stack")
+  def alphabet = upperGreek
 
-  def isEmpty = true
+  def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
+    case m: :: => m.unifyWith(t, s)
+    case m: Empty => m.unifyWith(t, s)
+    case m: Remainder => t.substitute(s) match {
+      case t :: r => Some(s.addBinding(m, t :: r))
+      case t: Empty => Some(s.addBinding(m, t))
+      case t: Remainder => Some(s.addBinding(m, t))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+
+class Empty extends StackType {
+  def top = throw new NoSuchElementException("top of empty stack")
+  def rest = throw new UnsupportedOperationException("rest of empty stack")
+  override def toString = ""
+
   def hasOccurrence(t: Variable) = false
   def isMonomorphic = true
   def isPolymorphic = false
-  def variables     = Set.empty
 
-  def substitute(s: Substitution): Option[StackType] =
-    Some(this)
+  def variables = Set.empty
+  def substitute(s: Substitution): StackType = this
 
-  def unifyWith(t: Type, s: Substitution): Option[Substitution] =
-    t.substitute(s).flatMap {
-      case he: RestVariable => s.addBinding(he, this)
-      case RestNil => Some(s)
-      case _ => None
-    }
-}
-
-case class RestVariable(id: Int) extends StackType with Variable {
-  val alphabet = upperLatin
-  def isEmpty  = false
-  def top      = this
-  def rest     = RestNil
-
-  def unifyWith(t: Type, s: Substitution) = {
-    t.substitute(s).flatMap { he =>
-      substitute(s) flatMap {
-        case me: RestVariable => he match {
-          case he: RestVariable =>
-            if (me.id == he.id) Some(s)
-            else s.addBinding(me, he)
-          case _ =>
-            if (he.hasOccurrence(me)) None
-            else s.addBinding(me, he)
-        }
-        case me => me.unifyWith(he, s)
-      }
-    }
+  def unifyWith(t: AbstractType, s: Substitution) = t.substitute(s) match {
+    case t: Empty => Some(s)
+    case r: Remainder => Some(s.addBinding(r, this))
+    case _ => None
   }
 }
 
-final case class ::(top: Type, rest: StackType) extends StackType {
-  def isEmpty = false
+case class ::(top: AbstractType, rest: StackType) extends StackType {
+  override def toString = top.toString + " " + rest.toString
 
-  def hasOccurrence(t: Variable) =
-    exists(_.hasOccurrence(t))
+  def hasOccurrence(t: Variable) = top.hasOccurrence(t) || rest.hasOccurrence(t)
+  def isMonomorphic = top.isMonomorphic || rest.isMonomorphic
+  def isPolymorphic = top.isPolymorphic || rest.isPolymorphic
 
-  def isMonomorphic =
-    !isPolymorphic
-  
-  def isPolymorphic =
-    exists(_.isPolymorphic)
+  def variables = top.variables ++ rest.variables
+  def substitute(s: Substitution): StackType =
+    top.substitute(s) :: rest.substitute(s).asInstanceOf[StackType]
 
-  def variables =
-    top.variables ++ rest.variables
-
-  def substitute(s: Substitution): Option[StackType] =
-    top.substitute(s).flatMap(top =>
-      rest.substitute(s).map(rest =>
-        top :: rest.asInstanceOf[StackType]))
-
-  def unifyWith(t: Type, s: Substitution) =
-    substitute(s).flatMap { me =>
-      t.substitute(s).flatMap {
-        case he: StackType if !he.isEmpty =>
-          me.top.unifyWith(he.top, s).flatMap(s => me.rest.unifyWith(he.rest, s))
-        case _ => None
-      }
+  def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
+    case top :: rest => t.substitute(s) match {
+      case t :: r =>
+        top.unifyWith(t, s).flatMap(s => rest.unifyWith(r, s))
+      case t: Remainder =>
+        if ((top :: rest).hasOccurrence(t)) None
+        else Some(s.addBinding(t, top :: rest))
+      case _ =>
+        None
     }
+    case _ =>
+      None
+  }
 }
