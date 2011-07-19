@@ -4,6 +4,8 @@ case class WordType(input: StackType, output: StackType) extends AbstractType {
   override def toString =
     "(" + input + " -> " + output + ")"
 
+  def asWord = this
+
   def hasOccurrence(t: Variable) =
     input.hasOccurrence(t) || output.hasOccurrence(t)
 
@@ -16,12 +18,19 @@ case class WordType(input: StackType, output: StackType) extends AbstractType {
     WordType(input.substitute(s).asInstanceOf[StackType],
              output.substitute(s).asInstanceOf[StackType])
 
-  def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
-    case m: WordType => t.substitute(s) match {
-      case t: WordType =>
-        m.input.unifyWith(t.input, s).flatMap(s => m.output.unifyWith(t.output, s))
-      case _ => None
-    }
-    case _ => None
+  def unifyWith(t: AbstractType, s: Substitution) = {
+    val he = t.substitute(s).asInstanceOf[WordType]
+    val me =   substitute(s).asInstanceOf[WordType]
+
+    me.input.unifyWith(he.input, s).flatMap(s => me.output.unifyWith(he.output, s))
+  }
+
+  def chainInto(t: WordType, s: Substitution) = {
+    val he = t.substitute(s).asInstanceOf[WordType]
+    val me =   substitute(s).asInstanceOf[WordType]
+
+    me.output.unifyWith(he.input, s).map(s =>
+      Pair(WordType(me.input.substitute(s).asInstanceOf[StackType],
+                    he.output.substitute(s).asInstanceOf[StackType]), s))
   }
 }

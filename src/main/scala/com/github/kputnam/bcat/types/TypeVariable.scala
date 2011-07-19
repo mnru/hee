@@ -1,7 +1,10 @@
 package com.github.kputnam.bcat.types
 
 case class TypeVariable(id: Int) extends AbstractType with Variable {
-  val alphabet = lowerLatin
+  val alphabet = lowerGreek
+
+  def asWord = WordType(StackType(Remainder(0)),
+                        StackType(this, Remainder(0)))
 
   def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
     case m: TypeVariable => t.substitute(s) match {

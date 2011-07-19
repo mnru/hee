@@ -26,7 +26,4 @@ case class Substitution(bindings: Map[Variable, AbstractType]) {
     val singleton = Substitution(Map(k -> v))
     Substitution(bindings.mapValues(v => v.substitute(singleton)) + (k -> v))
   }
-
-  def variables =
-    bindings.keys
 }

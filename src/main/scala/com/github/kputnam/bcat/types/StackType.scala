@@ -3,7 +3,7 @@ package com.github.kputnam.bcat.types
 import annotation.tailrec
 
 object StackType {
-  def empty: StackType = new Empty
+  def empty: StackType = Empty
   def apply(elements: AbstractType*): StackType =
     elements.foldLeft(empty)((stack, e) => e :: stack)
 }
@@ -12,6 +12,8 @@ sealed abstract class StackType extends AbstractType {
   def top: AbstractType
   def rest: StackType
   def ::(top: AbstractType): StackType = new ::(top, this)
+
+  def asWord = throw new UnsupportedOperationException
 }
 
 case class Remainder(id: Int) extends StackType with Variable {
@@ -22,10 +24,10 @@ case class Remainder(id: Int) extends StackType with Variable {
 
   def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
     case m: :: => m.unifyWith(t, s)
-    case m: Empty => m.unifyWith(t, s)
+    case Empty => Empty.unifyWith(t, s)
     case m: Remainder => t.substitute(s) match {
-      case t :: r => Some(s.addBinding(m, t :: r))
-      case t: Empty => Some(s.addBinding(m, t))
+      case t: :: => Some(s.addBinding(m, t))
+      case Empty => Some(s.addBinding(m, Empty))
       case t: Remainder => Some(s.addBinding(m, t))
       case _ => None
     }
@@ -33,10 +35,16 @@ case class Remainder(id: Int) extends StackType with Variable {
   }
 }
 
-class Empty extends StackType {
+case object Empty extends StackType {
+  override def toString = "∅"
+
   def top = throw new NoSuchElementException("top of empty stack")
   def rest = throw new UnsupportedOperationException("rest of empty stack")
-  override def toString = ""
+
+  override def ::(top: AbstractType): StackType = top match {
+    case t: Remainder => t
+    case t => new ::(top, this)
+  }
 
   def hasOccurrence(t: Variable) = false
   def isMonomorphic = true
@@ -46,14 +54,14 @@ class Empty extends StackType {
   def substitute(s: Substitution): StackType = this
 
   def unifyWith(t: AbstractType, s: Substitution) = t.substitute(s) match {
-    case t: Empty => Some(s)
+    case Empty => Some(s)
     case r: Remainder => Some(s.addBinding(r, this))
     case _ => None
   }
 }
 
 case class ::(top: AbstractType, rest: StackType) extends StackType {
-  override def toString = top.toString + " " + rest.toString
+  override def toString = rest.toString + " " + top.toString
 
   def hasOccurrence(t: Variable) = top.hasOccurrence(t) || rest.hasOccurrence(t)
   def isMonomorphic = top.isMonomorphic || rest.isMonomorphic
@@ -63,17 +71,16 @@ case class ::(top: AbstractType, rest: StackType) extends StackType {
   def substitute(s: Substitution): StackType =
     top.substitute(s) :: rest.substitute(s).asInstanceOf[StackType]
 
-  def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
-    case top :: rest => t.substitute(s) match {
+  def unifyWith(t: AbstractType, s: Substitution) = {
+    val (top :: rest) = substitute(s)
+
+    t.substitute(s) match {
       case t :: r =>
         top.unifyWith(t, s).flatMap(s => rest.unifyWith(r, s))
       case t: Remainder =>
         if ((top :: rest).hasOccurrence(t)) None
         else Some(s.addBinding(t, top :: rest))
-      case _ =>
-        None
+      case _ => None
     }
-    case _ =>
-      None
   }
 }

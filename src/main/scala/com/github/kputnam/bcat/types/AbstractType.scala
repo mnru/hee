@@ -1,10 +1,42 @@
 package com.github.kputnam.bcat.types
 
 abstract class AbstractType {
+  // Value types (StringType, NumericType, etc) can be viewed as a nullary
+  // function call that pushes a value onto that stack
+  def asWord: WordType
+
+  // True if the given variable occurs in this type expression
   def hasOccurrence(t: Variable): Boolean
+
+  // Polymorphic types consist of at least one type variable
   def isPolymorphic: Boolean
   def isMonomorphic: Boolean
+
+  // Returns the set of all variables in this type expression
   def variables: Set[Variable]
+
+  // Replaces variables in this type expression according to their bindings
+  // in the given substitution (leaves unbound variables as-is)
   def substitute(s: Substitution): AbstractType
+
+  // Creates a substitution that unifies this type expression with the other
   def unifyWith(t: AbstractType, s: Substitution): Option[Substitution]
+
+  // 
+  def rename(bound: Set[Variable]): this.type = {
+    var allocated = (variables | bound).map(_.id)
+    var conflicts =  variables & bound
+
+    val substitution = conflicts.foldLeft(Substitution.empty) { (s, v) =>
+      val id = Iterator.from(0).find(id => !allocated.contains(id)).get
+      allocated += id
+
+      v match {
+        case _: TypeVariable  => s.addBinding(v, TypeVariable(id))
+        case _: Remainder     => s.addBinding(v, Remainder(id))
+      }
+    }
+
+    substitute(substitution).asInstanceOf[this.type]
+  }
 }
