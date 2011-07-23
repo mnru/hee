@@ -4,14 +4,21 @@ import annotation.tailrec
 
 object StackType {
   def empty: StackType = Empty
+
+  // StackType(Z Y X ... C B A).top = A
   def apply(elements: AbstractType*): StackType =
-    elements.foldLeft(empty)((stack, e) => e :: stack)
+    elements.foldLeft(empty)((stack, e) => stack :+ e)
+
+  // StackType(List(Z Y X ... C B A)).top = A
+  def apply(elements: List[AbstractType]): StackType =
+    elements.foldLeft(empty)((stack, e) => stack :+ e)
 }
 
 sealed abstract class StackType extends AbstractType {
   def top: AbstractType
   def rest: StackType
-  def ::(top: AbstractType): StackType = new ::(top, this)
+  def ::(top: AbstractType): StackType = new NonEmpty(top, this)
+  def :+(top: AbstractType): StackType = new NonEmpty(top, this)
 
   def asWord = throw new UnsupportedOperationException
 }
@@ -23,11 +30,11 @@ case class Remainder(id: Int) extends StackType with Variable {
   def alphabet = upperGreek
 
   def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
-    case m: :: => m.unifyWith(t, s)
     case Empty => Empty.unifyWith(t, s)
+    case m: NonEmpty => m.unifyWith(t, s)
     case m: Remainder => t.substitute(s) match {
-      case t: :: => Some(s.addBinding(m, t))
       case Empty => Some(s.addBinding(m, Empty))
+      case t: NonEmpty => Some(s.addBinding(m, t))
       case t: Remainder => Some(s.addBinding(m, t))
       case _ => None
     }
@@ -43,7 +50,12 @@ case object Empty extends StackType {
 
   override def ::(top: AbstractType): StackType = top match {
     case t: Remainder => t
-    case t => new ::(top, this)
+    case t => new NonEmpty(top, this)
+  }
+
+  override def :+(top: AbstractType): StackType = top match {
+    case t: Remainder => t
+    case t => new NonEmpty(top, this)
   }
 
   def hasOccurrence(t: Variable) = false
@@ -60,7 +72,27 @@ case object Empty extends StackType {
   }
 }
 
-case class ::(top: AbstractType, rest: StackType) extends StackType {
+object :: {
+  def apply(top: AbstractType, rest: StackType) =
+    new NonEmpty(top, rest)
+
+  def unapply(s: StackType): Option[(AbstractType, StackType)] = s match {
+    case s: NonEmpty => Some((s.top, s.rest))
+    case _ => None
+  }
+}
+
+object :+ {
+  def apply(rest: StackType, top: AbstractType) =
+    new NonEmpty(top, rest)
+
+  def unapply(s: StackType): Option[(StackType, AbstractType)] = s match {
+    case s: NonEmpty => Some((s.rest, s.top))
+    case _ => None
+  }
+}
+
+class NonEmpty(val top: AbstractType, val rest: StackType) extends StackType {
   override def toString = rest.toString + " " + top.toString
 
   def hasOccurrence(t: Variable) = top.hasOccurrence(t) || rest.hasOccurrence(t)
@@ -69,17 +101,19 @@ case class ::(top: AbstractType, rest: StackType) extends StackType {
 
   def variables = top.variables ++ rest.variables
   def substitute(s: Substitution): StackType =
-    top.substitute(s) :: rest.substitute(s).asInstanceOf[StackType]
+    rest.substitute(s).asInstanceOf[StackType] :+ top.substitute(s)
 
   def unifyWith(t: AbstractType, s: Substitution) = {
-    val (top :: rest) = substitute(s)
+    val (aRest :+ aTop) = substitute(s)
 
     t.substitute(s) match {
-      case t :: r =>
-        top.unifyWith(t, s).flatMap(s => rest.unifyWith(r, s))
+      case bRest :+ bTop =>
+        aTop.unifyWith(bTop, s).flatMap(s => aRest.unifyWith(bRest, s))
+
       case t: Remainder =>
-        if ((top :: rest).hasOccurrence(t)) None
-        else Some(s.addBinding(t, top :: rest))
+        if ((aRest :+ aTop).hasOccurrence(t)) None
+        else Some(s.addBinding(t, aRest :+ aTop))
+
       case _ => None
     }
   }

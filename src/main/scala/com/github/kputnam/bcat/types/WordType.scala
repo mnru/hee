@@ -18,11 +18,13 @@ case class WordType(input: StackType, output: StackType) extends AbstractType {
     WordType(input.substitute(s).asInstanceOf[StackType],
              output.substitute(s).asInstanceOf[StackType])
 
-  def unifyWith(t: AbstractType, s: Substitution) = {
-    val he = t.substitute(s).asInstanceOf[WordType]
-    val me =   substitute(s).asInstanceOf[WordType]
+  def unifyWith(t: AbstractType, s: Substitution) = t match {
+    case t: TypeVariable => Some(s.addBinding(t, substitute(s)))
+    case _: WordType =>
+      val he = t.substitute(s).asInstanceOf[WordType]
+      val me =   substitute(s).asInstanceOf[WordType]
 
-    me.input.unifyWith(he.input, s).flatMap(s => me.output.unifyWith(he.output, s))
+      me.input.unifyWith(he.input, s).flatMap(s => me.output.unifyWith(he.output, s))
   }
 
   def chainInto(t: WordType, s: Substitution) = {

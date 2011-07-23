@@ -15,6 +15,8 @@ case class Substitution(bindings: Map[Variable, AbstractType]) {
       s.append("/")
       s.append(binding._2)} + ")"
 
+  def variables: Set[Variable] = bindings.keys.toSet
+
   def getOrElse(k: Variable, default: AbstractType) =
     bindings.getOrElse(k, default)
 
