@@ -3,18 +3,17 @@ package com.github.kputnam.bcat.parser
 import com.github.kputnam.bcat.nodes._
 
 class Parser extends scala.util.parsing.combinator.RegexParsers {
-  def topLevel: Parser[QuotationNode] =
-    rep1(node) ^^ (x => QuotationNode(x))
+  def topLevel: Parser[RootNode] =
+    rep1(node) ^^ (xs => RootNode(xs))
 
   def quotation: Parser[QuotationNode] =
-    "[" ~> rep(node) <~ "]" ^^ (x => QuotationNode(x))
+    "[" ~> rep(node) <~ "]" ^^ (xs => QuotationNode(xs))
 
   def string: Parser[StringLit] =
     "\"" ~> "[^\"]*".r <~ "\"" ^^ (x => StringLit(x))
 
   def boolean: Parser[BooleanLit] =
-    "true|false".r ^^ { case "true"  => BooleanLit(true)
-                        case "false" => BooleanLit(false) }
+    "true|false".r ^^ (x => BooleanLit("true".equals(x)))
 
   def numeric: Parser[NumericLit] =
     "[+-]?[0-9]+(?:\\.[0-9]*)?".r ^^ (x => NumericLit(BigDecimal(x)))

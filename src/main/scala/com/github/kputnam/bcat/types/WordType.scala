@@ -4,7 +4,7 @@ case class WordType(input: StackType, output: StackType) extends AbstractType {
   override def toString =
     "(" + input + " -> " + output + ")"
 
-  def asWord = this
+  override def asWord = this
 
   def hasOccurrence(t: Variable) =
     input.hasOccurrence(t) || output.hasOccurrence(t)

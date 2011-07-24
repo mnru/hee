@@ -51,7 +51,7 @@ object SymbolTable {
         WordType(Remainder(0) :+ TypeVariable(1) :+ TypeVariable(2),
                  Remainder(0) :+ TypeVariable(2) :+ TypeVariable(1))).
 
-      // S (A -> B) (B -> C) compose :: S (A -> B)
+      // S (A -> B) (B -> C) compose :: S (A -> C)
       addBinding("compose",
         WordType(Remainder(0) :+ WordType(Remainder(1),  // A -> B
                                           Remainder(2))

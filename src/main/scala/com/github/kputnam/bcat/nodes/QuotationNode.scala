@@ -15,17 +15,15 @@ object QuotationNode {
 }
 
 class QuotationNode(val nodes: List[AbstractNode]) extends AbstractNode {
-  // @todo: prevent nodes from being an empty list
-
-  def toType(s: SymbolTable) = None
-
-  /*def toType(t: SymbolTable) = nodes match {
-    case head :: Nil  => StackType(head.
-    case head :: tail =>
-  }*/
-
+  def toType(s: SymbolTable) =
+    nodes.tail.foldLeft(nodes.head.toType(s).map(_.asWord)) ((t, n) =>
+      t.flatMap(t =>
+        n.toType(s).flatMap(u =>
+          t.chainInto(u.asWord.rename(t.variables), Substitution.empty)).map(_._1))).map(_.quote)
+  
   def head = nodes.head
-  def tail = if (nodes.lengthCompare(1) > 1) Some(QuotationNode(nodes.tail)) else None
+  def tail = if (isLast) None else Some(QuotationNode(nodes.tail))
+  def isLast = nodes.lengthCompare(1) <= 0
 
   override def toString =
     nodes.mkString("[", ", ", "]")

@@ -1,9 +1,16 @@
 package com.github.kputnam.bcat.types
 
 abstract class AbstractType {
+
+  def quote: WordType =
+    WordType(Remainder(0).rename(variables),
+             Remainder(0).rename(variables) :+ this)
+
   // Value types (StringType, NumericType, etc) can be viewed as a nullary
   // function call that pushes a value onto that stack
-  def asWord: WordType
+  def asWord: WordType =
+    WordType(Remainder(0).rename(variables),
+             Remainder(0).rename(variables) :+ this)
 
   // True if the given variable occurs in this type expression
   def hasOccurrence(t: Variable): Boolean

@@ -20,7 +20,9 @@ sealed abstract class StackType extends AbstractType {
   def ::(top: AbstractType): StackType = new NonEmpty(top, this)
   def :+(top: AbstractType): StackType = new NonEmpty(top, this)
 
+  override
   def asWord = throw new UnsupportedOperationException
+  def toWord = throw new UnsupportedOperationException
 }
 
 case class Remainder(id: Int) extends StackType with Variable {

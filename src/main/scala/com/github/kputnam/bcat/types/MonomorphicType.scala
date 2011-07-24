@@ -6,6 +6,8 @@ abstract class MonomorphicType extends AbstractType {
   def isMonomorphic = true
   def variables = Set.empty
   def substitute(s: Substitution) = this
-  def asWord = WordType(StackType(Remainder(0)),
-                        StackType(Remainder(0), this))
+
+  override
+  def asWord = WordType(Remainder(0),
+                        Remainder(0) :+ this)
 }
