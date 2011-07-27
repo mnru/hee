@@ -2,78 +2,45 @@ package com.github.kputnam.bcat
 
 import com.github.kputnam.bcat.types._
 
-/**
- * def word(s: Name) = SymbolTable.default.getOrElse(word, null).asInstanceOf[WordType]
- *
- * val s = StackType(StringType, IntegerType, BooleanType)
- *   s.top // BooleanType
- *
- * word("pop").input.unifyWith(s, Substitution.empty).
- *   flatMap(word("pop").output.substitute(_))
- *   // Some([StringType, IntegerType])
- *
- * word("dup").input.unifyWith(s, Substitution.empty).
- *   flatMap(word("dup").output.substitute(_))
- *   // Some([StringType, IntegerType, BooleanType, BooleanType])
- *
- * word("id").input.unifyWith(s, Substitution.empty).
- *   flatMap(word("id").output.substitute(_))
- *   // Some([StringType, IntegerType, BooleanType])
- *
- * word("swap").input.unifyWith(s, Substitution.empty).
- *   flatMap(word("swap").output.substitute(_))
- *   // Some([StringType, BooleanType, IntegerType])
- *
- * word("quote").input.unifyWith(s, Substitution.empty).
- *   flatMap(word("quote").output.substitute(_))
- *   // Some([StringType, IntegerType, (C -> [C, BooleanType])])
- */
 object SymbolTable {
   def default =
     SymbolTable(Map.empty, None).
-      // T a pop :: T
-      addBinding("pop",
-        WordType(Remainder(0) :+ TypeVariable(1),
-                 Remainder(0))).
 
-      // T a dup :: T a a
-      addBinding("dup",
-        WordType(Remainder(0) :+ TypeVariable(1),
-                 Remainder(0) :+ TypeVariable(1) :+ TypeVariable(1))).
-
-      // T id :: T
-      addBinding("id",
+      // Combinators
+      addBinding("id", // T id :: T
         WordType(Remainder(0),
                  Remainder(0))).
-
-      // T a b swap :: T b a
-      addBinding("swap",
+      addBinding("pop", // T a pop :: T
+        WordType(Remainder(0) :+ TypeVariable(1),
+                 Remainder(0))).
+      addBinding("dup", // T a dup :: T a a
+        WordType(Remainder(0) :+ TypeVariable(1),
+                 Remainder(0) :+ TypeVariable(1) :+ TypeVariable(1))).
+      addBinding("swap", // T a b swap :: T b a
         WordType(Remainder(0) :+ TypeVariable(1) :+ TypeVariable(2),
                  Remainder(0) :+ TypeVariable(2) :+ TypeVariable(1))).
-
-      // S (A -> B) (B -> C) compose :: S (A -> C)
-      addBinding("compose",
-        WordType(Remainder(0) :+ WordType(Remainder(1),  // A -> B
+      addBinding("compose", // S (A -> B) (B -> C) compose :: S (A -> C)
+        WordType(Remainder(0) :+ WordType(Remainder(1),
                                           Remainder(2))
-                              :+ WordType(Remainder(2),  // B -> C
+                              :+ WordType(Remainder(2),
                                           Remainder(3)),
-                 Remainder(0) :+ WordType(Remainder(1),  // A -> C
+                 Remainder(0) :+ WordType(Remainder(1),
                                           Remainder(3)))).
-
-      // A (A -> B) apply :: B
-      addBinding("apply",
+      addBinding("apply", // A (A -> B) apply :: B
         WordType(Remainder(0) :+ WordType(Remainder(0),
                                           Remainder(1)),
                  Remainder(1))).
-
-      // A a quote :: A (B -> B a)
-      addBinding("quote",
+      addBinding("dip", // T a (T -> S) dip :: S a
+        WordType(Remainder(0) :+ TypeVariable(1)
+                              :+ WordType(Remainder(0),
+                                          Remainder(2)),
+                 Remainder(2) :+ TypeVariable(1))).
+      addBinding("quote", // A a quote :: A (B -> B a)
         WordType(Remainder(0) :+ TypeVariable(1),
                  Remainder(0) :+ WordType(Remainder(2),
                                           Remainder(2) :+ TypeVariable(1)))).
 
-      // A boolean a a if :: A a
-      addBinding("if",
+      addBinding("if", // A boolean a a if :: A a
         WordType(Remainder(0) :+ BooleanType :+ TypeVariable(1) :+ TypeVariable(1),
                  Remainder(0) :+ TypeVariable(1))).
 
@@ -93,6 +60,9 @@ object SymbolTable {
       addBinding("%",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
                  Remainder(0) :+ NumericType)).
+      addBinding("/%",
+        WordType(Remainder(0) :+ NumericType :+ NumericType,
+                 Remainder(0) :+ NumericType :+ NumericType)).
       addBinding("**",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
                  Remainder(0) :+ NumericType)).
@@ -161,7 +131,7 @@ object SymbolTable {
       addBinding("drop",
         WordType(Remainder(0) :+ StringType :+ NumericType,
                  Remainder(0) :+ StringType)).
-      addBinding("includes",
+      addBinding("includes?",
         WordType(Remainder(0) :+ StringType :+ StringType,
                  Remainder(0) :+ BooleanType))
 }
