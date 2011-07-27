@@ -100,22 +100,22 @@ object SymbolTable {
       // Numeric relational operators
       addBinding("=",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
-                 Remainder(0) :+ NumericType)).
+                 Remainder(0) :+ BooleanType)).
       addBinding("!=",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
-                 Remainder(0) :+ NumericType)).
+                 Remainder(0) :+ BooleanType)).
       addBinding("<",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
-                 Remainder(0) :+ NumericType)).
+                 Remainder(0) :+ BooleanType)).
       addBinding("<=",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
-                 Remainder(0) :+ NumericType)).
+                 Remainder(0) :+ BooleanType)).
       addBinding(">=",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
-                 Remainder(0) :+ NumericType)).
+                 Remainder(0) :+ BooleanType)).
       addBinding(">",
         WordType(Remainder(0) :+ NumericType :+ NumericType,
-                 Remainder(0) :+ NumericType)).
+                 Remainder(0) :+ BooleanType)).
 
       // Bitwise operators
       addBinding("&",
