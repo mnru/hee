@@ -28,8 +28,13 @@ abstract class AbstractType {
 
   // Creates a substitution that unifies this type expression with the other
   def unifyWith(t: AbstractType, s: Substitution): Option[Substitution]
+  def unifyWith(t: AbstractType): Option[Substitution] = unifyWith(t, Substitution.empty)
 
-  // 
+  // Returns true if this is an "instance" of that
+  def <(that: AbstractType): Boolean = throw new UnsupportedOperationException
+  def ==(that: AbstractType): Boolean = this < that && that < this
+
+  // Generate fresh variables for each of the given variables
   def rename(bound: Set[Variable]): this.type = {
     var allocated = (variables | bound).map(_.id)
     var conflicts =  variables & bound

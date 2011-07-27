@@ -5,6 +5,8 @@ import annotation.tailrec
 object StackType {
   def empty: StackType = Empty
 
+  def variable(id: Int): StackType = Remainder(id)
+
   // StackType(Z Y X ... C B A).top = A
   def apply(elements: AbstractType*): StackType =
     elements.foldLeft(empty)((stack, e) => stack :+ e)
@@ -106,16 +108,15 @@ class NonEmpty(val top: AbstractType, val rest: StackType) extends StackType {
     rest.substitute(s).asInstanceOf[StackType] :+ top.substitute(s)
 
   def unifyWith(t: AbstractType, s: Substitution) = {
-    val (aRest :+ aTop) = substitute(s)
+    val me = substitute(s)
+    val (aRest :+ aTop) = me
 
     t.substitute(s) match {
       case bRest :+ bTop =>
         aTop.unifyWith(bTop, s).flatMap(s => aRest.unifyWith(bRest, s))
-
       case t: Remainder =>
-        if ((aRest :+ aTop).hasOccurrence(t)) None
-        else Some(s.addBinding(t, aRest :+ aTop))
-
+        if (me.hasOccurrence(t)) None
+        else Some(s.addBinding(t, me))
       case _ => None
     }
   }
