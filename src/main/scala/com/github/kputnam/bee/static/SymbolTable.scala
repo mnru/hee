@@ -1,6 +1,6 @@
-package com.github.kputnam.bcat.static
+package com.github.kputnam.bee.static
 
-import com.github.kputnam.bcat.types.AbstractType
+import com.github.kputnam.bee.types.AbstractType
 
 /**
  * Note that because "bee" doesn't support mutable bindings (variables), the
@@ -53,17 +53,17 @@ case class NonEmpty(val parent: SymbolTable, bs: Map[String, Set[Entry]]) extend
 
   /** Filter bindings by name and type */
   def searchBindings(name: String, t: AbstractType): List[Entry] =
-    bs.getOrElse(name, Set.empty).filter(_.t.rename(t.variables) < t).toList ++
+  bs.getOrElse(name, Set.empty).filter(_.t.rename(t.variables).instanceOf(t)).toList ++
       parent.searchBindings(name, t)
 
   /** Filter bindings by type */
   def searchBindings(t: AbstractType): List[Entry] =
-    bs.values.flatMap(es => es).filter(_.t.rename(t.variables) < t).toList ++
+    bs.values.flatMap(es => es).filter(_.t.rename(t.variables).instanceOf(t)).toList ++
       parent.searchBindings(t)
 }
 
 object SymbolTable {
-  import com.github.kputnam.bcat.types.{NonEmpty => _, Empty => _, _}
+  import com.github.kputnam.bee.types.{NonEmpty => _, Empty => _, _}
 
   def empty =
     Empty

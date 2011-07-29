@@ -1,3 +1,3 @@
-package com.github.kputnam.bcat.nodes
+package com.github.kputnam.bee.nodes
 
 abstract class LiteralNode extends AbstractNode

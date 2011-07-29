@@ -1,4 +1,4 @@
-package com.github.kputnam.bcat.types
+package com.github.kputnam.bee.types
 
 trait Variable { self: AbstractType =>
 

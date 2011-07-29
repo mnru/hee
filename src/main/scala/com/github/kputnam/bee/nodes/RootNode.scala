@@ -1,7 +1,7 @@
-package com.github.kputnam.bcat.nodes
+package com.github.kputnam.bee.nodes
 
-import com.github.kputnam.bcat.types._
-import com.github.kputnam.bcat.SymbolTable
+import com.github.kputnam.bee.types._
+import com.github.kputnam.bee.SymbolTable
 
 object RootNode {
   def apply(nodes: AbstractNode*): RootNode =

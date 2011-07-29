@@ -1,4 +1,4 @@
-package com.github.kputnam.bcat.types
+package com.github.kputnam.bee.types
 
 abstract class AbstractType {
 
@@ -31,8 +31,9 @@ abstract class AbstractType {
   def unifyWith(t: AbstractType): Option[Substitution] = unifyWith(t, Substitution.empty)
 
   // Returns true if this is an "instance" of that
-  def <(that: AbstractType): Boolean = throw new UnsupportedOperationException
-  def ==(that: AbstractType): Boolean = this < that && that < this
+  def instanceOf(that: AbstractType): Boolean = throw new UnsupportedOperationException
+  def equivalentTo(that: AbstractType): Boolean = this.instanceOf(that) && that.instanceOf(this)
+  def subtypeOf(that: AbstractType): Boolean = throw new UnsupportedOperationException
 
   // Generate fresh variables for each of the given variables
   def rename(bound: Set[Variable]): this.type = {

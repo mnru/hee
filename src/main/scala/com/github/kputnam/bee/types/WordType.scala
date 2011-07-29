@@ -1,4 +1,4 @@
-package com.github.kputnam.bcat.types
+package com.github.kputnam.bee.types
 
 case class WordType(input: StackType, output: StackType) extends AbstractType {
   override def toString =

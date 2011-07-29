@@ -1,10 +1,10 @@
-package com.github.kputnam.bcat.types
+package com.github.kputnam.bee.types
 
-case object NumericType extends MonomorphicType {
-  override def toString = "num"
+case object BooleanType extends MonomorphicType {
+  override def toString = "bool"
 
   def unifyWith(t: AbstractType, s: Substitution) = t.substitute(s) match {
-    case NumericType => Some(s)
+    case BooleanType => Some(s)
     case t: TypeVariable => Some(s.addBinding(t, this))
     case _ => None
   }

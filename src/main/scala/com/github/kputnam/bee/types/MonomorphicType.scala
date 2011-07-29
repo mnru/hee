@@ -1,4 +1,4 @@
-package com.github.kputnam.bcat.types
+package com.github.kputnam.bee.types
 
 abstract class MonomorphicType extends AbstractType {
   def hasOccurrence(t: Variable) = false

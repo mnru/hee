@@ -1,10 +1,10 @@
-package com.github.kputnam.bcat.types
+package com.github.kputnam.bee.types
 
-case object BooleanType extends MonomorphicType {
-  override def toString = "bool"
+case object ByteType extends MonomorphicType {
+  override def toString = "byte"
 
   def unifyWith(t: AbstractType, s: Substitution) = t.substitute(s) match {
-    case BooleanType => Some(s)
+    case ByteType => Some(s)
     case t: TypeVariable => Some(s.addBinding(t, this))
     case _ => None
   }

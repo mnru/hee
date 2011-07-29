@@ -1,6 +1,6 @@
-package com.github.kputnam.bcat
+package com.github.kputnam.bee
 
-import com.github.kputnam.bcat.types._
+import com.github.kputnam.bee.types._
 
 object SymbolTable {
   def default =

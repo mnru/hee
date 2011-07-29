@@ -1,6 +1,6 @@
-package com.github.kputnam.bcat.parser
+package com.github.kputnam.bee.parser
 
-import com.github.kputnam.bcat.nodes._
+import com.github.kputnam.bee.nodes._
 
 class Parser extends scala.util.parsing.combinator.RegexParsers {
   def topLevel: Parser[RootNode] =

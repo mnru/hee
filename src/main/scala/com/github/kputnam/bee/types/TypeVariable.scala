@@ -1,4 +1,4 @@
-package com.github.kputnam.bcat.types
+package com.github.kputnam.bee.types
 
 case class TypeVariable(id: Int) extends AbstractType with Variable {
   val alphabet = lowerGreek
