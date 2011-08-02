@@ -2,7 +2,8 @@ package com.github.kputnam.bee.parser
 
 import com.github.kputnam.bee.nodes._
 
-class Parser extends scala.util.parsing.combinator.RegexParsers {
+class ValueExpression extends scala.util.parsing.combinator.RegexParsers {
+
   def topLevel: Parser[RootNode] =
     rep1(node) ^^ (xs => RootNode(xs))
 
@@ -23,4 +24,5 @@ class Parser extends scala.util.parsing.combinator.RegexParsers {
 
   def node: Parser[AbstractNode] =
     quotation | string | boolean | numeric | word
+
 }

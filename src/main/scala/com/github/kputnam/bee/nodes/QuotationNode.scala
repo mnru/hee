@@ -19,7 +19,7 @@ class QuotationNode(val nodes: List[AbstractNode]) extends AbstractNode {
     nodes.tail.foldLeft(nodes.head.toType(s).map(_.asWord)) ((t, n) =>
       t.flatMap(t =>
         n.toType(s).flatMap(u =>
-          t.chainInto(u.asWord.rename(t.variables), Substitution.empty)).map(_._1))).map(_.quote)
+          t.chainInto(u.asWord.rename(t.freeVariables), Substitution.empty)).map(_._1))).map(_.quote)
   
   def head = nodes.head
   def tail = if (isLast) None else Some(QuotationNode(nodes.tail))

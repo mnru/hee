@@ -1,7 +1,15 @@
 package com.github.kputnam.bee.types
 
+object TypeVariable {
+  def fromString(c: Char) =
+    new TypeVariable(Variable.toInt(c))
+
+  def fromString(s: String) =
+    new TypeVariable(Variable.toInt(s))
+}
+
 case class TypeVariable(id: Int) extends AbstractType with Variable {
-  val alphabet = lowerGreek
+  def alphabet = Variable.lowerGreek
 
   def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
     case m: TypeVariable => t.substitute(s) match {

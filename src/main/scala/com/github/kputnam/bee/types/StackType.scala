@@ -1,17 +1,15 @@
 package com.github.kputnam.bee.types
 
-import annotation.tailrec
-
 object StackType {
   def empty: StackType = Empty
 
   def variable(id: Int): StackType = Remainder(id)
 
-  // StackType(Z Y X ... C B A).top = A
+  /** StackType(Z Y X ... C B A).top = A */
   def apply(elements: AbstractType*): StackType =
     elements.foldLeft(empty)((stack, e) => stack :+ e)
 
-  // StackType(List(Z Y X ... C B A)).top = A
+  /** StackType(List(Z Y X ... C B A)).top = A */
   def apply(elements: List[AbstractType]): StackType =
     elements.foldLeft(empty)((stack, e) => stack :+ e)
 }
@@ -19,6 +17,8 @@ object StackType {
 sealed abstract class StackType extends AbstractType {
   def top: AbstractType
   def rest: StackType
+
+  /** Push `top` on the stack (left and right-associative operators) */
   def ::(top: AbstractType): StackType = new NonEmpty(top, this)
   def :+(top: AbstractType): StackType = new NonEmpty(top, this)
 
@@ -27,11 +27,19 @@ sealed abstract class StackType extends AbstractType {
   def toWord = throw new UnsupportedOperationException
 }
 
+object Remainder {
+  def fromString(c: Char) =
+    new Remainder(Variable.toInt(c))
+
+  def fromString(s: String) =
+    new Remainder(Variable.toInt(s))
+}
+
 case class Remainder(id: Int) extends StackType with Variable {
   def top = throw new NoSuchElementException("top of placeholder stack")
   def rest = throw new UnsupportedOperationException("rest of placeholder stack")
 
-  def alphabet = upperGreek
+  def alphabet = Variable.upperGreek
 
   def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
     case Empty => Empty.unifyWith(t, s)
@@ -47,10 +55,10 @@ case class Remainder(id: Int) extends StackType with Variable {
 }
 
 case object Empty extends StackType {
-  override def toString = "∅"
-
   def top = throw new NoSuchElementException("top of empty stack")
   def rest = throw new UnsupportedOperationException("rest of empty stack")
+
+  override def toString = "∅"
 
   override def ::(top: AbstractType): StackType = top match {
     case t: Remainder => t
@@ -62,36 +70,12 @@ case object Empty extends StackType {
     case t => new NonEmpty(top, this)
   }
 
-  def hasOccurrence(t: Variable) = false
-  def isMonomorphic = true
-  def isPolymorphic = false
-
-  def variables = Set.empty
+  def freeVariables = Set.empty
   def substitute(s: Substitution): StackType = this
 
   def unifyWith(t: AbstractType, s: Substitution) = t.substitute(s) match {
-    case Empty => Some(s)
     case r: Remainder => Some(s.addBinding(r, this))
-    case _ => None
-  }
-}
-
-object :: {
-  def apply(top: AbstractType, rest: StackType) =
-    new NonEmpty(top, rest)
-
-  def unapply(s: StackType): Option[(AbstractType, StackType)] = s match {
-    case s: NonEmpty => Some((s.top, s.rest))
-    case _ => None
-  }
-}
-
-object :+ {
-  def apply(rest: StackType, top: AbstractType) =
-    new NonEmpty(top, rest)
-
-  def unapply(s: StackType): Option[(StackType, AbstractType)] = s match {
-    case s: NonEmpty => Some((s.rest, s.top))
+    case Empty => Some(s)
     case _ => None
   }
 }
@@ -99,11 +83,7 @@ object :+ {
 class NonEmpty(val top: AbstractType, val rest: StackType) extends StackType {
   override def toString = rest.toString + " " + top.toString
 
-  def hasOccurrence(t: Variable) = top.hasOccurrence(t) || rest.hasOccurrence(t)
-  def isMonomorphic = top.isMonomorphic || rest.isMonomorphic
-  def isPolymorphic = top.isPolymorphic || rest.isPolymorphic
-
-  def variables = top.variables ++ rest.variables
+  def freeVariables = top.freeVariables ++ rest.freeVariables
   def substitute(s: Substitution): StackType =
     rest.substitute(s).asInstanceOf[StackType] :+ top.substitute(s)
 
@@ -119,5 +99,33 @@ class NonEmpty(val top: AbstractType, val rest: StackType) extends StackType {
         else Some(s.addBinding(t, me))
       case _ => None
     }
+  }
+}
+
+/** Pattern matching object
+  *   val (rest :: top) = stack
+  *   case rest :: top => ...
+  */
+object :: {
+  def apply(top: AbstractType, rest: StackType) =
+    new NonEmpty(top, rest)
+
+  def unapply(s: StackType) = s match {
+    case s: NonEmpty => Some((s.top, s.rest))
+    case _ => None
+  }
+}
+
+/** Pattern matching object
+  *   val (top :+ rest) = stack
+  *   case top :+ rest => ...
+  */
+object :+ {
+  def apply(rest: StackType, top: AbstractType) =
+    new NonEmpty(top, rest)
+
+  def unapply(s: StackType) = s match {
+    case s: NonEmpty => Some((s.rest, s.top))
+    case _ => None
   }
 }
