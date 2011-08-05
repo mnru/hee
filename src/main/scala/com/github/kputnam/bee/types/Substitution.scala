@@ -8,7 +8,7 @@ object Substitution {
 
 case class Substitution(bindings: Map[Variable, AbstractType]) {
   override def toString =
-    "Substitution(" + bindings.foldLeft(new StringBuilder) {(s, binding) =>
+    "Substitution(" + (new StringBuilder /: bindings) {(s, binding) =>
       if (!s.isEmpty)
         s.append(", ")
       s.append(binding._2)

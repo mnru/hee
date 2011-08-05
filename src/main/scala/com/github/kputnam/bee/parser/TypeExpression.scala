@@ -16,8 +16,8 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
   def word: Parser[WordType] =
     "(" ~ stack ~ rep(argument) ~ "->" ~ stack ~ rep(argument) ~ ")" ^^ {
       case _ ~ a ~ as ~ _ ~ b ~ bs ~ _ =>
-        WordType(as.foldLeft(a)((s, t) => s :+ t),
-                 bs.foldLeft(b)((s, t) => s :+ t)) }
+        WordType((a /: as)((s, t) => s :+ t),
+                 (b /: bs)((s, t) => s :+ t)) }
 
   def argument: Parser[AbstractType] =
     ( "bitmap" ^^^ BitmapType

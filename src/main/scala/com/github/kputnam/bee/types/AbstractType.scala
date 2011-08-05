@@ -38,9 +38,9 @@ abstract class AbstractType {
   // Generate fresh variables for each of the given variables
   def rename(bound: Set[Variable]): this.type = {
     var allocated = (freeVariables | bound).map(_.id)
-    var conflicts =  freeVariables & bound
+    val conflicts =  freeVariables & bound
 
-    val substitution = conflicts.foldLeft(Substitution.empty) { (s, v) =>
+    val substitution = (Substitution.empty /: conflicts) { (s, v) =>
       val id = Iterator.from(0).find(id => !allocated.contains(id)).get
       allocated += id
 

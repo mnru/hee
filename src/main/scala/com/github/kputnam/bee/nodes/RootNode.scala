@@ -16,14 +16,16 @@ object RootNode {
 
 class RootNode(val nodes: List[AbstractNode]) extends AbstractNode {
   def toType(s: SymbolTable) =
-    nodes.tail.foldLeft(nodes.head.toType(s).map(_.asWord)) ((t, n) =>
-      t.flatMap(t =>
-        n.toType(s).flatMap(u =>
-          t.chainInto(u.asWord.rename(t.freeVariables), Substitution.empty)).map(_._1)))
+    if (isEmpty)
+      // empty quotation is like id :: S -> S
+      Some(WordType(Remainder(0), Remainder(0)))
+    else
+      (nodes.head.wordType(s) /: nodes.tail)((t, n) =>
+        t.flatMap(t => n.wordType(s).flatMap(n => t.chainInto(n.rename(t.freeVariables)))))
   
   def head = nodes.head
-  def tail = if (isLast) None else Some(RootNode(nodes.tail))
-  def isLast = nodes.lengthCompare(1) <= 0
+  def tail = if (nodes.isEmpty) this else QuotationNode(nodes.tail)
+  def isEmpty = nodes.isEmpty
 
   override def toString =
     nodes.mkString("[", ", ", "]")

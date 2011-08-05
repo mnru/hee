@@ -7,11 +7,11 @@ object StackType {
 
   /** StackType(Z Y X ... C B A).top = A */
   def apply(elements: AbstractType*): StackType =
-    elements.foldLeft(empty)((stack, e) => stack :+ e)
+    (empty /: elements)((stack, e) => stack :+ e)
 
   /** StackType(List(Z Y X ... C B A)).top = A */
   def apply(elements: List[AbstractType]): StackType =
-    elements.foldLeft(empty)((stack, e) => stack :+ e)
+    (empty /: elements)((stack, e) => stack :+ e)
 }
 
 sealed abstract class StackType extends AbstractType {

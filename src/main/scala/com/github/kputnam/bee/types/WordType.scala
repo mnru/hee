@@ -33,4 +33,10 @@ case class WordType(input: StackType, output: StackType) extends AbstractType {
       Pair(WordType(me.input.substitute(s).asInstanceOf[StackType],
                     he.output.substitute(s).asInstanceOf[StackType]), s))
   }
+
+  /** Unifies one word's output with the other's input */
+  def chainInto(t: WordType) =
+    output.unifyWith(t.input, Substitution.empty).map(s =>
+      WordType(input.substitute(s).asInstanceOf[StackType],
+               t.output.substitute(s).asInstanceOf[StackType]))
 }

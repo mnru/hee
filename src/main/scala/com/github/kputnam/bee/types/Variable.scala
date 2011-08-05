@@ -7,7 +7,7 @@ object Variable {
   val upperLatin = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
   def toInt(c: Char): Int =
-    List(lowerGreek, upperGreek, lowerLatin, upperLatin).foldLeft(-1) ((k, alphabet) =>
+    (-1 /: List(lowerGreek, upperGreek, lowerLatin, upperLatin)) ((k, alphabet) =>
       if (k < 0) alphabet.indexOf(c) else k)
 
   def toInt(s: String): Int = {
@@ -15,7 +15,7 @@ object Variable {
       if (alphabet.indexOf(s(0)) < 0) -1
       else alphabet.indexOf(s(0)) + alphabet.length * (s.length - 1)
 
-    List(lowerGreek, upperGreek, lowerLatin, upperLatin).foldLeft(-1) ((k, alphabet) =>
+    (-1 /: List(lowerGreek, upperGreek, lowerLatin, upperLatin)) ((k, alphabet) =>
       if (k < 0) index(s, alphabet) else k)
   }
 }
