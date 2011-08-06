@@ -18,7 +18,7 @@ class QuotationNode(val nodes: List[AbstractNode]) extends AbstractNode {
   def toType(s: SymbolTable) =
     if (isEmpty)
       // empty quotation is like id :: S -> S
-      Some(WordType(Remainder(0), Remainder(0)))
+      Some(WordType(Remainder(0), Remainder(0)).quote)
     else
       (nodes.head.wordType(s) /: nodes.tail)((t, n) =>
         t.flatMap(t => n.wordType(s).flatMap(n => t.chainInto(n.rename(t.freeVariables))))).map(_.quote)
