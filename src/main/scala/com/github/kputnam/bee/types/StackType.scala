@@ -25,6 +25,8 @@ sealed abstract class StackType extends AbstractType {
   override
   def asWord = throw new UnsupportedOperationException
   def toWord = throw new UnsupportedOperationException
+
+  def substitute(s: Substitution): StackType
 }
 
 object Remainder {
@@ -41,17 +43,11 @@ case class Remainder(id: Int) extends StackType with Variable {
 
   def alphabet = Variable.upperGreek
 
-  def unifyWith(t: AbstractType, s: Substitution) = substitute(s) match {
-    case Empty => Empty.unifyWith(t, s)
-    case m: NonEmpty => m.unifyWith(t, s)
-    case m: Remainder => t.substitute(s) match {
-      case Empty => Some(s.addBinding(m, Empty))
-      case t: NonEmpty => Some(s.addBinding(m, t))
-      case t: Remainder => Some(s.addBinding(m, t))
-      case _ => None
+  def substitute(s: Substitution): StackType =
+    s.getOrElse(this, this) match {
+      case t: StackType => t
+      case t => throw new UnsupportedOperationException(toString + " resolved to " + t)
     }
-    case _ => None
-  }
 }
 
 case object Empty extends StackType {
@@ -71,35 +67,17 @@ case object Empty extends StackType {
   }
 
   def freeVariables = Set.empty
-  def substitute(s: Substitution): StackType = this
 
-  def unifyWith(t: AbstractType, s: Substitution) = t.substitute(s) match {
-    case r: Remainder => Some(s.addBinding(r, this))
-    case Empty => Some(s)
-    case _ => None
-  }
+  def substitute(s: Substitution) = this
 }
 
-class NonEmpty(val top: AbstractType, val rest: StackType) extends StackType {
+case class NonEmpty(val top: AbstractType, val rest: StackType) extends StackType {
   override def toString = rest.toString + " " + top.toString
 
   def freeVariables = top.freeVariables ++ rest.freeVariables
-  def substitute(s: Substitution): StackType =
-    rest.substitute(s).asInstanceOf[StackType] :+ top.substitute(s)
 
-  def unifyWith(t: AbstractType, s: Substitution) = {
-    val me = substitute(s)
-    val (aRest :+ aTop) = me
-
-    t.substitute(s) match {
-      case bRest :+ bTop =>
-        aTop.unifyWith(bTop, s).flatMap(s => aRest.unifyWith(bRest, s))
-      case t: Remainder =>
-        if (me.hasOccurrence(t)) None
-        else Some(s.addBinding(t, me))
-      case _ => None
-    }
-  }
+  def substitute(s: Substitution) =
+    new NonEmpty(top.substitute(s), rest.substitute(s))
 }
 
 /** Pattern matching object

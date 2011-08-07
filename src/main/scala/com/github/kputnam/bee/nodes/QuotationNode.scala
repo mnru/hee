@@ -1,7 +1,6 @@
 package com.github.kputnam.bee.nodes
 
 import com.github.kputnam.bee.types._
-import com.github.kputnam.bee.SymbolTable
 
 object QuotationNode {
   def apply(nodes: AbstractNode*): QuotationNode =
@@ -15,14 +14,6 @@ object QuotationNode {
 }
 
 class QuotationNode(val nodes: List[AbstractNode]) extends AbstractNode {
-  def toType(s: SymbolTable) =
-    if (isEmpty)
-      // empty quotation is like id :: S -> S
-      Some(WordType(Remainder(0), Remainder(0)).quote)
-    else
-      (nodes.head.wordType(s) /: nodes.tail)((t, n) =>
-        t.flatMap(t => n.wordType(s).flatMap(n => t.chainInto(n.rename(t.freeVariables))))).map(_.quote)
-  
   def head = nodes.head
   def tail = if (nodes.isEmpty) this else QuotationNode(nodes.tail)
   def isEmpty = nodes.isEmpty

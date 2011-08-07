@@ -22,34 +22,25 @@ abstract class AbstractType {
   // Returns the set of all free variables in this type expression
   def freeVariables: Set[Variable]
 
-  // Replaces bound variables in this type expression according to their
-  // bindings in the given substitution (leaves free variables as-is)
   def substitute(s: Substitution): AbstractType
-
-  // Creates a substitution that unifies this type expression with the other
-  def unifyWith(t: AbstractType, s: Substitution): Option[Substitution]
-  def unifyWith(t: AbstractType): Option[Substitution] = unifyWith(t, Substitution.empty)
-
-  // Returns true if this is an "instance" of that
-  def instanceOf(that: AbstractType): Boolean = throw new UnsupportedOperationException
-  def equivalentTo(that: AbstractType): Boolean = this.instanceOf(that) && that.instanceOf(this)
-  def subtypeOf(that: AbstractType): Boolean = throw new UnsupportedOperationException
 
   // Generate fresh variables for each of the given variables
   def rename(bound: Set[Variable]): this.type = {
     var allocated = (freeVariables | bound).map(_.id)
     val conflicts =  freeVariables & bound
 
+    // Build a substitution of only Variable -> Variable
     val substitution = (Substitution.empty /: conflicts) { (s, v) =>
-      val id = Iterator.from(0).find(id => !allocated.contains(id)).get
-      allocated += id
+      val freshId = Iterator.from(0).find(id => !allocated.contains(id)).get
+      allocated += freshId
 
       v match {
-        case _: TypeVariable  => s.addBinding(v, TypeVariable(id))
-        case _: Remainder     => s.addBinding(v, Remainder(id))
+        case _: TypeVariable  => s.addBinding(v, TypeVariable(freshId))
+        case _: Remainder     => s.addBinding(v, Remainder(freshId))
       }
     }
 
-    substitute(substitution).asInstanceOf[this.type]
+    // We can trust this cast because we only substituted Variable -> Variable
+    substitution(this).asInstanceOf[this.type]
   }
 }

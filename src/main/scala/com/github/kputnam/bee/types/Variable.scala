@@ -33,9 +33,6 @@ trait Variable { self: AbstractType =>
   def freeVariables: Set[Variable] =
     Set(this)
 
-  def substitute(s: Substitution) =
-    s.getOrElse(this, this)
-
   def occursIn(that: AbstractType) =
     that.hasOccurrence(this)
 

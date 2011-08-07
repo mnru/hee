@@ -8,11 +8,6 @@ abstract class MonomorphicType extends AbstractType {
                                  Remainder(0) :+ this)
 
   def freeVariables = Set.empty
-  def substitute(s: Substitution) = this
 
-  def unifyWith(t: AbstractType, s: Substitution) = t.substitute(s) match {
-    case t: MonomorphicType if t == this => Some(s)
-    case t: TypeVariable => Some(s.addBinding(t, this))
-    case _ => None
-  }
+  def substitute(s: Substitution) = this
 }

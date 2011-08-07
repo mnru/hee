@@ -23,8 +23,8 @@ abstract class SymbolTable {
   def bindings: Set[Entry]
   def addBinding(name: String, t: AbstractType): SymbolTable
   def searchBindings(name: String): List[Entry]
-  def searchBindings(name: String, t: AbstractType): List[Entry]
-  def searchBindings(t: AbstractType): List[Entry]
+//def searchBindings(name: String, t: AbstractType): List[Entry]
+//def searchBindings(t: AbstractType): List[Entry]
 }
 
 case object Empty extends SymbolTable {
@@ -33,8 +33,8 @@ case object Empty extends SymbolTable {
 
   def bindings = Set.empty
   def searchBindings(name: String) = List.empty
-  def searchBindings(name: String, t: AbstractType) = List.empty
-  def searchBindings(t: AbstractType) = List.empty
+//def searchBindings(name: String, t: AbstractType) = List.empty
+//def searchBindings(t: AbstractType) = List.empty
 }
 
 case class NonEmpty(val parent: SymbolTable, bs: Map[String, Set[Entry]]) extends SymbolTable {
@@ -51,15 +51,15 @@ case class NonEmpty(val parent: SymbolTable, bs: Map[String, Set[Entry]]) extend
     bs.getOrElse(name, Set.empty).toList ++
       parent.searchBindings(name)
 
-  /** Filter bindings by name and type */
-  def searchBindings(name: String, t: AbstractType): List[Entry] =
-  bs.getOrElse(name, Set.empty).filter(_.t.rename(t.freeVariables).instanceOf(t)).toList ++
-      parent.searchBindings(name, t)
+///** Filter bindings by name and type */
+//def searchBindings(name: String, t: AbstractType): List[Entry] =
+//  bs.getOrElse(name, Set.empty).filter(_.t.rename(t.freeVariables) < t).toList ++
+//    parent.searchBindings(name, t)
 
-  /** Filter bindings by type */
-  def searchBindings(t: AbstractType): List[Entry] =
-    bs.values.flatMap(es => es).filter(_.t.rename(t.freeVariables).instanceOf(t)).toList ++
-      parent.searchBindings(t)
+///** Filter bindings by type */
+//def searchBindings(t: AbstractType): List[Entry] =
+//  bs.values.flatMap(es => es).filter(_.t.rename(t.freeVariables) < t).toList ++
+//    parent.searchBindings(t)
 }
 
 object SymbolTable {
