@@ -1,12 +1,12 @@
 package com.github.kputnam.bee.types
 
 object Substitution {
-  def empty = Substitution(Map.empty[Variable, AbstractType])
-  def apply(bindings: Pair[Variable, AbstractType]*): Substitution =
+  def empty = Substitution(Map.empty[VariableLike, Type])
+  def apply(bindings: Pair[VariableLike, Type]*): Substitution =
     Substitution(Map(bindings:_*))
 }
 
-case class Substitution(bindings: Map[Variable, AbstractType]) {
+case class Substitution(bindings: Map[VariableLike, Type]) {
 
   override def toString =
     "Substitution(" + (new StringBuilder /: bindings) {(s, binding) =>
@@ -19,65 +19,65 @@ case class Substitution(bindings: Map[Variable, AbstractType]) {
   def isEmpty =
     bindings.isEmpty
 
-  def domain: Set[Variable] =
-    bindings.keys.toSet
+  def getOrElse(x: VariableLike, τ: Type) =
+    bindings.getOrElse(x, τ)
 
-  def range: Set[AbstractType] =
-    bindings.values.toSet
-
-  def getOrElse(k: Variable, default: AbstractType) =
-    bindings.getOrElse(k, default)
-
-  def addBinding(k: Variable, v: AbstractType): Substitution =
-    if (k == v) this
-    else {
-      // Update existing bindings
-      val single = Substitution(k -> v)
-      Substitution(bindings.mapValues(single(_)) + (k -> v))
-    }
+  // Add new binding
+  def +(pair: Pair[VariableLike, Type]): Substitution = {
+    // Update existing bindings
+    val single = Substitution(pair)
+    Substitution(bindings.mapValues(single(_)) + pair)
+  }
 
   // Applies this substitution to a type expression
-  def apply(t: AbstractType): AbstractType = {
-    println(toString + ".apply(" + t + ")")
-
-    if (isEmpty) t
-    else t.substitute(this)
+  def apply(τ: Type): Type = {
+    println(toString + ".apply(" + τ + ")")
+    if (isEmpty) τ
+    else τ.substitute(this)
   }
 
   // Creates a new substitution that unifies both type expressions
-  def unify(a: AbstractType, b: AbstractType): Option[Substitution] = {
-    println(toString + ".unify(" + a + ", " + b + ")")
-    val a_ = this(a)
-    val b_ = this(b)
+  def unify(τa: Type, τb: Type): Option[Substitution] = {
+    println(toString + ".unify(" + τa + ", " + τb + ")")
 
-    (a_, b_) match {
-      case (a: MonomorphicType, b: MonomorphicType) =>
+    (this(τa), this(τb)) match {
+      case (τa: MonomorphicType, τb: MonomorphicType) =>
         Some(this)
 
       case (Empty, Empty) =>
         Some(this)
 
-      case (a: TypeVariable, b: AbstractType) if !b.isInstanceOf[StackType] =>
-        if (a.occursIn(b)) None
-        else Some(addBinding(a, b))
+      case (x: Variable, y: Variable) =>
+        if (x.id == y.id) Some(this)
+        else Some(this + (x -> y))
 
-      case (a: AbstractType, b: TypeVariable) if !a.isInstanceOf[StackType] =>
-        if (b.occursIn(a)) None
-        else Some(addBinding(b, a))
+      case (x: Remainder, y: Remainder) =>
+        if (x.id == y.id) Some(this)
+        else Some(this + (x -> y))
 
-      case (a: WordType, b: WordType) =>
-        unify(a.input, b.input).flatMap(s =>
-          s.unify(a.output, b.output))
+      case (x: Variable, τ: Type) if !τ.isInstanceOf[StackType] =>
+        if (x.occursIn(τ)) None
+        else Some(this + (x -> τ))
 
-      case (a: Remainder, b: StackType) =>
-        Some(addBinding(a, b))
+      case (τ: Type, x: Variable) if !τ.isInstanceOf[StackType] =>
+        if (x.occursIn(τ)) None
+        else Some(this + (x -> τ))
 
-      case (a: StackType, b: Remainder) =>
-        Some(addBinding(b, a))
+      case (τa: WordType, τb: WordType) =>
+        unify(τa.input, τb.input).flatMap(s =>
+          s.unify(τa.output, τb.output))
 
-      case (NonEmpty(aTop, aRest), NonEmpty(bTop, bRest)) =>
-        unify(aTop, bTop).flatMap(s =>
-          s.unify(aRest, bRest))
+      case (x: Remainder, τ: StackType) =>
+        if (x.occursIn(τ)) None
+        else Some(this + (x -> τ))
+
+      case (τ: StackType, x: Remainder) =>
+        if (x.occursIn(τ)) None
+        else Some(this + (x -> τ))
+
+      case (NonEmpty(τaT, τaR), NonEmpty(τbT, τbR)) =>
+        unify(τaT, τbT).flatMap(s =>
+          s.unify(τaR, τbR))
 
       case (_, _) => None
     }}

@@ -6,21 +6,21 @@ object StackType {
   def variable(id: Int): StackType = Remainder(id)
 
   /** StackType(Z Y X ... C B A).top = A */
-  def apply(elements: AbstractType*): StackType =
+  def apply(elements: Type*): StackType =
     (empty /: elements)((stack, e) => stack :+ e)
 
   /** StackType(List(Z Y X ... C B A)).top = A */
-  def apply(elements: List[AbstractType]): StackType =
+  def apply(elements: List[Type]): StackType =
     (empty /: elements)((stack, e) => stack :+ e)
 }
 
-sealed abstract class StackType extends AbstractType {
-  def top: AbstractType
+sealed abstract class StackType extends Type {
+  def top: Type
   def rest: StackType
 
   /** Push `top` on the stack (left and right-associative operators) */
-  def ::(top: AbstractType): StackType = new NonEmpty(top, this)
-  def :+(top: AbstractType): StackType = new NonEmpty(top, this)
+  def ::(top: Type): StackType = new NonEmpty(top, this)
+  def :+(top: Type): StackType = new NonEmpty(top, this)
 
   override
   def asWord = throw new UnsupportedOperationException
@@ -31,17 +31,17 @@ sealed abstract class StackType extends AbstractType {
 
 object Remainder {
   def fromString(c: Char) =
-    new Remainder(Variable.toInt(c))
+    new Remainder(VariableLike.toInt(c))
 
   def fromString(s: String) =
-    new Remainder(Variable.toInt(s))
+    new Remainder(VariableLike.toInt(s))
 }
 
-case class Remainder(id: Int) extends StackType with Variable {
+case class Remainder(id: Int) extends StackType with VariableLike {
   def top = throw new NoSuchElementException("top of placeholder stack")
   def rest = throw new UnsupportedOperationException("rest of placeholder stack")
 
-  def alphabet = Variable.upperGreek
+  def alphabet = VariableLike.upperGreek
 
   def substitute(s: Substitution): StackType =
     s.getOrElse(this, this) match {
@@ -56,12 +56,12 @@ case object Empty extends StackType {
 
   override def toString = "∅"
 
-  override def ::(top: AbstractType): StackType = top match {
+  override def ::(top: Type): StackType = top match {
     case t: Remainder => t
     case t => new NonEmpty(top, this)
   }
 
-  override def :+(top: AbstractType): StackType = top match {
+  override def :+(top: Type): StackType = top match {
     case t: Remainder => t
     case t => new NonEmpty(top, this)
   }
@@ -71,7 +71,7 @@ case object Empty extends StackType {
   def substitute(s: Substitution) = this
 }
 
-case class NonEmpty(val top: AbstractType, val rest: StackType) extends StackType {
+case class NonEmpty(val top: Type, val rest: StackType) extends StackType {
   override def toString = rest.toString + " " + top.toString
 
   def freeVariables = top.freeVariables ++ rest.freeVariables
@@ -85,7 +85,7 @@ case class NonEmpty(val top: AbstractType, val rest: StackType) extends StackTyp
   *   case rest :: top => ...
   */
 object :: {
-  def apply(top: AbstractType, rest: StackType) =
+  def apply(top: Type, rest: StackType) =
     new NonEmpty(top, rest)
 
   def unapply(s: StackType) = s match {
@@ -99,7 +99,7 @@ object :: {
   *   case top :+ rest => ...
   */
 object :+ {
-  def apply(rest: StackType, top: AbstractType) =
+  def apply(rest: StackType, top: Type) =
     new NonEmpty(top, rest)
 
   def unapply(s: StackType) = s match {

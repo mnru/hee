@@ -1,6 +1,6 @@
 package com.github.kputnam.bee.types
 
-case class WordType(input: StackType, output: StackType) extends AbstractType {
+case class WordType(input: StackType, output: StackType) extends Type {
   override def toString =
     "(" + input + " → " + output + ")"
 

@@ -1,7 +1,7 @@
 package com.github.kputnam.bee.types
 
-abstract class MonomorphicType extends AbstractType {
-  override def hasOccurrence(t: Variable) = false
+abstract class MonomorphicType extends Type {
+  override def hasOccurrence(t: VariableLike) = false
   override def isPolymorphic = false
   override def isMonomorphic = true
   override def asWord = WordType(Remainder(0),

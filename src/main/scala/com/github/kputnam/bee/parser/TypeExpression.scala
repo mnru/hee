@@ -4,7 +4,7 @@ import com.github.kputnam.bee.types._
 
 class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
 
-  def topLevel: Parser[AbstractType] =
+  def topLevel: Parser[Type] =
     ( "bitmap" ^^^ BitmapType
     | "bool"   ^^^ BooleanType
     | "byte"   ^^^ ByteType
@@ -19,7 +19,7 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
         WordType((a /: as)((s, t) => s :+ t),
                  (b /: bs)((s, t) => s :+ t)) }
 
-  def argument: Parser[AbstractType] =
+  def argument: Parser[Type] =
     ( "bitmap" ^^^ BitmapType
     | "bool"   ^^^ BooleanType
     | "byte"   ^^^ ByteType
@@ -32,7 +32,7 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
   def stack: Parser[StackType] =
     "[ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩABCDEFGHIJKLMNOPQRSTUVWXYZ]'*".r ^^ (x => Remainder.fromString(x))
 
-  def variable: Parser[TypeVariable] =
-    "[αβγδεζηθικλμνξοπρςστυφχψωabcdefghijklmnopqrstuvwxyz]'*".r ^^ (x => TypeVariable.fromString(x))
+  def variable: Parser[Variable] =
+    "[αβγδεζηθικλμνξοπρςστυφχψωabcdefghijklmnopqrstuvwxyz]'*".r ^^ (x => Variable.fromString(x))
 
 }
