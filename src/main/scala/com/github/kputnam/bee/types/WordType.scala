@@ -9,8 +9,9 @@ case class WordType(input: StackType, output: StackType) extends Type {
   def freeVariables =
     input.freeVariables ++ output.freeVariables
 
-  def >>(t: WordType, s: Substitution = Substitution.empty) =
-    s.unify(output, t.input).map(_(t.output))
+  // Chain this word
+  def >>(τ: WordType, s: Substitution = Substitution.empty) =
+    s.unify(output, τ.input).map(_(τ.output))
 
   def substitute(s: Substitution) =
     WordType(input.substitute(s), output.substitute(s))

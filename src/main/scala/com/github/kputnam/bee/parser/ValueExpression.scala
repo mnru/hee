@@ -5,22 +5,22 @@ import com.github.kputnam.bee.nodes._
 class ValueExpression extends scala.util.parsing.combinator.RegexParsers {
 
   def topLevel: Parser[RootNode] =
-    rep1(node) ^^ (xs => RootNode(xs))
+    rep1(node) ^^ (es => RootNode(es))
 
   def quotation: Parser[QuotationNode] =
-    "[" ~> rep(node) <~ "]" ^^ (xs => QuotationNode(xs))
+    "[" ~> rep(node) <~ "]" ^^ (es => QuotationNode(es))
 
   def string: Parser[StringLit] =
-    "\"" ~> "[^\"]*".r <~ "\"" ^^ (x => StringLit(x))
+    "\"" ~> "[^\"]*".r <~ "\"" ^^ (e => StringLit(e))
 
   def boolean: Parser[BooleanLit] =
-    "true|false".r ^^ (x => BooleanLit("true".equals(x)))
+    "true|false".r ^^ (e => BooleanLit("true".equals(e)))
 
   def numeric: Parser[NumericLit] =
-    "[+-]?[0-9]+(?:\\.[0-9]*)?".r ^^ (x => NumericLit(BigDecimal(x)))
+    "[+-]?[0-9]+(?:\\.[0-9]*)?".r ^^ (e => NumericLit(BigDecimal(e)))
 
   def word: Parser[WordNode] =
-    "[^\\s\\[\\]]+".r ^^ (x => WordNode(x))
+    "[^\\s\\[\\]]+".r ^^ (e => WordNode(e))
 
   def node: Parser[AbstractNode] =
     quotation | string | boolean | numeric | word

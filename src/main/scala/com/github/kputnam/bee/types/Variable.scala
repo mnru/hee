@@ -1,10 +1,10 @@
 package com.github.kputnam.bee.types
 
 object Variable {
-  def fromString(c: Char) =
+  def fromName(c: Char) =
     new Variable(VariableLike.toInt(c))
 
-  def fromString(s: String) =
+  def fromName(s: String) =
     new Variable(VariableLike.toInt(s))
 }
 

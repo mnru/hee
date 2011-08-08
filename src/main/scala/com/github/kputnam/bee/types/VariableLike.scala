@@ -27,23 +27,18 @@ trait VariableLike { self: Type =>
 
   override def isMonomorphic = false
   override def isPolymorphic = true
-  override def hasOccurrence(that: VariableLike) =
-    this.id == that.id
+  override def hasOccurrence(x: VariableLike) =
+    this.id == x.id
 
   def freeVariables: Set[VariableLike] =
     Set(this)
 
-  def occursIn(that: Type) =
-    that.hasOccurrence(this)
+  def occursIn(τ: Type) =
+    τ.hasOccurrence(this)
 
   override def toString = {
     val remainder = id % alphabet.length
     val dividend  = id / alphabet.length
     alphabet(remainder) + ("'" * dividend)
-  }
-
-  override def equals(that: Any) = that match {
-    case that: VariableLike => this.id == that.id
-    case _ => false
   }
 }

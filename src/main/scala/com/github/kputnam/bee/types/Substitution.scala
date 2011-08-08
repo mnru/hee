@@ -22,9 +22,8 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
   def getOrElse(x: VariableLike, τ: Type) =
     bindings.getOrElse(x, τ)
 
-  // Add new binding
+  // Create new binding and update existing bindings
   def +(pair: Pair[VariableLike, Type]): Substitution = {
-    // Update existing bindings
     val single = Substitution(pair)
     Substitution(bindings.mapValues(single(_)) + pair)
   }
@@ -35,6 +34,11 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
     if (isEmpty) τ
     else τ.substitute(this)
   }
+
+  // Combine substitutions
+  def ∘(s: Substitution) = compose(s)
+  def compose(s: Substitution) =
+    new Substitution(bindings ++ s.bindings)
 
   // Creates a new substitution that unifies both type expressions
   def unify(τa: Type, τb: Type): Option[Substitution] = {

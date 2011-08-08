@@ -17,49 +17,49 @@ import com.github.kputnam.bee.types.Type
  * - instance-of (reflexive, transitive)
  * - anonymous recursive types (mu)
  */
-case class Entry(name: String, t: Type)
+case class Entry(name: String, τ: Type)
 
 abstract class SymbolTable {
   def bindings: Set[Entry]
-  def addBinding(name: String, t: Type): SymbolTable
-  def searchBindings(name: String): List[Entry]
-//def searchBindings(name: String, t: Type): List[Entry]
-//def searchBindings(t: Type): List[Entry]
+  def addBinding(x: String, τ: Type): SymbolTable
+  def searchBindings(x: String): List[Entry]
+//def searchBindings(x: String, τ: Type): List[Entry]
+//def searchBindings(τ: Type): List[Entry]
 }
 
 case object Empty extends SymbolTable {
-  def addBinding(name: String, t: Type) =
+  def addBinding(name: String, τ: Type) =
     throw new UnsupportedOperationException
 
   def bindings = Set.empty
-  def searchBindings(name: String) = List.empty
-//def searchBindings(name: String, t: Type) = List.empty
-//def searchBindings(t: Type) = List.empty
+  def searchBindings(x: String) = List.empty
+//def searchBindings(x: String, τ: Type) = List.empty
+//def searchBindings(τ: Type) = List.empty
 }
 
 case class NonEmpty(val parent: SymbolTable, bs: Map[String, Set[Entry]]) extends SymbolTable {
   /** Bind a new definition to the given name */
-  def addBinding(name: String, t: Type): SymbolTable =
+  def addBinding(x: String, τ: Type): SymbolTable =
     new NonEmpty(parent, bs +
-      (name -> (bs.getOrElse(name, Set.empty) + Entry(name, t))))
+      (x -> (bs.getOrElse(x, Set.empty) + Entry(x, τ))))
 
   def bindings =
     bs.values.flatMap(es => es).toSet ++ parent.bindings
 
   /** Filter bindings by name */
-  def searchBindings(name: String): List[Entry] =
-    bs.getOrElse(name, Set.empty).toList ++
-      parent.searchBindings(name)
+  def searchBindings(x: String): List[Entry] =
+    bs.getOrElse(x, Set.empty).toList ++
+      parent.searchBindings(x)
 
 ///** Filter bindings by name and type */
-//def searchBindings(name: String, t: Type): List[Entry] =
-//  bs.getOrElse(name, Set.empty).filter(_.t.rename(t.freeVariables) < t).toList ++
-//    parent.searchBindings(name, t)
+//def searchBindings(x: String, τ: Type): List[Entry] =
+//  bs.getOrElse(x, Set.empty).filter(_.τ.rename(τ.freeVariables) < τ).toList ++
+//    parent.searchBindings(x, τ)
 
 ///** Filter bindings by type */
-//def searchBindings(t: Type): List[Entry] =
-//  bs.values.flatMap(es => es).filter(_.t.rename(t.freeVariables) < t).toList ++
-//    parent.searchBindings(t)
+//def searchBindings(τ: Type): List[Entry] =
+//  bs.values.flatMap(es => es).filter(_.τ.rename(τ.freeVariables) < τ).toList ++
+//    parent.searchBindings(τ)
 }
 
 object SymbolTable {

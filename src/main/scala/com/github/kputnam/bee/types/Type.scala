@@ -38,7 +38,7 @@ abstract class Type {
     // Build a substitution of only Variable -> Variable
     val substitution = (Substitution.empty /: conflicts) { (s, x) =>
       val freshId = Iterator.from(0).find(id => !allocated.contains(id)).get
-      allocated += freshId
+      allocated  += freshId
 
       x match {
         case _: Variable  => s + (x -> Variable(freshId))

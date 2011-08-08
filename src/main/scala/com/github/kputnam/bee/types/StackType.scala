@@ -6,12 +6,12 @@ object StackType {
   def variable(id: Int): StackType = Remainder(id)
 
   /** StackType(Z Y X ... C B A).top = A */
-  def apply(elements: Type*): StackType =
-    (empty /: elements)((stack, e) => stack :+ e)
+  def apply(τs: Type*): StackType =
+    (empty /: τs)((stack, τ) => stack :+ τ)
 
   /** StackType(List(Z Y X ... C B A)).top = A */
-  def apply(elements: List[Type]): StackType =
-    (empty /: elements)((stack, e) => stack :+ e)
+  def apply(τs: List[Type]): StackType =
+    (empty /: τs)((stack, τ) => stack :+ τ)
 }
 
 sealed abstract class StackType extends Type {
@@ -30,10 +30,10 @@ sealed abstract class StackType extends Type {
 }
 
 object Remainder {
-  def fromString(c: Char) =
+  def fromName(c: Char) =
     new Remainder(VariableLike.toInt(c))
 
-  def fromString(s: String) =
+  def fromName(s: String) =
     new Remainder(VariableLike.toInt(s))
 }
 
@@ -45,8 +45,8 @@ case class Remainder(id: Int) extends StackType with VariableLike {
 
   def substitute(s: Substitution): StackType =
     s.getOrElse(this, this) match {
-      case t: StackType => t
-      case t => throw new UnsupportedOperationException(toString + " resolved to " + t)
+      case τ: StackType => τ
+      case τ => throw new UnsupportedOperationException(toString + " resolved to " + τ)
     }
 }
 
@@ -57,13 +57,13 @@ case object Empty extends StackType {
   override def toString = "∅"
 
   override def ::(top: Type): StackType = top match {
-    case t: Remainder => t
-    case t => new NonEmpty(top, this)
+    case x: Remainder => x
+    case τ => new NonEmpty(top, this)
   }
 
   override def :+(top: Type): StackType = top match {
-    case t: Remainder => t
-    case t => new NonEmpty(top, this)
+    case x: Remainder => x
+    case τ => new NonEmpty(top, this)
   }
 
   def freeVariables = Set.empty
@@ -88,8 +88,8 @@ object :: {
   def apply(top: Type, rest: StackType) =
     new NonEmpty(top, rest)
 
-  def unapply(s: StackType) = s match {
-    case s: NonEmpty => Some((s.top, s.rest))
+  def unapply(τ: StackType) = τ match {
+    case τ: NonEmpty => Some((τ.top, τ.rest))
     case _ => None
   }
 }
@@ -102,8 +102,8 @@ object :+ {
   def apply(rest: StackType, top: Type) =
     new NonEmpty(top, rest)
 
-  def unapply(s: StackType) = s match {
-    case s: NonEmpty => Some((s.rest, s.top))
+  def unapply(τ: StackType) = τ match {
+    case τ: NonEmpty => Some((τ.rest, τ.top))
     case _ => None
   }
 }
