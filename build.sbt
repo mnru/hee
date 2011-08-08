@@ -1,4 +1,4 @@
-name := "bcat"
+name := "bee"
 
 version := "0.1"
 
