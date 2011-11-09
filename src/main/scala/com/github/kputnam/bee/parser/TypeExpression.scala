@@ -30,7 +30,7 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
     | word )
 
   def identifier: Parser[String] =
-    "[^\\s]+"
+    "[^\\s]+".r
 
   def word: Parser[WordType] =
     "(" ~ stack ~ rep(argument) ~ ("->" | "→") ~ stack ~ rep(argument) ~ ")" ^^ {

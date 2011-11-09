@@ -49,4 +49,7 @@ abstract class Type {
     // We can trust this cast because we only substituted VariableLike -> VariableLike
     substitution(this).asInstanceOf[this.type]
   }
+
+  
+  def unfold = this
 }

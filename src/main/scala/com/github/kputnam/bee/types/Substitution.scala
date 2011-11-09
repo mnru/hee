@@ -28,6 +28,9 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
     Substitution(bindings.mapValues(single(_)) + pair)
   }
 
+  def \(x: VariableLike) =
+    Substitution(bindings - x)
+
   // Applies this substitution to a type expression
   def apply(τ: Type): Type = {
     println(toString + ".apply(" + τ + ")")

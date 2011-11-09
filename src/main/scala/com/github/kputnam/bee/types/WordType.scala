@@ -1,10 +1,13 @@
 package com.github.kputnam.bee.types
 
 case class WordType(input: StackType, output: StackType) extends Type {
-  override def toString =
+  override
+  def toString =
     "(" + input + " → " + output + ")"
 
-  override def asWord = this
+  override
+  def asWord =
+    this
 
   def freeVariables =
     input.freeVariables ++ output.freeVariables
