@@ -1,0 +1,8 @@
+inc :: num -> num
+
+num inc :: num
+
+inc x = x 1 +
+
+-- Point-free notation
+inc = 1 +

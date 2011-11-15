@@ -19,7 +19,7 @@ class QuotationNode(val nodes: List[AbstractNode]) extends AbstractNode {
   def isEmpty = nodes.isEmpty
 
   override def toString =
-    nodes.mkString("[", ", ", "]")
+    nodes.mkString("QuotationNode(", ", ", ")")
 
   override def equals(that: Any) = that match {
     case that: QuotationNode => this.nodes == that.nodes

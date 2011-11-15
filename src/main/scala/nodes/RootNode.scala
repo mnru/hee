@@ -19,7 +19,7 @@ class RootNode(val nodes: List[AbstractNode]) extends AbstractNode {
   def isEmpty = nodes.isEmpty
 
   override def toString =
-    nodes.mkString("[", ", ", "]")
+    nodes.mkString("RootNode(", ", ", ")")
 
   override def equals(that: Any) = that match {
     case that: RootNode => this.nodes == that.nodes

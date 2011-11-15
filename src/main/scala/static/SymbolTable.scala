@@ -33,8 +33,6 @@ case object Empty extends SymbolTable {
 
   def bindings = Set.empty
   def searchBindings(x: String) = List.empty
-//def searchBindings(x: String, τ: Type) = List.empty
-//def searchBindings(τ: Type) = List.empty
 }
 
 case class NonEmpty(val parent: SymbolTable, bs: Map[String, Set[Entry]]) extends SymbolTable {
@@ -50,16 +48,6 @@ case class NonEmpty(val parent: SymbolTable, bs: Map[String, Set[Entry]]) extend
   def searchBindings(x: String): List[Entry] =
     bs.getOrElse(x, Set.empty).toList ++
       parent.searchBindings(x)
-
-///** Filter bindings by name and type */
-//def searchBindings(x: String, τ: Type): List[Entry] =
-//  bs.getOrElse(x, Set.empty).filter(_.τ.rename(τ.freeVariables) < τ).toList ++
-//    parent.searchBindings(x, τ)
-
-///** Filter bindings by type */
-//def searchBindings(τ: Type): List[Entry] =
-//  bs.values.flatMap(es => es).filter(_.τ.rename(τ.freeVariables) < τ).toList ++
-//    parent.searchBindings(τ)
 }
 
 object SymbolTable {
