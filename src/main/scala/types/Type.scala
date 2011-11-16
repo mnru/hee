@@ -9,14 +9,14 @@ package com.github.kputnam.bee.types
 abstract class Type {
 
   def quote: WordType =
-    WordType(Remainder(0).rename(freeVariables),
-             Remainder(0).rename(freeVariables) :+ this)
+    WordType(Tail(0).rename(freeVariables),
+             Tail(0).rename(freeVariables) :+ this)
 
   // Value types (StringType, NumericType, etc) can be viewed as a nullary
   // function call that pushes a value onto that stack
   def asWord: WordType =
-    WordType(Remainder(0).rename(freeVariables),
-             Remainder(0).rename(freeVariables) :+ this)
+    WordType(Tail(0).rename(freeVariables),
+             Tail(0).rename(freeVariables) :+ this)
 
   // True if the given variable occurs in this type expression
   def hasOccurrence(x: VariableLike): Boolean = freeVariables.contains(x)
@@ -42,7 +42,7 @@ abstract class Type {
 
       x match {
         case _: Variable  => s + (x -> Variable(freshId))
-        case _: Remainder => s + (x -> Remainder(freshId))
+        case _: Tail      => s + (x -> Tail(freshId))
       }
     }
 

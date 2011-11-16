@@ -3,7 +3,7 @@ package com.github.kputnam.bee.types
 object StackType {
   def empty: StackType = Empty
 
-  def variable(id: Int): StackType = Remainder(id)
+  def variable(id: Int): StackType = Tail(id)
 
   /** StackType(Z Y X ... C B A).top = A */
   def apply(τs: Type*): StackType =
@@ -29,15 +29,15 @@ sealed abstract class StackType extends Type {
   def substitute(s: Substitution): StackType
 }
 
-object Remainder {
+object Tail {
   def fromName(c: Char) =
-    new Remainder(VariableLike.toInt(c))
+    new Tail(VariableLike.toInt(c))
 
   def fromName(s: String) =
-    new Remainder(VariableLike.toInt(s))
+    new Tail(VariableLike.toInt(s))
 }
 
-case class Remainder(id: Int) extends StackType with VariableLike {
+case class Tail(id: Int) extends StackType with VariableLike {
   def top = throw new NoSuchElementException("top of placeholder stack")
   def rest = throw new UnsupportedOperationException("rest of placeholder stack")
 
@@ -57,12 +57,12 @@ case object Empty extends StackType {
   override def toString = "∅"
 
   override def ::(top: Type): StackType = top match {
-    case x: Remainder => x
+    case x: Tail => x
     case τ => new NonEmpty(top, this)
   }
 
   override def :+(top: Type): StackType = top match {
-    case x: Remainder => x
+    case x: Tail => x
     case τ => new NonEmpty(top, this)
   }
 

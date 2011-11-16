@@ -58,7 +58,7 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
         if (x.id == y.id) Some(this)
         else Some(this + (x -> y))
 
-      case (x: Remainder, y: Remainder) =>
+      case (x: Tail, y: Tail) =>
         if (x.id == y.id) Some(this)
         else Some(this + (x -> y))
 
@@ -74,11 +74,11 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
         unify(τa.input, τb.input).flatMap(s =>
           s.unify(τa.output, τb.output))
 
-      case (x: Remainder, τ: StackType) =>
+      case (x: Tail, τ: StackType) =>
         if (x.occursIn(τ)) None
         else Some(this + (x -> τ))
 
-      case (τ: StackType, x: Remainder) =>
+      case (τ: StackType, x: Tail) =>
         if (x.occursIn(τ)) None
         else Some(this + (x -> τ))
 

@@ -4,8 +4,8 @@ abstract class MonomorphicType extends Type {
   override def hasOccurrence(x: VariableLike) = false
   override def isPolymorphic = false
   override def isMonomorphic = true
-  override def asWord = WordType(Remainder(0),
-                                 Remainder(0) :+ this)
+  override def asWord = WordType(Tail(0),
+                                 Tail(0) :+ this)
 
   def freeVariables = Set.empty
 

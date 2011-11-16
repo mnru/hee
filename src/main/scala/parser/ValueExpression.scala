@@ -4,8 +4,8 @@ import com.github.kputnam.bee.nodes._
 
 class ValueExpression extends scala.util.parsing.combinator.RegexParsers {
 
-  def topLevel: Parser[RootNode] =
-    rep1(node) ^^ (es => RootNode(es))
+  def topLevel: Parser[QuotationNode] =
+    rep1(node) ^^ (es => QuotationNode(es))
 
   def quotation: Parser[QuotationNode] =
     "[" ~> rep(node) <~ "]" ^^ (es => QuotationNode(es))
@@ -19,10 +19,10 @@ class ValueExpression extends scala.util.parsing.combinator.RegexParsers {
   def numeric: Parser[NumericLit] =
     "[+-]?[0-9]+(?:\\.[0-9]*)?".r ^^ (e => NumericLit(BigDecimal(e)))
 
-  def word: Parser[WordNode] =
-    "[^\\s\\[\\]]+".r ^^ (e => WordNode(e))
+  def name: Parser[NameNode] =
+    "[^\\s\\[\\]]+".r ^^ (e => NameNode(e))
 
   def node: Parser[AbstractNode] =
-    quotation | string | boolean | numeric | word
+    quotation | string | boolean | numeric | name
 
 }

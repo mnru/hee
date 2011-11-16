@@ -7,7 +7,7 @@ case class RecursiveType(α: Variable, τ: Type) extends Type {
 
   override
   def toString =
-    "μ" + α + "." + τ
+    "(μ" + α + "." + τ + ")"
 
   override
   def unfold: Type =

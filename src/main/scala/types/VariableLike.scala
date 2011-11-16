@@ -2,7 +2,7 @@ package com.github.kputnam.bee.types
 
 object VariableLike {
   val lowerGreek = "αβγδεζηθικλμνξοπρςστυφχψω"
-  val upperGreek = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
+  val upperGreek = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡ-ΣΤΥΦΧΨΩ"
   val lowerLatin = "abcdefghijklmnopqrstuvwxyz"
   val upperLatin = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 

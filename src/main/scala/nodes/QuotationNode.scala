@@ -13,6 +13,9 @@ object QuotationNode {
     Some(q.nodes)
 }
 
+/**
+ * Grouped sequence of nodes (e.g., [1 2 3 + *]) whose evaluation is delayed.
+ */
 class QuotationNode(val nodes: List[AbstractNode]) extends AbstractNode {
   def head = nodes.head
   def tail = if (nodes.isEmpty) this else QuotationNode(nodes.tail)

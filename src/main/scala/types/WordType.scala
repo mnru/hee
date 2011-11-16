@@ -13,7 +13,7 @@ case class WordType(input: StackType, output: StackType) extends Type {
     input.freeVariables ++ output.freeVariables
 
   // Chain this word
-  def >>(τ: WordType, s: Substitution = Substitution.empty) =
+  def compose(τ: WordType, s: Substitution = Substitution.empty) =
     s.unify(output, τ.input).map(_(τ.output))
 
   def substitute(s: Substitution) =

@@ -4,7 +4,6 @@ import com.github.kputnam.bee.types._
 
 class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
 
-  // @todo: Lookup names in SymbolTable
   def topLevel: Parser[Type] =
     ( "bitmap"  ^^^ BitmapType
     | "bool"    ^^^ BooleanType
@@ -16,7 +15,6 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
     | "nothing" ^^^ BottomType
     | word )
 
-  // @todo: Lookup names in SymbolTable
   def argument: Parser[Type] =
     ( "bitmap"  ^^^ BitmapType
     | "bool"    ^^^ BooleanType
@@ -51,7 +49,7 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
     "(" ~ rep1sep(argument, "|") ~ ")" ~ "sum" ^^^ ""
 
   def stack: Parser[StackType] =
-    "[ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩABCDEFGHIJKLMNOPQRSTUVWXYZ]'*".r ^^ (x => Remainder.fromName(x))
+    "[ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩABCDEFGHIJKLMNOPQRSTUVWXYZ]'*".r ^^ (x => Tail.fromName(x))
 
   def variable: Parser[Variable] =
     "[αβγδεζηθικλμνξοπρςστυφχψωabcdefghijklmnopqrstuvwxyz]'*".r ^^ (x => Variable.fromName(x))
