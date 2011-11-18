@@ -46,7 +46,8 @@ case class Tail(id: Int) extends StackType with VariableLike {
   def substitute(s: Substitution): StackType =
     s.getOrElse(this, this) match {
       case τ: StackType => τ
-      case τ => throw new UnsupportedOperationException(toString + " resolved to " + τ)
+      case τ => throw new UnsupportedOperationException(
+        "stack type variable " + toString + " resolved to non-stack type " + τ)
     }
 }
 

@@ -12,7 +12,8 @@ case class ExistentialType(α : VariableLike, τ: Type) extends Type {
   def substitute(s: Substitution) =
     new UniversalType(α, τ.substitute(s \ α))
 
-  def instantiate(τa: Type) =
-    τ.substitute(Substitution(α -> τa))
+  override
+  def instantiate(σ: Type) =
+    τ.substitute(Substitution(α -> σ))
 
 }

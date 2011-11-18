@@ -1,17 +1,14 @@
 package com.github.kputnam.bee.types
 
-// fix λx. e
-// μα.τ
-
+/**
+ * Recursive type (defined in terms of itself), required to
+ * type recursive data structures
+ */
 case class RecursiveType(α: Variable, τ: Type) extends Type {
 
   override
   def toString =
     "(μ" + α + "." + τ + ")"
-
-  override
-  def unfold: Type =
-    Substitution(α -> this)(τ)
 
   def freeVariables =
     τ.freeVariables - α
