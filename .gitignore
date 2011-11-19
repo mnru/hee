@@ -1,0 +1,5 @@
+*.swp
+*.swo
+target/
+project/boot/
+project/target/
