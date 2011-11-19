@@ -7,42 +7,42 @@ package com.github.kputnam.bee.types
  *    | τ ⨯ τ
  */
 abstract class Type {
+  import WordType._
 
-  def quote: WordType =
+  def quote: WordType[_, _] =
     WordType(Tail(0).rename(freeVariables),
              Tail(0).rename(freeVariables) :+ this)
 
-  // Value types (StringType, NumericType, etc) can be viewed as a nullary
-  // function call that pushes a value onto that stack
-  def asWord: WordType =
+  /** Values (eg numbers) can be viewed alternately as functions that push a value onto that stack */
+  def asWord: WordType[_, _] =
     WordType(Tail(0).rename(freeVariables),
              Tail(0).rename(freeVariables) :+ this)
 
-  // True if the given variable occurs in this type expression
+  /** True if the given variable occurs in this type expression */
   def hasOccurrence(x: VariableLike): Boolean = freeVariables.contains(x)
 
-  // Polymorphic types consist of at least one type variable
+  /** Polymorphic types consist of at least one type variable */
   def isPolymorphic: Boolean = freeVariables.nonEmpty
   def isMonomorphic: Boolean = freeVariables.isEmpty
 
-  // Returns the set of all free variables in this type expression
+  /** Returns the set of all free variables in this type expression */
   def freeVariables: Set[VariableLike]
 
   def substitute(s: Substitution): Type
 
-  // Generate fresh variables for each of the given variables
+  /** Generate fresh variables for each of the given variables */
   def rename(bound: Set[VariableLike]): this.type = {
     var allocated = (freeVariables | bound).map(_.id)
     val conflicts =  freeVariables & bound
 
-    // Build a substitution of only Variable -> Variable
-    val substitution = (Substitution.empty /: conflicts) { (s, x) =>
+    // Build a substitution from old variable to new variable
+    val substitution = (Substitution.empty /: conflicts) { (s, α) =>
       val freshId = Iterator.from(0).find(id => !allocated.contains(id)).get
       allocated  += freshId
 
-      x match {
-        case _: Variable  => s + (x -> Variable(freshId))
-        case _: Tail      => s + (x -> Tail(freshId))
+      α match {
+        case _: Variable  => s + (α -> Variable(freshId))
+        case _: Tail      => s + (α -> Tail(freshId))
       }
     }
 
@@ -61,7 +61,7 @@ abstract class Type {
    * been any type σ, and the type judgement Γ ⊢ e:τ[σ/α] would also hold.
    */
   def generalize =
-    UniversalType(Variable.fromName('A').rename(freeVariables), this)
+    UniversalType(Variable.fromName('a').rename(freeVariables), this)
 
   /**
    *   Γ ⊢ e:∀α.τ
@@ -79,6 +79,6 @@ abstract class Type {
     this
 
   /** Universally quantifies any free variables in this type expression */
-  def quantifyFree =
+  def universally =
     freeVariables.foldLeft(this)((τ, x) => UniversalType(x, τ))
 }

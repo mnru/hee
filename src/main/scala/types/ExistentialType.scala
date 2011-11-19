@@ -1,6 +1,6 @@
 package com.github.kputnam.bee.types
 
-case class ExistentialType(α : VariableLike, τ: Type) extends Type {
+case class ExistentialType(α : VariableLike, τ: Type) extends QuantifiedType {
 
   override
   def toString =

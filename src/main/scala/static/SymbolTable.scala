@@ -49,6 +49,7 @@ case class Child(val parent: SymbolTable, bs: Map[String, Entry]) extends Symbol
 
 object SymbolTable {
   import com.github.kputnam.bee.types.{NonEmpty => _, Empty => _, _}
+  import com.github.kputnam.bee.types.WordType._
 
   def root =
     Root

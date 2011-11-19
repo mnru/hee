@@ -19,8 +19,8 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
   def isEmpty =
     bindings.isEmpty
 
-  def getOrElse(x: VariableLike, τ: Type) =
-    bindings.getOrElse(x, τ)
+  def getOrElse(α: VariableLike, τ: Type) =
+    bindings.getOrElse(α, τ)
 
   // Create new binding and update existing bindings
   def +(pair: Pair[VariableLike, Type]): Substitution = {
@@ -28,22 +28,22 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
     Substitution(bindings.mapValues(single(_)) + pair)
   }
 
-  def \(x: VariableLike) =
-    Substitution(bindings - x)
+  def \(α: VariableLike) =
+    Substitution(bindings - α)
 
-  // Applies this substitution to a type expression
+  /** Applies this substitution to a type expression */
   def apply(τ: Type): Type = {
     println(toString + ".apply(" + τ + ")")
     if (isEmpty) τ
     else τ.substitute(this)
   }
 
-  // Combine substitutions
+  /** Combine substitutions */
   def ∘(s: Substitution) = compose(s)
   def compose(s: Substitution) =
     new Substitution(bindings ++ s.bindings)
 
-  // Creates a new substitution that unifies both type expressions
+  /** Creates a new substitution that unifies both type expressions */
   def unify(τa: Type, τb: Type): Option[Substitution] = {
     println(toString + ".unify(" + τa + ", " + τb + ")")
 
@@ -54,33 +54,33 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
       case (Empty, Empty) =>
         Some(this)
 
-      case (x: Variable, y: Variable) =>
-        if (x.id == y.id) Some(this)
-        else Some(this + (x -> y))
+      case (α: Variable, β: Variable) =>
+        if (α.id == β.id) Some(this)
+        else Some(this + (α -> β))
 
-      case (x: Tail, y: Tail) =>
-        if (x.id == y.id) Some(this)
-        else Some(this + (x -> y))
+      case (α: Tail, β: Tail) =>
+        if (α.id == β.id) Some(this)
+        else Some(this + (α -> β))
 
-      case (x: Variable, τ: Type) if !τ.isInstanceOf[StackType] =>
-        if (x.occursIn(τ)) None
-        else Some(this + (x -> τ))
+      case (α: Variable, τ: Type) if !τ.isInstanceOf[StackType] =>
+        if (α.occursIn(τ)) None
+        else Some(this + (α -> τ))
 
-      case (τ: Type, x: Variable) if !τ.isInstanceOf[StackType] =>
-        if (x.occursIn(τ)) None
-        else Some(this + (x -> τ))
+      case (τ: Type, α: Variable) if !τ.isInstanceOf[StackType] =>
+        if (α.occursIn(τ)) None
+        else Some(this + (α -> τ))
 
-      case (τa: WordType, τb: WordType) =>
+      case (τa: WordType[_, _], τb: WordType[_, _]) =>
         unify(τa.input, τb.input).flatMap(s =>
           s.unify(τa.output, τb.output))
 
-      case (x: Tail, τ: StackType) =>
-        if (x.occursIn(τ)) None
-        else Some(this + (x -> τ))
+      case (α: Tail, τ: StackType) =>
+        if (α.occursIn(τ)) None
+        else Some(this + (α -> τ))
 
-      case (τ: StackType, x: Tail) =>
-        if (x.occursIn(τ)) None
-        else Some(this + (x -> τ))
+      case (τ: StackType, α: Tail) =>
+        if (α.occursIn(τ)) None
+        else Some(this + (α -> τ))
 
       case (NonEmpty(τaT, τaR), NonEmpty(τbT, τbR)) =>
         unify(τaT, τbT).flatMap(s =>

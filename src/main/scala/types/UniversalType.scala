@@ -3,7 +3,7 @@ package com.github.kputnam.bee.types
 /**
  * Universally qualified type
  */
-case class UniversalType(α: VariableLike, τ: Type) extends Type {
+case class UniversalType(α: VariableLike, τ: Type) extends QuantifiedType {
 
   override
   def toString =
