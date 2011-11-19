@@ -41,4 +41,10 @@ trait VariableLike { self: Type =>
     val dividend  = id / alphabet.length
     alphabet(remainder) + ("'" * dividend)
   }
+
+  override def equals(that: Any) = that match {
+    case that: VariableLike => that.id == this.id
+    case _ => false
+  }
+
 }
