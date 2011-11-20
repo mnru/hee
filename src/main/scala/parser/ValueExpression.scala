@@ -1,14 +1,14 @@
 package com.github.kputnam.bee.parser
 
-import com.github.kputnam.bee.nodes._
+import com.github.kputnam.bee.terms._
 
 class ValueExpression extends scala.util.parsing.combinator.RegexParsers {
 
-  def topLevel: Parser[QuotationNode] =
-    rep1(node) ^^ (es => QuotationNode(es))
+  def topLevel: Parser[QuotationTerm] =
+    rep1(term) ^^ (es => QuotationTerm(es))
 
-  def quotation: Parser[QuotationNode] =
-    "[" ~> rep(node) <~ "]" ^^ (es => QuotationNode(es))
+  def quotation: Parser[QuotationTerm] =
+    "[" ~> rep(term) <~ "]" ^^ (es => QuotationTerm(es))
 
   def string: Parser[StringLit] =
     "\"" ~> "[^\"]*".r <~ "\"" ^^ (e => StringLit(e))
@@ -19,10 +19,10 @@ class ValueExpression extends scala.util.parsing.combinator.RegexParsers {
   def numeric: Parser[NumericLit] =
     "[+-]?[0-9]+(?:\\.[0-9]*)?".r ^^ (e => NumericLit(BigDecimal(e)))
 
-  def name: Parser[NameNode] =
-    "[^\\s\\[\\]]+".r ^^ (e => NameNode(e))
+  def name: Parser[NameTerm] =
+    "[^\\s\\[\\]]+".r ^^ (e => NameTerm(e))
 
-  def node: Parser[AbstractNode] =
+  def term: Parser[Term] =
     quotation | string | boolean | numeric | name
 
 }

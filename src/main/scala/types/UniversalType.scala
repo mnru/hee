@@ -1,5 +1,7 @@
 package com.github.kputnam.bee.types
 
+import com.github.kputnam.bee.static._
+
 /**
  * Universally qualified type
  */

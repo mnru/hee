@@ -1,5 +1,7 @@
 package com.github.kputnam.bee.types
 
+import com.github.kputnam.bee.static._
+
 /**
  * Recursive type (defined in terms of itself), required to
  * type recursive data structures

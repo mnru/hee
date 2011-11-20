@@ -3,7 +3,6 @@ package com.github.kputnam.bee.parser
 import com.github.kputnam.bee.types._
 
 class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
-  import WordType._
 
   def topLevel: Parser[Type] =
     ( "bitmap"  ^^^ BitmapType
@@ -14,7 +13,7 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
     | "str"     ^^^ StringType
     | "any"     ^^^ TopType
     | "nothing" ^^^ BottomType
-    | word.asInstanceOf[Parser[Type]] )
+    | word )
 
   def argument: Parser[Type] =
     ( "bitmap"  ^^^ BitmapType
@@ -26,12 +25,12 @@ class TypeExpression extends scala.util.parsing.combinator.RegexParsers {
     | "any"     ^^^ TopType
     | "nothing" ^^^ BottomType
     | variable
-    | word.asInstanceOf[Parser[Type]] )
+    | word )
 
   def identifier: Parser[String] =
     "[^\\s]+".r
 
-  def word: Parser[WordType[_, _]] =
+  def word: Parser[WordType] =
     "(" ~ stack ~ rep(argument) ~ ("->" | "→") ~ stack ~ rep(argument) ~ ")" ^^ {
       case _ ~ a ~ as ~ _ ~ b ~ bs ~ _ =>
         WordType((a /: as)((s, τ) => s :+ τ),

@@ -1,5 +1,7 @@
 package com.github.kputnam.bee.types
 
+import com.github.kputnam.bee.static._
+
 object Variable {
   def fromName(c: Char) =
     new Variable(VariableLike.toInt(c))

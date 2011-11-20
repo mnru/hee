@@ -1,4 +1,6 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee.static
+
+import com.github.kputnam.bee.types._
 
 object Substitution {
   def empty = Substitution(Map.empty[VariableLike, Type])
@@ -70,7 +72,7 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
         if (α.occursIn(τ)) None
         else Some(this + (α -> τ))
 
-      case (τa: WordType[_, _], τb: WordType[_, _]) =>
+      case (τa: WordType, τb: WordType) =>
         unify(τa.input, τb.input).flatMap(s =>
           s.unify(τa.output, τb.output))
 

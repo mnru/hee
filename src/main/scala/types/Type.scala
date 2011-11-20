@@ -1,20 +1,15 @@
 package com.github.kputnam.bee.types
 
-/**
- * τ := α
- *    | const
- *    | τ → τ
- *    | τ ⨯ τ
- */
-abstract class Type {
-  import WordType._
+import com.github.kputnam.bee.static._
 
-  def quote: WordType[_, _] =
+abstract class Type {
+
+  def quote: WordType =
     WordType(Tail(0).rename(freeVariables),
              Tail(0).rename(freeVariables) :+ this)
 
   /** Values (eg numbers) can be viewed alternately as functions that push a value onto that stack */
-  def asWord: WordType[_, _] =
+  def asWord: WordType =
     WordType(Tail(0).rename(freeVariables),
              Tail(0).rename(freeVariables) :+ this)
 
