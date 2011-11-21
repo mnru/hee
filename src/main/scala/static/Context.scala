@@ -1,4 +1,7 @@
-package com.github.kputnam.bee.static
+package com.github.kputnam.bee
+package static
+
+import types._
 
 /**
  * Kinding contexts     Δ ::= Δ, α:_ | ε
@@ -12,9 +15,11 @@ package com.github.kputnam.bee.static
  *
  * Rho-types            ρ ::= τ | σ → σ
  *
- * Monotypes            τ ::= num | τ → τ | τ ∧ τ | τ ∨ τ | α
+ * Monotypes            τ ::= num | τ → τ | τ ∧ τ | τ × τ | α
  *
- * Type variables       α ::= a, b, c, ...
+ * Type variables       α ::= τa, τb, τc, ...
+ *
+ * Term variables       x ::= ta, tb, tc, ...
  *
  * Terms                t ::= x         application
  *                          | [t ..]    abstraction
@@ -24,6 +29,11 @@ package com.github.kputnam.bee.static
  * of the term 1 as an invocation of a procedure that pushes the literal
  * value 1 onto the stack.
  *
- * @TODO: What does the type ascription syntax look like?
+ * @TODO: What does the syntax look like for type ascription?
  */
-abstract class Context
+abstract class Context {
+
+  def freeVariables: Set[VariableLike] =
+    Set.empty
+
+}

@@ -55,8 +55,8 @@ abstract class Type {
    * assumptions involving α; if so, then we can conclude that α could have
    * been any type σ, and the type judgement Γ ⊢ e:τ[σ/α] would also hold.
    */
-  def generalize =
-    UniversalType(Variable.fromName('a').rename(freeVariables), this)
+  def generalize(Γ: Context) =
+    (freeVariables -- Γ.freeVariables).foldLeft(this)((σ, α) => UniversalType(α, σ))
 
   /**
    *   Γ ⊢ e:∀α.τ
@@ -70,10 +70,7 @@ abstract class Type {
    * In particular, we can α-convert (rename) type variables as necessary
    * to avoid capturing free type variables when performing substitutions.
    */
-  def instantiate(σ: Type) =
+  def instantiate(α: VariableLike, σ: Type) =
     this
 
-  /** Universally quantifies any free variables in this type expression */
-  def universally =
-    freeVariables.foldLeft(this)((τ, x) => UniversalType(x, τ))
 }

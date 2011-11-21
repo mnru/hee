@@ -1,6 +1,7 @@
-package com.github.kputnam.bee.static
+package com.github.kputnam.bee
+package static
 
-import com.github.kputnam.bee.types.Type
+import types.Type
 
 /**
  * Note that because bee doesn't support mutable bindings (variables), the

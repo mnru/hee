@@ -1,6 +1,7 @@
-package com.github.kputnam.bee.static
+package com.github.kputnam.bee
+package static
 
-import com.github.kputnam.bee.types._
+import types._
 
 object Substitution {
   def empty = Substitution(Map.empty[VariableLike, Type])
