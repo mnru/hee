@@ -1,0 +1,10 @@
+: breakfast
+  hurried? cereal eggs if clean ;
+
+breakfast = [ hurried? cereal eggs if clean ]
+
+: doit
+  get-c transform-to-d put-d ;
+
+doit = [ get-c transform-to-d put-d ]
+

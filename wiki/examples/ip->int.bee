@@ -1,0 +1,20 @@
+Forth
+    
+    : ip->int ( n n n n -- n )
+      >r 256 * >r 256 256 * * > r 256 256 * 256 * * r> + r> + r> + ;
+
+Retro
+
+    : ip->int ( nnnn-n )
+      push 256 * push 256 2 pow * push 256 3 pow * pop + pop + pop + ;
+
+Bee
+
+    ip->int :: byte byte byte byte -> int
+    ip->int = swap 256 1 pow * +
+              swap 256 2 pow * +
+              swap 256 3 pow * +
+
+Usage
+
+    127 0 0 1 ip->int
