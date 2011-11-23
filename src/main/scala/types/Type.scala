@@ -73,4 +73,7 @@ abstract class Type {
   def instantiate(α: VariableLike, σ: Type) =
     this
 
+  def skolemize =
+    this
+
 }

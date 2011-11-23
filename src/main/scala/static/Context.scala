@@ -21,7 +21,7 @@ import types._
  *
  * Term variables       x ::= ta, tb, tc, ...
  *
- * Terms                t ::= x         application
+ * Terms                t ::= t x       application
  *                          | [t ..]    abstraction
  *
  * Literal values are equivalent to an application of some abstraction

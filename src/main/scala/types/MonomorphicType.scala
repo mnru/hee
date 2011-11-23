@@ -1,6 +1,7 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee
+package types
 
-import com.github.kputnam.bee.static._
+import static._
 
 abstract class MonomorphicType extends Type {
   import WordType._

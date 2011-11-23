@@ -19,4 +19,7 @@ case class ExistentialType(α : VariableLike, σ: Type) extends QuantifiedType {
     else
       ExistentialType(this.α, this.σ.instantiate(α, σ))
 
+  override def skolemize =
+    σ.skolemize.substitute(Substitution(α -> SkolemConstant(α)))
+
 }

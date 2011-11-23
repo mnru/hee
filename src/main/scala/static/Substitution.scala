@@ -73,9 +73,9 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
         if (α.occursIn(τ)) None
         else Some(this + (α -> τ))
 
-      case (τa: WordType, τb: WordType) =>
-        unify(τa.input, τb.input).flatMap(s =>
-          s.unify(τa.output, τb.output))
+      case (WordType(τIn, τOut), WordType(σIn, σOut)) =>
+        unify(τIn, σIn).flatMap(s =>
+          s.unify(τOut, σOut))
 
       case (α: Tail, τ: StackType) =>
         if (α.occursIn(τ)) None
@@ -85,9 +85,15 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
         if (α.occursIn(τ)) None
         else Some(this + (α -> τ))
 
-      case (NonEmpty(τaT, τaR), NonEmpty(τbT, τbR)) =>
-        unify(τaT, τbT).flatMap(s =>
-          s.unify(τaR, τbR))
+      case (NonEmpty(τTail, τHead), NonEmpty(σTail, σHead)) =>
+        unify(τTail, σTail).flatMap(s =>
+          s.unify(τHead, σHead))
+
+      case (τ, UniversalType(α, σ)) =>
+        unify(τ, σ)
+
+      case (UniversalType(α, τ), σ) =>
+        unify(τ, σ)
 
       case (_, _) => None
     }}

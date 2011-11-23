@@ -21,8 +21,8 @@ sealed abstract class StackType extends Type {
   def rest: StackType
 
   /** Push `top` on the stack (left and right-associative operators) */
-  def ::(top: Type): StackType = new NonEmpty(top, this)
-  def :+(top: Type): StackType = new NonEmpty(top, this)
+  def ::(top: Type): StackType = NonEmpty(top, this)
+  def :+(top: Type): StackType = NonEmpty(top, this)
 
   override
   def asWord = throw new UnsupportedOperationException
@@ -33,10 +33,10 @@ sealed abstract class StackType extends Type {
 
 object Tail {
   def fromName(c: Char) =
-    new Tail(VariableLike.toInt(c))
+    Tail(VariableLike.toInt(c))
 
   def fromName(s: String) =
-    new Tail(VariableLike.toInt(s))
+    Tail(VariableLike.toInt(s))
 }
 
 case class Tail(id: Int) extends StackType with VariableLike {
@@ -61,12 +61,12 @@ case object Empty extends StackType {
 
   override def ::(top: Type): StackType = top match {
     case x: Tail => x
-    case τ => new NonEmpty(top, this)
+    case τ => NonEmpty(top, this)
   }
 
   override def :+(top: Type): StackType = top match {
     case x: Tail => x
-    case τ => new NonEmpty(top, this)
+    case τ => NonEmpty(top, this)
   }
 
   def freeVariables = Set.empty
@@ -80,7 +80,10 @@ case class NonEmpty(val top: Type, val rest: StackType) extends StackType {
   def freeVariables = top.freeVariables ++ rest.freeVariables
 
   def substitute(s: Substitution) =
-    new NonEmpty(top.substitute(s), rest.substitute(s))
+    NonEmpty(top.substitute(s), rest.substitute(s))
+
+  override def skolemize =
+    NonEmpty(top.skolemize, rest.skolemize.asInstanceOf[StackType])
 }
 
 /** Pattern matching object
@@ -89,7 +92,7 @@ case class NonEmpty(val top: Type, val rest: StackType) extends StackType {
   */
 object :: {
   def apply(top: Type, rest: StackType) =
-    new NonEmpty(top, rest)
+    NonEmpty(top, rest)
 
   def unapply(τ: StackType) = τ match {
     case τ: NonEmpty => Some((τ.top, τ.rest))
@@ -103,7 +106,7 @@ object :: {
   */
 object :+ {
   def apply(rest: StackType, top: Type) =
-    new NonEmpty(top, rest)
+    NonEmpty(top, rest)
 
   def unapply(τ: StackType) = τ match {
     case τ: NonEmpty => Some((τ.rest, τ.top))

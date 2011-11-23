@@ -30,4 +30,7 @@ case class UniversalType(α: VariableLike, σ: Type) extends QuantifiedType {
     else
       UniversalType(this.α, this.σ.instantiate(α, σ))
 
+  override def skolemize =
+    σ.skolemize.substitute(Substitution(α -> SkolemConstant(α)))
+
 }

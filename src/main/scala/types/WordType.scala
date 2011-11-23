@@ -27,4 +27,7 @@ case class WordType(input: Type, output: Type) extends Type {
   def substitute(s: Substitution) =
     WordType(input.substitute(s), output.substitute(s))
 
+  override def skolemize =
+    WordType(input.skolemize, output.skolemize)
+
 }

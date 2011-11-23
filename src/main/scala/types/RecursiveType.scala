@@ -16,6 +16,9 @@ case class RecursiveType(α: Variable, τ: Type) extends Type {
     τ.freeVariables - α
 
   def substitute(s: Substitution) =
-    new RecursiveType(α, τ.substitute(s \ α))
+    RecursiveType(α, τ.substitute(s \ α))
+
+  override def skolemize =
+    RecursiveType(α, τ.skolemize)
 
 }
