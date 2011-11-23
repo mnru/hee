@@ -1,5 +1,6 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee
+package types
 
-case object ByteType extends MonomorphicType {
+case object ByteType extends Type with MonomorphicLike {
   override def toString = "byte"
 }

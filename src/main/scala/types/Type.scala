@@ -1,6 +1,7 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee
+package types
 
-import com.github.kputnam.bee.static._
+import static._
 
 abstract class Type {
 
@@ -55,7 +56,7 @@ abstract class Type {
    * assumptions involving α; if so, then we can conclude that α could have
    * been any type σ, and the type judgement Γ ⊢ e:τ[σ/α] would also hold.
    */
-  def generalize(Γ: Context) =
+  def generalize(Γ: Context = new Context { }) =
     (freeVariables -- Γ.freeVariables).foldLeft(this)((σ, α) => UniversalType(α, σ))
 
   /**

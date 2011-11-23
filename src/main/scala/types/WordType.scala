@@ -1,6 +1,7 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee
+package types
 
-import com.github.kputnam.bee.static._
+import static._
 
 /**
  * Words are functions that map stacks to stacks. Normally input and output

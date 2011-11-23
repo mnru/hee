@@ -1,4 +1,5 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee
+package types
 
 object VariableLike {
   val lowerGreek = "αβγδεζηθικλμνξοπρςστυ φχψω".replace(" ", "")
@@ -24,6 +25,7 @@ trait VariableLike { self: Type =>
   protected def alphabet: String
 
   def id: Int
+  def skolemize: Type
 
   override def isMonomorphic = false
   override def isPolymorphic = true

@@ -51,11 +51,8 @@ case class Substitution(bindings: Map[VariableLike, Type]) {
     println(toString + ".unify(" + τa + ", " + τb + ")")
 
     (this(τa), this(τb)) match {
-      case (τa: MonomorphicType, τb: MonomorphicType) =>
-        Some(this)
-
-      case (Empty, Empty) =>
-        Some(this)
+      case (τa: MonomorphicLike, τb: MonomorphicLike) =>
+        if (τa == τb) Some(this) else None
 
       case (α: Variable, β: Variable) =>
         if (α.id == β.id) Some(this)

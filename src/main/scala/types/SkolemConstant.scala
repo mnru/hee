@@ -3,23 +3,16 @@ package types
 
 import static._
 
-case class SkolemConstant(α: VariableLike) extends Type {
-
-  override def hasOccurrence(x: VariableLike) = false
-  override def isPolymorphic = false
-  override def isMonomorphic = true
-
-  override def quote  = throw new UnsupportedOperationException
+case class SkolemizedTail(α: Tail) extends StackType with MonomorphicLike {
   override def asWord = throw new UnsupportedOperationException
-  override def skolemize = this
 
-  def freeVariables = Set.empty
+  def top  = throw new NoSuchElementException("top of placeholder stack")
+  def rest = throw new UnsupportedOperationException("rest of placeholder stack")
+}
 
-  def substitute(s: Substitution) = this
+case class SkolemizedVariable(α: Variable) extends Type with MonomorphicLike {
+  override def asWord = throw new UnsupportedOperationException
 
-  override def equals(that: Any) = that match {
-    case SkolemConstant(β) => α == β
-    case _ => false
-  }
-
+  def top  = throw new NoSuchElementException("top of placeholder stack")
+  def rest = throw new UnsupportedOperationException("rest of placeholder stack")
 }

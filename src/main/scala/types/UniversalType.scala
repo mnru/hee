@@ -1,6 +1,7 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee
+package types
 
-import com.github.kputnam.bee.static._
+import static._
 
 /**
  * Universally qualified type
@@ -14,7 +15,6 @@ import com.github.kputnam.bee.static._
  * ∀α.∀β.pair(α,β) → pair(β,α) ≤ ∀γ.pair(γ,γ) → pair(γ,γ)
  */
 case class UniversalType(α: VariableLike, σ: Type) extends QuantifiedType {
-
   override def toString =
     "(∀" + α + "." + σ + ")"
 
@@ -31,6 +31,5 @@ case class UniversalType(α: VariableLike, σ: Type) extends QuantifiedType {
       UniversalType(this.α, this.σ.instantiate(α, σ))
 
   override def skolemize =
-    σ.skolemize.substitute(Substitution(α -> SkolemConstant(α)))
-
+    σ.skolemize.substitute(Substitution(α -> α.skolemize))
 }

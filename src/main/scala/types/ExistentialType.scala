@@ -1,9 +1,9 @@
-package com.github.kputnam.bee.types
+package com.github.kputnam.bee
+package types
 
-import com.github.kputnam.bee.static._
+import static._
 
 case class ExistentialType(α : VariableLike, σ: Type) extends QuantifiedType {
-
   override def toString =
     "(∃" + α + "." + σ + ")"
 
@@ -20,6 +20,5 @@ case class ExistentialType(α : VariableLike, σ: Type) extends QuantifiedType {
       ExistentialType(this.α, this.σ.instantiate(α, σ))
 
   override def skolemize =
-    σ.skolemize.substitute(Substitution(α -> SkolemConstant(α)))
-
+    σ.skolemize.substitute(Substitution(α -> α.skolemize))
 }
