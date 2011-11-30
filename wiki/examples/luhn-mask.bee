@@ -1,0 +1,4 @@
+-- https://github.com/kputnam/luhnybin
+
+-- Luhn filter searches text for sequences of digits that pass
+-- the Luhn check (credit card numbers, NPI numbers, etc)
