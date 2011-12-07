@@ -171,7 +171,7 @@ module Bee
       @dictionary.import(dictionary)
       @input.concat(quotation.terms)
 
-      while term = @input.shift
+      until (term = @input.shift).nil?
         if term.is_a?(Term) and term.name?
           case term.name
           when "id" # S -> S
@@ -223,14 +223,30 @@ module Bee
             a = @stack.pop
             @stack.push(a ? b : c)
 
-          when *%w(+ - * / % ** < <= == >= >)
+          when *%w(+ - * / % ** < <= == >= > >> << & | ^)
             b = @stack.pop
             a = @stack.pop
             @stack.push(a.__send__(term.name.to_sym, b))
 
-          when *%w(abs to_s to_i to_f to_b length)
+          when "and" # S boolean boolean -> S boolean
+            b = @stack.pop
             a = @stack.pop
-            @stack.push(a.__send__(term.name))
+            @stack.push(a && b)
+
+          when "or" # S boolean boolean -> S boolean
+            b = @stack.pop
+            a = @stack.pop
+            @stack.push(a || b)
+
+          when "xor" # S boolean boolean -> S boolean
+            b = @stack.pop
+            a = @stack.pop
+            @stack.push(a ^ b)
+
+
+          when "not" # S boolean -> S boolean
+            a = @stack.pop
+            @stack.push(!a)
 
           else
             @input.unshift(*@dictionary.lookup(term.name))
@@ -257,13 +273,13 @@ end
 ################################################################################
 #
 # $ irb -rbee
-# >> bee("3 4 +")
+# >> bee "3 4 +"
 # => [7]
 #
-# >> bee(": count dup dup print 0 == [pop] [1 - count] if apply ;")
+# >> bee ": count dup dup print 0 == [pop] [1 - count] if apply ;"
 # => [7]
 #
-# >> bee("count")
+# >> bee "count"
 # 7
 # 6
 # 5
@@ -274,10 +290,10 @@ end
 # 0
 # => []
 #
-# >> bee(": twice dup compose apply ;")
+# >> bee ": twice dup compose apply ;"
 # => []
 #
-# >> bee("3 4 5 [+] twice")
+# >> bee "3 4 5 [+] twice"
 # => [12]
 #
 ################################################################################
