@@ -1,6 +1,23 @@
 require "strscan"
 
 module Bee
+  module List
+    def head
+      # Damnit, 1.8!
+      is_a?(String) ? self[0,1] : self[0]
+    end
+
+    def tail
+      self[1..-1]
+    end
+
+    def cons(a)
+      method(self.class.name).call(a) + self
+    end
+  end
+
+  ::Array.__send__(:include, List)
+  ::String.__send__(:include, List)
 
   class Term
     def name?
@@ -150,7 +167,8 @@ module Bee
       case token
       when /^-?\d+$/;       Literal.new(token.to_i)
       when /^-?\d*\.\d+$/;  Literal.new(token.to_f)
-      when /^"([^"]+)"$/;   Literal.new(token[1..-2])
+      when /^"([^"]*)"$/;   Literal.new(token[1..-2])
+      when /^'([^']*)'$/;   Literal.new(token[1..-2])
       when "true";          Literal.new(true)
       when "false";         Literal.new(false)
       else                  Name.new(token)
@@ -243,15 +261,35 @@ module Bee
             a = @stack.pop
             @stack.push(a ^ b)
 
-
           when "not" # S boolean -> S boolean
             a = @stack.pop
             @stack.push(!a)
+
+          when "null" # S -> S list
+            @stack.push([])
+
+          when "cons" # S list t -> S t-list
+            b = @stack.pop
+            a = @stack.pop
+            @stack.push(a.cons(b))
+
+          when "unlist" # S t-list (S -> U) (S t-list t -> U) -> U
+            c = @stack.pop
+            b = @stack.pop
+            a = @stack.pop
+            if a.empty?
+              @input.unshift(*b.terms)
+            else
+              @stack.push(a.tail)
+              @stack.push(a.head)
+              @input.unshift(*c.terms)
+            end
 
           else
             @input.unshift(*@dictionary.lookup(term.name))
           end
         else
+          # Just a literal value
           @stack.push(term)
         end
       end
@@ -273,17 +311,13 @@ end
 ################################################################################
 #
 # $ irb -rbee
-# >> bee "3 4 +"
-# => [7]
+# >> bee "5 2 -"
+# => [5]
 #
 # >> bee ": count dup dup print 0 == [pop] [1 - count] if apply ;"
-# => [7]
+# => [3]
 #
 # >> bee "count"
-# 7
-# 6
-# 5
-# 4
 # 3
 # 2
 # 1
@@ -295,5 +329,22 @@ end
 #
 # >> bee "3 4 5 [+] twice"
 # => [12]
+#
+# >> bee ": length [0] [pop length 1 +] ;"
+# => [12]
+#
+# >> bee "'bebe' length"
+# => [12, 4]
+#
+# >> bee "pop pop"
+# => []
+#
+# >> bee ": sum [0] [swap sum +] unlist ;"
+#
+# >> bee "null 3 cons 2 cons 1 cons"
+# => [[1,2,3]]
+#
+# >> bee "sum"
+# => [6]
 #
 ################################################################################
