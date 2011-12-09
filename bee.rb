@@ -1,4 +1,7 @@
 require "strscan"
+require "term/ansicolor"
+
+String.__send__(:include, Term::ANSIColor)
 
 module Bee
   module List
@@ -82,7 +85,7 @@ module Bee
     end
 
     def inspect
-      @terms.inspect
+      "(" + @terms.map(&:inspect).join(" ") + ")"
     end
   end
 
@@ -179,7 +182,8 @@ module Bee
   class Interpreter
     attr_reader :stack, :input, :dictionary
 
-    def initialize
+    def initialize(debug = true)
+      @debug = debug
       @stack = []
       @input = []
       @dictionary = Dictionary.new
@@ -189,7 +193,12 @@ module Bee
       @dictionary.import(dictionary)
       @input.concat(quotation.terms)
 
+      # Store triples of stack + current + continuation
+      trace = []
+
       until (term = @input.shift).nil?
+        trace << [@stack.map(&:inspect).join(" "), term.inspect, @input.map(&:inspect).join(" ")]
+
         if term.is_a?(Term) and term.name?
           case term.name
           when "id" # S -> S
@@ -295,7 +304,26 @@ module Bee
       end
 
       @stack
+    rescue
+      @input.clear
+    ensure
+      s = trace.map{|_| _[0].length }.max # stack
+      t = trace.map{|_| _[1].length }.max # eval term
+      c = trace.map{|_| _[2].length }.max # continuation
+
+      maxs, maxt, maxc = trace.inject([0,0,0]) do |(s,t,c), _|
+        [ s > _[0].length ? s : _[0].length,
+          t > _[1].length ? t : _[1].length,
+          c > _[2].length ? c : _[2].length ]
+      end
+
+      trace.each do |t|
+        puts ".. " << t[0].rjust(maxs).yellow    <<
+             " : " << t[1].rjust(maxt).cyan.bold <<
+             " : " << t[2]
+      end
     end
+
   end
 end
 
@@ -312,7 +340,7 @@ end
 #
 # $ irb -rbee
 # >> bee "5 2 -"
-# => [5]
+# => [3]
 #
 # >> bee ": count dup dup print 0 == [pop] [1 - count] if apply ;"
 # => [3]
