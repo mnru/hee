@@ -83,8 +83,7 @@ object SymbolTable {
                  Tail(1))).
 
       addBinding("dip", // T (T -> S) a dip :: S a
-        WordType(Tail(0) :+ WordType(Tail(0),
-                                     Tail(2) :+ Variable(1)),
+        WordType(Tail(0) :+ WordType(Tail(0), Tail(2)) :+ Variable(1),
                  Tail(2) :+ Variable(1))).
 
       addBinding("quote", // A a quote :: A (B -> B a)
