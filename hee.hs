@@ -51,12 +51,19 @@ instance HasKind Type where
 -- Substitutions are represented using association lists
 type Substitution = [(TVar, Type)]
 
+-- Construct an empty substitution
 nullSub  :: Substitution
 nullSub   = []
 
-(@@)     :: Substitution -> Substitution -> Substitution
-(@@) a b  = [(u, substitute a t) | (u, t) <- b] ++ a
+-- Construct a singleton substitution
+(+->)    :: TVar -> Type -> Substitution
+(+->) v t = [(v, t)]
 
+-- Compose two substitutions, but bindings in b take precedence over a
+(@@)     :: Substitution -> Substitution -> Substitution
+(@@) a b  = [(v, substitute a t) | (v, t) <- b] ++ a
+
+-- Compose two substitutions if binding precedence is irrelevant
 merge    :: Monad m => Substitution -> Substitution -> m Substitution
 merge a b = if agree
             then return (a ++ b)
@@ -70,9 +77,9 @@ class CanSubstitute t where
   tvars      :: t -> [TVar]
 
 instance CanSubstitute Type where
-  substitute s (TVar u)   = case lookup u s of
+  substitute s (TVar v)   = case lookup v s of
                               Just t  -> t
-                              Nothing -> TVar u
+                              Nothing -> TVar v
   substitute s (TApp a b) = TApp (substitute s a) (substitute s b)
   substitute s t          = t
 
@@ -90,9 +97,9 @@ instance CanSubstitute a => CanSubstitute [a] where
 unify                        :: Monad m => Type -> Type -> m Substitution
 unify (TApp a b) (TApp a' b') = do sb <- unify b b'
                                    sa <- unify (substitute sb a) (substitute sb a')
-                                   return ((@@) sa sb)
-unify (TVar u) t              = bindTVar u t
-unify t (TVar u)              = bindTVar u t
+                                   return sa `@@` sb
+unify (TVar v) t              = bindTVar v t
+unify t (TVar v)              = bindTVar v t
 unify (TAbs a) (TAbs b)
   | a == b                    = return nullSub
 unify _ _                     = fail "unify failed"
@@ -102,7 +109,7 @@ bindTVar :: Monad m => TVar -> Type -> m Substitution
 bindTVar v@(_,k) t | t == TVar v      = return nullSub
                    | v `elem` tvars t = fail "occurs check failed"
                    | k /= kind t      = fail "kinds do not match"
-                   | otherwise        = return [(v, t)]
+                   | otherwise        = return v +-> t
 
 -- Finds a substitution s such that (substitute s a) == b. Follows the same
 -- pattern as unification, except it uses `merge` instead of `@@` to combine
@@ -110,9 +117,55 @@ bindTVar v@(_,k) t | t == TVar v      = return nullSub
 match                        :: Monad m => Type -> Type -> m Substitution
 match (TApp a b) (TApp a' b') = do sb <- match b b'
                                    sa <- match a a'
-                                   merge sa sb
+                                   sa `merge` sb
 match (TVar v@(_,k)) t
-  | k == kind t               = return [(v, t)]
+  | k == kind t               = return v +-> t
 match (TAbs a) (TAbs b)
   | a == b                    = return nullSub
 match _ _                     = fail "types do not match"
+
+-------------------------------------------------------------------------------
+
+data Qualified t = [Predicate] :=> t
+                   deriving Eq
+
+data Predicate = MemberOf Id Type
+                 deriving Eq
+
+instance CanSubstitute t => CanSubstitute (Qualified t) where
+  substitute s (ps :=> t) = substitute s ps :=> substitute s t
+  tvars (ps :=> t)        = tvars ps `union` tvars t
+
+instance CanSubstitute Predicate where
+  substitute s (MemberOf id t) = MemberOf id (substitute s t)
+  tvars (MemberOf id t)        = tvars t
+
+unifyPredicate :: Predicate -> Predicate -> Maybe Substitution
+unifyPredicate  = lift unify
+
+matchPredicate :: Predicate -> Predicate -> Maybe Substitution
+matchPredicate  = lift match
+
+lift m (MemberOf i t) (MemberOf i' t') 
+  | i == i'   = m t t'
+  | otherwise = fail "classes do not match"
+
+type Class    = ([Id], [Instance])
+type Instance = Qualified Predicate
+
+-- The Haskell class Ord might be described by:
+--   Eq is a superclass of Ord
+--   Eq has four instances
+--
+-- (["Eq"], [ [] :=> MemberOf "Ord" tUnit,
+--            [] :=> MemberOf "Ord" tChar,
+--            [] :=> MemberOf "Ord" tInt,
+--            [ MemberOf "Ord" (TVar ("a", Star))
+--            , MemberOf "Ord" (TVar ("b", Star)) ]
+--               :=> MemberOf "Ord" (pair (TVar ("a", Star))
+--                                        (TVar ("b", Star))) ])
+
+-- TODO: Store additional information for each declaration, such
+-- as list of member functions for each class and details of their
+-- implementations in each particular instance
+
