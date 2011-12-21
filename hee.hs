@@ -1,5 +1,6 @@
 import List (nub, (\\), intersect, union, partition)
 import Monad (msum)
+import Maybe (isJust, isNothing)
 
 type Id = String
 
@@ -23,15 +24,15 @@ data Expr = EEmpty
           deriving (Eq, Show)
 
 -- Primitive data types
-tUnit   = TAbs ("()"     ,KStar)
-tChar   = TAbs ("char"   ,KStar)
-tInt    = TAbs ("int"    ,KStar)
-tFloat  = TAbs ("float"  ,KStar)
-tDouble = TAbs ("double" ,KStar)
-tList   = TAbs ("[]"    ,(KAbs KStar KStar))
-tArrow  = TAbs ("->"    ,(KAbs KStar (KAbs KStar KStar)))
-tPair   = TAbs ("(,)"   ,(KAbs KStar (KAbs KStar KStar)))
-tTriple = TAbs ("(,,)"  ,(KAbs KStar (KAbs KStar (KAbs KStar KStar))))
+tUnit    = TAbs ("()"     ,KStar)
+tChar    = TAbs ("char"   ,KStar)
+tInteger = TAbs ("int"    ,KStar)
+tFloat   = TAbs ("float"  ,KStar)
+tDouble  = TAbs ("double" ,KStar)
+tList    = TAbs ("[]"    ,(KAbs KStar KStar))
+tArrow   = TAbs ("->"    ,(KAbs KStar (KAbs KStar KStar)))
+tPair    = TAbs ("(,)"   ,(KAbs KStar (KAbs KStar KStar)))
+tTriple  = TAbs ("(,,)"  ,(KAbs KStar (KAbs KStar (KAbs KStar KStar))))
 
 -- Helper functions
 fn a b   = TApp (TApp tArrow a) b
@@ -52,8 +53,8 @@ instance HasKind Type where
 type Substitution = [(TVar, Type)]
 
 -- Construct an empty substitution
-nullSub  :: Substitution
-nullSub   = []
+nullSubstitution  :: Substitution
+nullSubstitution   = []
 
 -- Construct a singleton substitution
 (+->)    :: TVar -> Type -> Substitution
@@ -97,19 +98,19 @@ instance CanSubstitute a => CanSubstitute [a] where
 unify                        :: Monad m => Type -> Type -> m Substitution
 unify (TApp a b) (TApp a' b') = do sb <- unify b b'
                                    sa <- unify (substitute sb a) (substitute sb a')
-                                   return sa `@@` sb
+                                   return (sa @@ sb)
 unify (TVar v) t              = bindTVar v t
 unify t (TVar v)              = bindTVar v t
 unify (TAbs a) (TAbs b)
-  | a == b                    = return nullSub
+  | a == b                    = return nullSubstitution
 unify _ _                     = fail "unify failed"
 
 -- Special case of unifying a type variable with a type, ensuring validity
 bindTVar :: Monad m => TVar -> Type -> m Substitution
-bindTVar v@(_,k) t | t == TVar v      = return nullSub
+bindTVar v@(_,k) t | t == TVar v      = return nullSubstitution
                    | v `elem` tvars t = fail "occurs check failed"
                    | k /= kind t      = fail "kinds do not match"
-                   | otherwise        = return v +-> t
+                   | otherwise        = return (v +-> t)
 
 -- Finds a substitution s such that (substitute s a) == b. Follows the same
 -- pattern as unification, except it uses `merge` instead of `@@` to combine
@@ -119,9 +120,9 @@ match (TApp a b) (TApp a' b') = do sb <- match b b'
                                    sa <- match a a'
                                    sa `merge` sb
 match (TVar v@(_,k)) t
-  | k == kind t               = return v +-> t
+  | k == kind t               = return (v +-> t)
 match (TAbs a) (TAbs b)
-  | a == b                    = return nullSub
+  | a == b                    = return nullSubstitution
 match _ _                     = fail "types do not match"
 
 -------------------------------------------------------------------------------
@@ -150,6 +151,10 @@ lift m (MemberOf i t) (MemberOf i' t')
   | i == i'   = m t t'
   | otherwise = fail "classes do not match"
 
+-- List of superclasses and list of instances
+-- TODO: Store additional information for each declaration, such
+-- as list of member functions for each class and details of their
+-- implementations in each particular instance
 type Class    = ([Id], [Instance])
 type Instance = Qualified Predicate
 
@@ -165,7 +170,92 @@ type Instance = Qualified Predicate
 --               :=> MemberOf "Ord" (pair (TVar ("a", Star))
 --                                        (TVar ("b", Star))) ])
 
--- TODO: Store additional information for each declaration, such
--- as list of member functions for each class and details of their
--- implementations in each particular instance
+data ClassEnvironment = ClassEnvironment { classes  :: Id -> Maybe Class
+                                         , defaults :: [Type] }
+
+supers       :: ClassEnvironment -> Id -> [Id]
+supers env id = case classes env id of Just (ids, instances) -> ids
+
+instances       :: ClassEnvironment -> Id -> [Instance]
+instances env id = case classes env id of Just (ids, instances) -> instances
+
+-- Update class environment with a new binding
+modify :: ClassEnvironment -> Id -> Class -> ClassEnvironment
+modify env id cl = env { classes = \id' -> if id == id'
+                                           then Just cl
+                                           else classes env id' }
+
+-- Construct an empty class enivronment 
+nullClassEnvironment :: ClassEnvironment
+nullClassEnvironment  = ClassEnvironment { classes = \id -> fail "class not defined"
+                                         , defaults = [tInteger, tDouble] }
+
+-- Partial function allows for environment updates to fail, in
+-- cases where a new declaration is not consistent with others
+-- or the definition is being redefined
+type EnvironmentT = ClassEnvironment -> Maybe ClassEnvironment
+
+infixr        5 <:>
+(<:>)        :: EnvironmentT -> EnvironmentT -> EnvironmentT
+(<:>) f g env = do env' <- f env
+                   g env'
+
+addClass :: Id -> [Id] -> EnvironmentT
+addClass id ids env
+  | isJust (classes env id)            = fail "class already defined"
+  | any (isNothing . classes env) ids  = fail "superclass not defined"
+  | otherwise                          = return (modify env id (ids, []))
+
+addPreludeClasses :: EnvironmentT
+addPreludeClasses  = addCoreClasses <:> addNumClasses
+
+addCoreClasses :: EnvironmentT
+addCoreClasses  = addClass "Eq"       []
+              <:> addClass "Ord"      ["Eq"]
+              <:> addClass "Show"     []
+              <:> addClass "Read"     []
+              <:> addClass "Bounded"  []
+              <:> addClass "Enum"     []
+              <:> addClass "Functor"  []
+              <:> addClass "Monoid"   []
+
+addNumClasses :: EnvironmentT
+addNumClasses  = addClass "Num"         ["Eq", "Show"]
+             <:> addClass "Real"        ["Num", "Ord"]
+             <:> addClass "Fractional"  ["Num"]
+             <:> addClass "Integral"    ["Real", "Enum"]
+             <:> addClass "RealFrac"    ["Real", "Fractional"]
+             <:> addClass "Floating"    ["Fractional"]
+             <:> addClass "RealFloat"   ["RealFrac", "Floating"]
+
+addInstance :: [Predicate] -> Predicate -> EnvironmentT
+addInstance ps p@(MemberOf id _) env
+  | isNothing (classes env id)  = fail "class not defined"
+  | any (overlap p) qs          = fail "overlapping instance"
+  | otherwise                   = return (modify env id cl)
+  where ins = instances env id
+        qs  = [q | (_ :=> q) <- ins]
+        cl  = (supers env id, (ps :=> p) : ins)
+
+-- Two class instances overlap if we can unify their declarations,
+-- eg Eq [Int] and Eq [a], where unification finds a = Int
+--
+-- Example:
+--      addPreludeClasses
+--  <:> addInstance [] (MemberOf "Ord" tUnit)
+--  <:> addInstance [] (MemberOf "Ord" tChar)
+--  <:> addInstance [] (MemberOf "Ord" tInt)
+--  <:> addInstance [MemberOf "Ord" (TVar ("a", Star))
+--                  ,MemberOf "Ord" (TVar ("b", Star)) ]
+--                  (MemberOf "Ord" (pair (TVar ("a", Star))
+--                                        (TVar ("b", Star))))
+overlap :: Predicate -> Predicate -> Bool
+overlap p q = isJust (unifyPredicate p q)
+
+-- TODO: Further restrictions on class and instance declarations
+-- * Superclasses of a class should have the same kind as the class itself
+-- * The parameters of any predicates in an instance context should be TVars,
+--   each of which should appear in the head of the instance
+-- * The type in the head of an instance should consist of a type constructor
+--   applied to a sequence of distinct type variable arguments
 
