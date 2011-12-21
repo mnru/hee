@@ -1,0 +1,2 @@
+-- Given a balanced binary search tree S of n values and a
+-- unique value v, find the two closest values to v in S.
