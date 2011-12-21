@@ -85,7 +85,7 @@ module Bee
     end
 
     def inspect
-      "(" + @terms.map(&:inspect).join(" ") + ")"
+      "[" + @terms.map(&:inspect).join(" ") + "]"
     end
   end
 
@@ -282,7 +282,17 @@ module Bee
             a = @stack.pop
             @stack.push(a.cons(b))
 
-          when "unlist" # S t-list (S -> U) (S t-list t -> U) -> U
+          # Should this be polymorphic?
+          #   boolean [true-case] [false-case] fold
+          #   option  [some-case] [none-case]  fold
+          #   either  [left-case] [right-case] fold
+          #   list    [null-case] [cons-case]  fold
+          #
+          # Probably not, because the number of cases (arguments) depends on
+          # the data type definition. Type classes can't safely handle per-
+          # instance arity -- needs research -- and readability would suffer
+          # as reading "fold" in the source could imply several meanings
+          when "fold" # S t-list (S -> U) (S t-list t -> U) -> U
             c = @stack.pop
             b = @stack.pop
             a = @stack.pop
@@ -367,7 +377,7 @@ end
 # >> bee "pop pop"
 # => []
 #
-# >> bee ": sum [0] [swap sum +] unlist ;"
+# >> bee ": sum [0] [swap sum +] fold ;"
 #
 # >> bee "null 3 cons 2 cons 1 cons"
 # => [[1,2,3]]
