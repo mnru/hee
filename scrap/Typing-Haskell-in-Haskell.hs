@@ -23,6 +23,9 @@ data Expr = EEmpty
           | ECompose Expr Expr
           deriving (Eq, Show)
 
+-------------------------------------------------------------------------------
+-- 4. Types
+
 -- Primitive data types
 tUnit    = TAbs ("()"     ,KStar)
 tChar    = TAbs ("char"   ,KStar)
@@ -48,6 +51,9 @@ instance HasKind Type where
   kind (TAbs (_, k)) = k
   -- We can calculate the kind of an application, it's the result side of t
   kind (TApp t _) = case (kind t) of (KAbs _ k) -> k
+
+-------------------------------------------------------------------------------
+-- 5. Substitutions
 
 -- Substitutions are represented using association lists
 type Substitution = [(TVar, Type)]
@@ -93,6 +99,9 @@ instance CanSubstitute a => CanSubstitute [a] where
   substitute s = map (substitute s)
   tvars        = nub . concat . map tvars
 
+-------------------------------------------------------------------------------
+-- 6. Substitution and Matching
+
 -- Unification is a partial function, so results are in a monad. This
 -- finds a Substitution s such that (substitute s a) == (substitute s b)
 unify                        :: Monad m => Type -> Type -> m Substitution
@@ -126,10 +135,12 @@ match (TAbs a) (TAbs b)
 match _ _                     = fail "types do not match"
 
 -------------------------------------------------------------------------------
+-- 7.1. Basic Definitions
 
 data Qualified t = [Predicate] :=> t
                    deriving Eq
 
+-- Declares `Type` is an instance of a class named by `Id`
 data Predicate = MemberOf Id Type
                  deriving Eq
 
@@ -169,6 +180,9 @@ type Instance = Qualified Predicate
 --            , MemberOf "Ord" (TVar ("b", Star)) ]
 --               :=> MemberOf "Ord" (pair (TVar ("a", Star))
 --                                        (TVar ("b", Star))) ])
+
+-------------------------------------------------------------------------------
+-- 7.2. Class Environments
 
 data ClassEnvironment = ClassEnvironment { classes  :: Id -> Maybe Class
                                          , defaults :: [Type] }
@@ -259,3 +273,17 @@ overlap p q = isJust (unifyPredicate p q)
 -- * The type in the head of an instance should consist of a type constructor
 --   applied to a sequence of distinct type variable arguments
 
+-------------------------------------------------------------------------------
+-- 7.3. Entailment
+
+
+-- True iff the predicate p holds when all predicates in ps are satisfied
+entail         :: ClassEnvironment -> [Predicate] -> Predicate -> Bool
+entail env ps p = any (p `elem`) (map (bySuper env) ps) ||
+                  case byInstance env p of
+                    Nothing -> False
+                    Just qs -> all (entail env ps) qs
+  where bySuper env p@(MemberOf id t) = p : concat [bySuper env (MemberOf id' t) | id' <- supers env id]
+        byInstance env p@(MemberOf id t) = msum [tryInstance it | it <- instances env id]
+        tryInstance (ps :=> t')  = do u <- matchPredicate t' p
+                                            Just (map (substitute u) ps)
