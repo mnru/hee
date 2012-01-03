@@ -328,6 +328,11 @@ module Bee
       @stack
     rescue
       @input.clear
+
+      if $!
+        $stderr.puts $!.to_s.red
+        $stderr.puts $!.backtrace.map{|s| "\t#{s}" }
+      end
     ensure
       s = trace.map{|_| _[0].length }.max # stack
       t = trace.map{|_| _[1].length }.max # eval term
@@ -340,9 +345,9 @@ module Bee
       end
 
       trace.each do |t|
-        puts ".. " << t[0].rjust(maxs).yellow    <<
-             " : " << t[1].rjust(maxt).cyan.bold <<
-             " : " << t[2]
+        $stdout.puts ".. " << t[0].rjust(maxs).yellow <<
+                     " : " << t[1].rjust(maxt).cyan   <<
+                     " : " << t[2]
       end
     end
 
