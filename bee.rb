@@ -244,6 +244,14 @@ module Bee
             @input.unshift(a)
             @input.unshift(*b.terms)
 
+          when "dig" # S a b c -> S b c a
+            c = @stack.pop
+            b = @stack.pop
+            a = @stack.pop
+            @stack.push(b)
+            @stack.push(c)
+            @stack.push(a)
+
           when "if" # S boolean t t -> S t
             c = @stack.pop
             b = @stack.pop
@@ -254,6 +262,10 @@ module Bee
             b = @stack.pop
             a = @stack.pop
             @stack.push(a.__send__(term.name.to_sym, b))
+
+          when *%w(to_s to_i to_f)
+            a = @stack.pop
+            @stack.push(a.__send__(term.name.to_sym))
 
           when "and" # S boolean boolean -> S boolean
             b = @stack.pop
