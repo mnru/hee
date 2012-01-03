@@ -304,7 +304,7 @@ module Bee
           # the data type definition. Type classes can't safely handle per-
           # instance arity -- needs research -- and readability would suffer
           # as reading "fold" in the source could imply several meanings
-          when "fold" # S t-list (S -> U) (S t-list t -> U) -> U
+          when "unlist" # S t-list (S -> U) (S t-list t -> U) -> U
             c = @stack.pop
             b = @stack.pop
             a = @stack.pop
@@ -354,6 +354,21 @@ end
 $vm = Bee::Interpreter.new
 $p  = Bee::Parser.new
 
+$vm.dictionary.define(Bee::Definition.new("bottles",
+  $p.parse('dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply').first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("twice",
+  $p.parse("twice dup compose apply").first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("length",
+  $p.parse("[0] [pop length 1 +] unlist").first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("sum",
+  $p.parse("[0] [swap sum +] unlist").first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("map",
+  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first.terms))
+
 def bee(unparsed)
   $vm.run(*$p.parse(unparsed))
 end
@@ -364,23 +379,14 @@ end
 # >> bee "5 2 -"
 # => [3]
 #
-# >> bee ": count dup dup print 0 == [pop] [1 - count] if apply ;"
-# => [3]
-#
-# >> bee "count"
+# >> bee "bottles"
 # 3
 # 2
 # 1
 # 0
 # => []
 #
-# >> bee ": twice dup compose apply ;"
-# => []
-#
 # >> bee "3 4 5 [+] twice"
-# => [12]
-#
-# >> bee ": length [0] [pop length 1 +] ;"
 # => [12]
 #
 # >> bee "'bebe' length"
@@ -389,12 +395,13 @@ end
 # >> bee "pop pop"
 # => []
 #
-# >> bee ": sum [0] [swap sum +] fold ;"
-#
-# >> bee "null 3 cons 2 cons 1 cons"
+# >> bee ": xs null 3 cons 2 cons 1 cons ;"
 # => [[1,2,3]]
 #
 # >> bee "sum"
 # => [6]
+#
+# >> "xs [dup *] map"
+# => [6, [1,4,9]]
 #
 ################################################################################
