@@ -329,10 +329,8 @@ module Bee
     rescue
       @input.clear
 
-      if $!
-        $stderr.puts $!.to_s.red
-        $stderr.puts $!.backtrace.map{|s| "\t#{s}" }
-      end
+      $stderr.puts $!.to_s.red
+    # $stderr.puts $!.backtrace.map{|s| "\t#{s}" }
     ensure
       s = trace.map{|_| _[0].length }.max # stack
       t = trace.map{|_| _[1].length }.max # eval term
@@ -365,14 +363,37 @@ $vm.dictionary.define(Bee::Definition.new("bottles",
 $vm.dictionary.define(Bee::Definition.new("twice",
   $p.parse("dup compose apply").first.terms))
 
-$vm.dictionary.define(Bee::Definition.new("length",
-  $p.parse("[0] [pop length 1 +] unlist").first.terms))
+$vm.dictionary.define(Bee::Definition.new("fold",
+  $p.parse("dup quote compose [fold] compose [quote dup] dip compose unlist").first.terms))
 
-$vm.dictionary.define(Bee::Definition.new("sum",
-  $p.parse("[0] [swap sum +] unlist").first.terms))
+$vm.dictionary.define(Bee::Definition.new("reverse-map",
+  $p.parse("null [swap] dig compose [cons] compose fold").first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("reverse",
+  $p.parse("null [swap cons] fold").first.terms))
 
 $vm.dictionary.define(Bee::Definition.new("map",
-  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first.terms))
+  $p.parse("reverse-map reverse").first.terms))
+
+# Naive version (non tail call)
+#$vm.dictionary.define(Bee::Definition.new("map",
+#  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("length",
+  $p.parse("0 [1 + pop] fold").first.terms))
+
+# Naive version (non tail call)
+#$vm.dictionary.define(Bee::Definition.new("length",
+#  $p.parse("[0] [pop length 1 +] unlist").first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("sum",
+  $p.parse("0 [+] fold").first.terms))
+
+#$vm.dictionary.define(Bee::Definition.new("sum",
+#  $p.parse("[0] [swap sum +] unlist").first.terms))
+
+$vm.dictionary.define(Bee::Definition.new("product",
+  $p.parse("1 [*] fold").first.terms))
 
 def bee(unparsed)
   $vm.run(*$p.parse(unparsed))
