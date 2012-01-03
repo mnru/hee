@@ -363,7 +363,7 @@ $vm.dictionary.define(Bee::Definition.new("bottles",
   $p.parse('dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply').first.terms))
 
 $vm.dictionary.define(Bee::Definition.new("twice",
-  $p.parse("twice dup compose apply").first.terms))
+  $p.parse("dup compose apply").first.terms))
 
 $vm.dictionary.define(Bee::Definition.new("length",
   $p.parse("[0] [pop length 1 +] unlist").first.terms))
@@ -384,11 +384,11 @@ end
 # >> bee "5 2 -"
 # => [3]
 #
-# >> bee "bottles"
-# 3
-# 2
-# 1
-# 0
+# >> bee "3 bottles"
+# 3 bottles
+# 2 bottles
+# 1 bottles
+# 0 bottles
 # => []
 #
 # >> bee "3 4 5 [+] twice"
@@ -403,7 +403,7 @@ end
 # >> bee ": xs null 3 cons 2 cons 1 cons ;"
 # => [[1,2,3]]
 #
-# >> bee "sum"
+# >> bee "xs sum"
 # => [6]
 #
 # >> "xs [dup *] map"
