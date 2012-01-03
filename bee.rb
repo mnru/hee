@@ -141,7 +141,7 @@ module Bee
       scanner = StringScanner.new(unparsed)
       scanner.skip(/\s+/)
 
-      while token = scanner.scan(/\[|\]|[^\s\]]+/)
+      while token = scanner.scan(/\[|\]|"[^"]*"|'[^']*'|[^\s\]]+/)
         case token
         when "["
           Quotation.new.tap do |q|
