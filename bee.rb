@@ -134,7 +134,7 @@ module Bee
 
   class Parser
 
-    # @return [Quotation, Dictionary]
+    # @return [[Terms], Dictionary]
     def parse(unparsed)
       dictionary = Dictionary.new
       nesting = [Quotation.new]
@@ -163,7 +163,7 @@ module Bee
       end
 
       raise "unexpected EOF" unless nesting.size == 1
-      return nesting.first, dictionary
+      return nesting.first.terms, dictionary
     end
 
     def term(token)
@@ -189,9 +189,9 @@ module Bee
       @dictionary = Dictionary.new
     end
 
-    def run(quotation, dictionary)
+    def run(terms, dictionary)
       @dictionary.import(dictionary)
-      @input.concat(quotation.terms)
+      @input.concat(terms)
 
       # Store triples of stack + current + continuation
       trace = []
@@ -358,42 +358,42 @@ $vm = Bee::Interpreter.new
 $p  = Bee::Parser.new
 
 $vm.dictionary.define(Bee::Definition.new("bottles",
-  $p.parse('dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply').first.terms))
+  $p.parse('dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply').first))
 
 $vm.dictionary.define(Bee::Definition.new("twice",
-  $p.parse("dup compose apply").first.terms))
+  $p.parse("dup compose apply").first))
 
 $vm.dictionary.define(Bee::Definition.new("fold",
-  $p.parse("dup quote compose [fold] compose [quote dup] dip compose unlist").first.terms))
+  $p.parse("dup quote compose [fold] compose [quote dup] dip compose unlist").first))
 
 $vm.dictionary.define(Bee::Definition.new("reverse-map",
-  $p.parse("null [swap] dig compose [cons] compose fold").first.terms))
+  $p.parse("null [swap] dig compose [cons] compose fold").first))
 
 $vm.dictionary.define(Bee::Definition.new("reverse",
-  $p.parse("null [swap cons] fold").first.terms))
+  $p.parse("null [swap cons] fold").first))
 
 $vm.dictionary.define(Bee::Definition.new("map",
-  $p.parse("reverse-map reverse").first.terms))
+  $p.parse("reverse-map reverse").first))
 
 # Naive version (non tail call)
 #$vm.dictionary.define(Bee::Definition.new("map",
-#  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first.terms))
+#  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first))
 
 $vm.dictionary.define(Bee::Definition.new("length",
-  $p.parse("0 [1 + pop] fold").first.terms))
+  $p.parse("0 [[pop] dip 1 +] fold").first))
 
 # Naive version (non tail call)
 #$vm.dictionary.define(Bee::Definition.new("length",
-#  $p.parse("[0] [pop length 1 +] unlist").first.terms))
+#  $p.parse("[0] [pop length 1 +] unlist").first))
 
 $vm.dictionary.define(Bee::Definition.new("sum",
-  $p.parse("0 [+] fold").first.terms))
+  $p.parse("0 [+] fold").first))
 
 #$vm.dictionary.define(Bee::Definition.new("sum",
-#  $p.parse("[0] [swap sum +] unlist").first.terms))
+#  $p.parse("[0] [swap sum +] unlist").first))
 
 $vm.dictionary.define(Bee::Definition.new("product",
-  $p.parse("1 [*] fold").first.terms))
+  $p.parse("1 [*] fold").first))
 
 def bee(unparsed)
   $vm.run(*$p.parse(unparsed))
