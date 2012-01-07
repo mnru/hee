@@ -412,14 +412,25 @@ $vm.dictionary.add(Bee::Definition.new("y'",
 $vm.dictionary.add(Bee::Definition.new("y",
   $p.parse("quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply").first))
 
+# Non tail-recursive factorial
 $vm.dictionary.add(Bee::Definition.new("!'",
   $p.parse("swap dup 1 = [pop pop 1] [dup [-1 + swap apply] dip *] if apply").first))
+
+# Tail recursive factorial
+$vm.dictionary.add(Bee::Definition.new("!''",
+  $p.parse("swap dup 1 = [pop pop] [-1 + dup dig [[*] dip] dip apply] if apply").first))
 
 $vm.dictionary.add(Bee::Definition.new("!.1",
   $p.parse("[!'] y'").first))
 
 $vm.dictionary.add(Bee::Definition.new("!.2",
   $p.parse("[!'] y").first))
+
+$vm.dictionary.add(Bee::Definition.new("!.3",
+  $p.parse("dup [!''] y'").first))
+
+$vm.dictionary.add(Bee::Definition.new("!.4",
+  $p.parse("dup [!''] y").first))
 
 def bee(unparsed, debug = false)
   $vm.run(debug, *$p.parse(unparsed))
@@ -430,6 +441,7 @@ end
 
 def time(n, &block)
   a = Time.now
+  c = nil
   n.times do |m|
     b = Time.now
     print "#{m}... "
