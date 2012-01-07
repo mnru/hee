@@ -391,6 +391,7 @@ $vm.dictionary.add(Bee::Definition.new("length",
 $vm.dictionary.add(Bee::Definition.new("sum",
   $p.parse("0 [+] fold").first))
 
+# Naive version (non tail call)
 #$vm.dictionary.add(Bee::Definition.new("sum",
 #  $p.parse("[0] [swap sum +] unlist").first))
 
@@ -407,17 +408,36 @@ $vm.dictionary.add(Bee::Definition.new("cons?",
 $vm.dictionary.add(Bee::Definition.new("y'",
   $p.parse("dup quote [y'] compose quote swap compose apply").first))
 
+# The 'apply apply' suffix seems to indicate we quoted once too many in the first place, perhaps we can optimize this
+$vm.dictionary.add(Bee::Definition.new("y",
+  $p.parse("quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply").first))
+
 $vm.dictionary.add(Bee::Definition.new("!'",
   $p.parse("swap dup 1 = [pop pop 1] [dup [-1 + swap apply] dip *] if apply").first))
 
-$vm.dictionary.add(Bee::Definition.new("!",
+$vm.dictionary.add(Bee::Definition.new("!.1",
   $p.parse("[!'] y'").first))
+
+$vm.dictionary.add(Bee::Definition.new("!.2",
+  $p.parse("[!'] y").first))
 
 def bee(unparsed, debug = false)
   $vm.run(debug, *$p.parse(unparsed))
 rescue
   $vm.input.clear
   $stderr.puts $!.to_s.red
+end
+
+def time(n, &block)
+  a = Time.now
+  n.times do |m|
+    b = Time.now
+    print "#{m}... "
+    block.call
+    c = Time.now
+    puts c - b
+  end
+  return (c - a)/n
 end
 
 ################################################################################
