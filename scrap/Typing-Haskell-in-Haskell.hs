@@ -5,14 +5,14 @@ import Maybe (isJust, isNothing)
 type Id = String
 
 type TVar = (Id, Kind)
-type TAbs = (Id, Kind)
+type TCon = (Id, Kind)
 
 data Kind = KStar
           | KAbs Kind Kind
           deriving (Eq, Show)
 
 data Type = TVar TVar
-          | TAbs TAbs
+          | TCon TCon
           | TApp Type Type
           | TGen Int
           deriving (Eq, Show)
@@ -27,15 +27,15 @@ data Expr = EEmpty
 -- 4. Types
 
 -- Primitive data types
-tUnit    = TAbs ("()"     ,KStar)
-tChar    = TAbs ("char"   ,KStar)
-tInteger = TAbs ("int"    ,KStar)
-tFloat   = TAbs ("float"  ,KStar)
-tDouble  = TAbs ("double" ,KStar)
-tList    = TAbs ("[]"    ,(KAbs KStar KStar))
-tArrow   = TAbs ("->"    ,(KAbs KStar (KAbs KStar KStar)))
-tPair    = TAbs ("(,)"   ,(KAbs KStar (KAbs KStar KStar)))
-tTriple  = TAbs ("(,,)"  ,(KAbs KStar (KAbs KStar (KAbs KStar KStar))))
+tUnit    = TCon ("()"     ,KStar)
+tChar    = TCon ("char"   ,KStar)
+tInteger = TCon ("int"    ,KStar)
+tFloat   = TCon ("float"  ,KStar)
+tDouble  = TCon ("double" ,KStar)
+tList    = TCon ("[]"    ,(KAbs KStar KStar))
+tArrow   = TCon ("->"    ,(KAbs KStar (KAbs KStar KStar)))
+tPair    = TCon ("(,)"   ,(KAbs KStar (KAbs KStar KStar)))
+tTriple  = TCon ("(,,)"  ,(KAbs KStar (KAbs KStar (KAbs KStar KStar))))
 
 -- Helper functions
 fn a b   = TApp (TApp tArrow a) b
@@ -48,7 +48,7 @@ class HasKind t where
   kind :: t -> Kind
 instance HasKind Type where
   kind (TVar (_, k)) = k
-  kind (TAbs (_, k)) = k
+  kind (TCon (_, k)) = k
   -- We can calculate the kind of an application, it's the result side of t
   kind (TApp t _) = case (kind t) of (KAbs _ k) -> k
 
@@ -110,7 +110,7 @@ unify (TApp a b) (TApp a' b') = do sb <- unify b b'
                                    return (sa @@ sb)
 unify (TVar v) t              = bindTVar v t
 unify t (TVar v)              = bindTVar v t
-unify (TAbs a) (TAbs b)
+unify (TCon a) (TCon b)
   | a == b                    = return nullSubstitution
 unify _ _                     = fail "unify failed"
 
@@ -130,7 +130,7 @@ match (TApp a b) (TApp a' b') = do sb <- match b b'
                                    sa `merge` sb
 match (TVar v@(_,k)) t
   | k == kind t               = return (v +-> t)
-match (TAbs a) (TAbs b)
+match (TCon a) (TCon b)
   | a == b                    = return nullSubstitution
 match _ _                     = fail "types do not match"
 
