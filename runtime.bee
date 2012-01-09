@@ -1,3 +1,9 @@
+: foldr
+  dig [pop] [[bury] dip [dup] dip swap [[foldr] dip] dip apply] unlist ;
+
+: bury
+  swap [swap] dip ;
+
 : bottles
   dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply ;
 
@@ -66,3 +72,4 @@
 
 : times
   [times'] y ;
+
