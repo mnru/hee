@@ -17,13 +17,13 @@
   reverse-map reverse ;
 
 : length
-   0 [[pop] dip 1 +] fold ;
+  0 [[pop] dip 1 +] fold ;
 
 : sum
-   0 [+] fold ;
+  0 [+] fold ;
 
 : product
-   1 [*] fold ;
+  1 [*] fold ;
 
 : null?
   [true] [pop pop false] unlist ;
@@ -54,4 +54,13 @@
 
 : !.4
   dup [!''] y ;
+
+: +xs
+  4 cons 3 cons 2 cons 1 cons 0 cons ;
+
+: times'
+  swap dup 0 = [pop pop pop] [1 - [[dup [apply] dip] dip] dip swap apply] if apply ;
+
+: times
+  [times'] y ;
 
