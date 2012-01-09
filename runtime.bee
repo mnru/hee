@@ -5,7 +5,7 @@
   swap [swap] dip ;
 
 : bottles
-  dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply ;
+  dup dup to_s " bottles" swap concat print 0 == [pop] [1 - bottles] if apply ;
 
 : twice
   dup compose apply ;
@@ -47,22 +47,10 @@
   quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
 
 : !'
-  swap dup 1 = [pop pop 1] [dup [-1 + swap apply] dip *] if apply ;
-
-: !''
   swap dup 1 = [pop pop] [-1 + dup dig [[*] dip] dip apply] if apply ;
 
-: !.1
-  [!'] y' ;
-
-: !.2
-  [!'] y ;
-
-: !.3
-  dup [!''] y' ;
-
-: !.4
-  dup [!''] y ;
+: !
+  dup [!'] y ;
 
 : +xs
   5 cons 4 cons 3 cons 2 cons 1 cons ;
