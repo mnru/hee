@@ -76,12 +76,12 @@ module Bee
     end
 
     def append(term)
-      if term.literal?
-        @terms << term.value
-      else
-        @terms << term
-      end
+      @terms << term
       self
+    end
+
+    def quotation?
+      true
     end
 
     def inspect
@@ -101,11 +101,7 @@ module Bee
       if @name.nil?
         @name = token.name
       else
-        if token.literal?
-          @terms << token.value
-        else
-          @terms << token
-        end
+        @terms << token
       end
     end
   end
@@ -197,6 +193,8 @@ module Bee
         o.inspect
       when Name
         o.inspect
+      else
+        o.inspect
       end
     end
   end
@@ -221,7 +219,13 @@ module Bee
       until (term = @input.shift).nil?
         trace << [@stack.map(&:inspect).join(" "), term.inspect, @input.map(&:inspect).join(" ")] if debug
 
-        if term.is_a?(Term) and term.name?
+        if !term.is_a?(Term)
+          @stack.push(term)
+        elsif term.literal?
+          @stack.push(term.value)
+        elsif term.quotation?
+          @stack.push(term)
+        elsif term.name?
           case term.name
           when "id", "nop" # S -> S
 
@@ -385,9 +389,6 @@ module Bee
           else
             @input.unshift(*@dictionary.lookup(term.name))
           end
-        else
-          # Just a literal value
-          @stack.push(term)
         end
       end
 

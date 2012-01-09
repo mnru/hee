@@ -1,5 +1,5 @@
 : bottles
-  dup dup to_s  swap cons print  == [pop] [1 - bottles] if apply ;
+  dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply ;
 
 : twice
   dup compose apply ;
@@ -17,13 +17,13 @@
   reverse-map reverse ;
 
 : length
-   [[pop] dip 1 +] fold ;
+   0 [[pop] dip 1 +] fold ;
 
 : sum
-   [+] fold ;
+   0 [+] fold ;
 
 : product
-   [*] fold ;
+   1 [*] fold ;
 
 : null?
   [true] [pop pop false] unlist ;
@@ -38,10 +38,10 @@
   quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
 
 : !'
-  swap dup  = [pop pop 1] [dup [-1 + swap apply] dip *] if apply ;
+  swap dup 1 = [pop pop 1] [dup [-1 + swap apply] dip *] if apply ;
 
 : !''
-  swap dup  = [pop pop] [-1 + dup dig [[*] dip] dip apply] if apply ;
+  swap dup 1 = [pop pop] [-1 + dup dig [[*] dip] dip apply] if apply ;
 
 : !.1
   [!'] y' ;
