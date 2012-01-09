@@ -122,6 +122,11 @@ module Bee
       self
     end
 
+    def defined?(name)
+      @storage.include?(name)
+    end
+
+    # @return [Term]
     def lookup(name)
       @storage[name] or raise "undefined `#{name}'"
     end
@@ -129,6 +134,10 @@ module Bee
     def import(other)
       @storage.merge!(other.storage)
       self
+    end
+
+    def definitions
+      @storage.map{|name, terms| Definition.new(name, terms) }
     end
   end
 
@@ -177,6 +186,19 @@ module Bee
       else                  Name.new(token)
       end
     end
+
+    def unparse(o)
+      case o
+      when Definition
+        ": #{o.name}\n  #{o.terms.map{|p| unparse(p) }.join(' ')} ;\n\n"
+      when Quotation
+        o.inspect
+      when Literal
+        o.inspect
+      when Name
+        o.inspect
+      end
+    end
   end
 
   class Interpreter
@@ -201,7 +223,7 @@ module Bee
 
         if term.is_a?(Term) and term.name?
           case term.name
-          when "id" # S -> S
+          when "id", "nop" # S -> S
 
           when "halt" # S -> 0
             @stack = []
@@ -268,6 +290,18 @@ module Bee
             a = @stack.pop
             @stack.push(a.__send__(term.name.to_sym, b))
 
+          when "/%"
+            b = @stack.pop
+            a = @stack.pop
+            @stack.push(a / b)
+            @stack.push(a % b)
+
+          when "%/"
+            b = @stack.pop
+            a = @stack.pop
+            @stack.push(a % b)
+            @stack.push(a / b)
+
           when *%w(to_s to_i to_f)
             a = @stack.pop
             @stack.push(a.__send__(term.name.to_sym))
@@ -321,6 +355,33 @@ module Bee
               @input.unshift(*c.terms)
             end
 
+          when "dump-defs" # S path -> S
+            a = @stack.pop
+            p = Parser.new
+
+            File.open(a, "w+") do |io|
+              @dictionary.definitions.each{|d| io << p.unparse(d) }
+            end
+
+          when "load-defs" # S path -> S
+            a    = @stack.pop
+            t, d = Parser.new.parse(File.read(a))
+            @dictionary.import(d)
+
+          when "expand-def" # S (T -> U) -> S (T -> U)
+            a = @stack.pop
+            q = Quotation.new
+
+            while t = a.terms.shift
+              if t.name? and @dictionary.defined?(t.name)
+                q.terms.push(*@dictionary.lookup(t.name))
+              else
+                q.terms.push(t)
+              end
+            end
+
+            @stack.push(q)
+
           else
             @input.unshift(*@dictionary.lookup(term.name))
           end
@@ -359,78 +420,12 @@ end
 $vm = Bee::Interpreter.new
 $p  = Bee::Parser.new
 
-$vm.dictionary.add(Bee::Definition.new("bottles",
-  $p.parse('dup dup to_s " bottles" swap cons print 0 == [pop] [1 - bottles] if apply').first))
-
-$vm.dictionary.add(Bee::Definition.new("twice",
-  $p.parse("dup compose apply").first))
-
-$vm.dictionary.add(Bee::Definition.new("fold",
-  $p.parse("dup quote compose [fold] compose [quote dup] dip compose unlist").first))
-
-$vm.dictionary.add(Bee::Definition.new("reverse-map",
-  $p.parse("null [swap] dig compose [cons] compose fold").first))
-
-$vm.dictionary.add(Bee::Definition.new("reverse",
-  $p.parse("null [swap cons] fold").first))
-
-$vm.dictionary.add(Bee::Definition.new("map",
-  $p.parse("reverse-map reverse").first))
-
-# Naive version (non tail call)
 #$vm.dictionary.add(Bee::Definition.new("map",
 #  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first))
-
-$vm.dictionary.add(Bee::Definition.new("length",
-  $p.parse("0 [[pop] dip 1 +] fold").first))
-
-# Naive version (non tail call)
 #$vm.dictionary.add(Bee::Definition.new("length",
 #  $p.parse("[0] [pop length 1 +] unlist").first))
-
-$vm.dictionary.add(Bee::Definition.new("sum",
-  $p.parse("0 [+] fold").first))
-
-# Naive version (non tail call)
 #$vm.dictionary.add(Bee::Definition.new("sum",
 #  $p.parse("[0] [swap sum +] unlist").first))
-
-$vm.dictionary.add(Bee::Definition.new("product",
-  $p.parse("1 [*] fold").first))
-
-$vm.dictionary.add(Bee::Definition.new("null?",
-  $p.parse("[true] [pop pop false] unlist").first))
-
-$vm.dictionary.add(Bee::Definition.new("cons?",
-  $p.parse("[false] [pop pop true] unlist").first))
-
-# This is like fix f = f (fix f)... references itself
-$vm.dictionary.add(Bee::Definition.new("y'",
-  $p.parse("dup quote [y'] compose quote swap compose apply").first))
-
-# The 'apply apply' suffix seems to indicate we quoted once too many in the first place, perhaps we can optimize this
-$vm.dictionary.add(Bee::Definition.new("y",
-  $p.parse("quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply").first))
-
-# Non tail-recursive factorial
-$vm.dictionary.add(Bee::Definition.new("!'",
-  $p.parse("swap dup 1 = [pop pop 1] [dup [-1 + swap apply] dip *] if apply").first))
-
-# Tail recursive factorial
-$vm.dictionary.add(Bee::Definition.new("!''",
-  $p.parse("swap dup 1 = [pop pop] [-1 + dup dig [[*] dip] dip apply] if apply").first))
-
-$vm.dictionary.add(Bee::Definition.new("!.1",
-  $p.parse("[!'] y'").first))
-
-$vm.dictionary.add(Bee::Definition.new("!.2",
-  $p.parse("[!'] y").first))
-
-$vm.dictionary.add(Bee::Definition.new("!.3",
-  $p.parse("dup [!''] y'").first))
-
-$vm.dictionary.add(Bee::Definition.new("!.4",
-  $p.parse("dup [!''] y").first))
 
 def bee(unparsed, debug = false)
   $vm.run(debug, *$p.parse(unparsed))
@@ -457,6 +452,9 @@ end
 # $ irb -rbee
 # >> bee "5 2 -"
 # => [3]
+#
+# >> bee "'runtime.bee' load-defs"
+# => []
 #
 # >> bee "3 bottles"
 # 3 bottles

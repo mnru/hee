@@ -1,0 +1,57 @@
+: bottles
+  dup dup to_s  swap cons print  == [pop] [1 - bottles] if apply ;
+
+: twice
+  dup compose apply ;
+
+: fold
+  dup quote compose [fold] compose [quote dup] dip compose unlist ;
+
+: reverse-map
+  null [swap] dig compose [cons] compose fold ;
+
+: reverse
+  null [swap cons] fold ;
+
+: map
+  reverse-map reverse ;
+
+: length
+   [[pop] dip 1 +] fold ;
+
+: sum
+   [+] fold ;
+
+: product
+   [*] fold ;
+
+: null?
+  [true] [pop pop false] unlist ;
+
+: cons?
+  [false] [pop pop true] unlist ;
+
+: y'
+  dup quote [y'] compose quote swap compose apply ;
+
+: y
+  quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
+
+: !'
+  swap dup  = [pop pop 1] [dup [-1 + swap apply] dip *] if apply ;
+
+: !''
+  swap dup  = [pop pop] [-1 + dup dig [[*] dip] dip apply] if apply ;
+
+: !.1
+  [!'] y' ;
+
+: !.2
+  [!'] y ;
+
+: !.3
+  dup [!''] y' ;
+
+: !.4
+  dup [!''] y ;
+
