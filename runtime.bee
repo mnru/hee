@@ -1,5 +1,5 @@
 : foldr
-  dig [pop] [[bury dup] dip swap [[foldr] dip] dip apply] unlist ;
+  dig [pop] [swap [bury] dip bury dup [foldr] dip apply] unlist ;
 
 : bury
   swap [swap] dip ;
