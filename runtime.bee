@@ -73,3 +73,6 @@
 : times
   [times'] y ;
 
+: concat
+  [swap cons] foldr ;
+
