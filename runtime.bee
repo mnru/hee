@@ -4,26 +4,29 @@
 : twice
   dup compose apply ;
 
-: fold
-  dup quote compose [fold] compose [quote dup] dip compose unlist ;
+: foldl'
+  [dup quote compose] dip compose [quote dup] dip compose unlist ;
+
+: foldl
+  [foldl'] y ;
 
 : reverse-map
-  null [swap] dig compose [cons] compose fold ;
+  null [swap] dig compose [cons] compose foldl ;
 
 : reverse
-  null [swap cons] fold ;
+  null [swap cons] foldl ;
 
 : map
   reverse-map reverse ;
 
 : length
-  0 [[pop] dip 1 +] fold ;
+  0 [[pop] dip 1 +] foldl ;
 
 : sum
-  0 [+] fold ;
+  0 [+] foldl ;
 
 : product
-  1 [*] fold ;
+  1 [*] foldl ;
 
 : null?
   [true] [pop pop false] unlist ;
@@ -56,11 +59,10 @@
   dup [!''] y ;
 
 : +xs
-  4 cons 3 cons 2 cons 1 cons 0 cons ;
+  5 cons 4 cons 3 cons 2 cons 1 cons ;
 
 : times'
   swap dup 0 = [pop pop pop] [1 - [[dup [apply] dip] dip] dip swap apply] if apply ;
 
 : times
   [times'] y ;
-
