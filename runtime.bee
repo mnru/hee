@@ -1,3 +1,6 @@
+: filter
+  reverse-filter reverse ;
+
 : foldr
   dig [pop] [swap [bury] dip bury dup [foldr] dip apply] unlist ;
 
@@ -63,4 +66,7 @@
 
 : concat
   [swap cons] foldr ;
+
+: reverse-filter
+  [swap dup] swap compose [[cons] [pop] if apply] compose null swap foldl ;
 
