@@ -436,7 +436,7 @@ module Bee
 
           when *%w(to_i to_f)
             a = @stack.pop
-            @stack.push(a.__send__(term.name.to_sym))
+            @stack.push(a.to_s.__send__(term.name.to_sym))
 
           when "and" # S boolean boolean -> S boolean
             b = @stack.pop
@@ -561,7 +561,7 @@ def bee(unparsed, debug = false)
 rescue
   $vm.input.clear
   $stderr.puts $!.to_s.red
-  $stderr.puts "  " << $!.backtrace.join("\n  ")
+# $stderr.puts "  " << $!.backtrace.join("\n  ")
 end
 
 def time(n, &block)
