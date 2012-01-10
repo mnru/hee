@@ -75,8 +75,8 @@ module Bee
       @terms = terms
     end
 
-    def append(term)
-      @terms << term
+    def append(term, *terms)
+      @terms.push(term, *terms)
       self
     end
 
@@ -97,11 +97,11 @@ module Bee
       @terms = terms
     end
 
-    def append(token)
+    def append(token, *tokens)
       if @name.nil?
         @name = token.name
       else
-        @terms << token
+        @terms.push(token, *tokens)
       end
     end
   end
@@ -161,7 +161,7 @@ module Bee
         when ";"
           dictionary.add(nesting.pop)
         else
-          nesting.last.append(term(token))
+          nesting.last.append(*term(token))
         end
 
         scanner.skip(/\s+/)
@@ -175,8 +175,8 @@ module Bee
       case token
       when /^-?\d+$/;       Literal.new(token.to_i)
       when /^-?\d*\.\d+$/;  Literal.new(token.to_f)
-      when /^"([^"]*)"$/;   Literal.new(token[1..-2])
-      when /^'([^']*)'$/;   Literal.new(token[1..-2])
+      when /^"([^"]*)"$/;   token[1..-2].reverse.chars.inject([Name.new("null")]) {|ts,t| ts << Literal.new(t) << Name.new("cons") }
+      when /^'([^']*)'$/;   token[1..-2].reverse.chars.inject([Name.new("null")]) {|ts,t| ts << Literal.new(t) << Name.new("cons") }
       when "true";          Literal.new(true)
       when "false";         Literal.new(false)
       else                  Name.new(token)
@@ -306,7 +306,11 @@ module Bee
             @stack.push(a % b)
             @stack.push(a / b)
 
-          when *%w(to_s to_i to_f)
+          when "to_s"
+            a = @stack.pop
+            @stack.push(a.to_s.chars.to_a)
+
+          when *%w(to_i to_f)
             a = @stack.pop
             @stack.push(a.__send__(term.name.to_sym))
 
@@ -363,13 +367,13 @@ module Bee
             a = @stack.pop
             p = Parser.new
 
-            File.open(a, "w+") do |io|
+            File.open(a.join, "w+") do |io|
               @dictionary.definitions.each{|d| io << p.unparse(d) }
             end
 
           when "load-defs" # S path -> S
             a    = @stack.pop
-            t, d = Parser.new.parse(File.read(a))
+            t, d = Parser.new.parse(File.read(a.join))
             @dictionary.import(d)
 
           when "expand-def" # S (T -> U) -> S (T -> U)
@@ -433,6 +437,7 @@ def bee(unparsed, debug = false)
 rescue
   $vm.input.clear
   $stderr.puts $!.to_s.red
+  $stderr.puts "\n\t" << $!.backtrace.join("\n\t")
 end
 
 def time(n, &block)

@@ -8,7 +8,7 @@
   swap [swap] dip ;
 
 : bottles
-  dup dup to_s " bottles" swap concat print 0 == [pop] [1 - bottles] if apply ;
+  dup dup to_s " bottles" concat print 0 == [pop] [1 - bottles] if apply ;
 
 : twice
   dup compose apply ;
