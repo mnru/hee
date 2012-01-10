@@ -1,26 +1,19 @@
 require "strscan"
 require "term/ansicolor"
 
-String.__send__(:include, Term::ANSIColor)
+class String
+  include Term::ANSIColor
+
+  # Dumb way to distinguish bee chars (modeled with ::String) from
+  # bee strings (represented with Bee::String or Bee::Cons), eg 'x'
+  # instead of "x"
+  alias _inspect inspect
+  def inspect
+    "'#{_inspect[1..-2]}'"
+  end
+end
 
 module Bee
-  module List
-    def head
-      # Damnit, 1.8!
-      is_a?(String) ? self[0,1] : self[0]
-    end
-
-    def tail
-      self[1..-1]
-    end
-
-    def cons(a)
-      method(self.class.name).call(a) + self
-    end
-  end
-
-  ::Array.__send__(:include, List)
-  ::String.__send__(:include, List)
 
   class Term
     def name?
@@ -50,6 +43,10 @@ module Bee
     def inspect
       @name
     end
+
+    def unparse
+      @name
+    end
   end
 
   class Literal < Term
@@ -65,6 +62,124 @@ module Bee
 
     def inspect
       @value.inspect
+    end
+
+    def unparse
+      @value.inspect
+    end
+  end
+
+  class List
+    # Prepend an element
+    def cons(head)
+      Cons.new(head, self)
+    end
+
+    # Lower a bee string to Ruby's String
+    def to_s
+      lst = self
+      str = ""
+
+      until lst.null?
+        str << lst.head.to_s
+        lst  = lst.tail
+      end
+
+      str
+    end
+  end
+
+  Null = Class.new(List) do
+    def null?
+      true
+    end
+
+    def head
+      raise "head of empty list"
+    end
+
+    def tail
+      self
+    end
+
+    def inspect
+      "null"
+    end
+  end.new
+
+  class Cons < List
+    attr_reader :head, :tail
+
+    def initialize(head, tail)
+      @head, @tail = head, tail
+    end
+
+    def null?
+      false
+    end
+
+    # Show lists of bee chars (modeled by ::String) as "strings" but
+    # format non-char lists as (a b c ...)
+    def inspect
+      fmt = "("
+      str = '"'
+      lst = self
+
+      unless lst.null?
+        until lst.null?
+          str &&= (::String === lst.head) && (str << lst.head)
+          fmt  << lst.head.inspect
+          fmt  << " "
+          lst   = lst.tail
+        end
+
+        str ?
+          str.gsub("\n", "\\n").gsub("\r", "\\r").gsub("\t", "\\t") << '"' :
+          fmt[0..-2]  << ")"
+      else
+        "null"
+      end
+    end
+  end
+
+  class String < Literal
+    def initialize(value)
+      @value = value.chars.to_a
+    end
+
+    # Not used, evaluated with #value first
+    def head
+      if @value.empty?
+        raise "head of empty list"
+      else
+        @value[0]
+      end
+    end
+
+    # Not used, evaluated with #value first
+    def tail
+      (@value[1..-1] || []).reverse.inject(Null){|tail,head| Cons.new(head, tail) }
+    end
+
+    # Not used, evaluated with #value first
+    def cons(head)
+      Cons.new(head, self)
+    end
+
+    def value
+      @value.reverse.inject(Null){|tail,head| Cons.new(head, tail) }
+    end
+
+    def inspect
+      @value.join.inspect
+    end
+
+    def unparse
+      @value.join.inspect
+    end
+
+    def to_s
+      @value.join
     end
   end
 
@@ -86,6 +201,10 @@ module Bee
 
     def inspect
       "[" + @terms.map(&:inspect).join(" ") + "]"
+    end
+
+    def unparse
+      "[" + @terms.map(&:unparse).join(" ") + "]"
     end
   end
 
@@ -175,8 +294,13 @@ module Bee
       case token
       when /^-?\d+$/;       Literal.new(token.to_i)
       when /^-?\d*\.\d+$/;  Literal.new(token.to_f)
-      when /^"([^"]*)"$/;   token[1..-2].reverse.chars.inject([Name.new("null")]) {|ts,t| ts << Literal.new(t) << Name.new("cons") }
-      when /^'([^']*)'$/;   token[1..-2].reverse.chars.inject([Name.new("null")]) {|ts,t| ts << Literal.new(t) << Name.new("cons") }
+      when /^'([^']{1})'$/; Literal.new(token[1..1])
+      when /^'\\n'$/;       Literal.new("\n")
+      when /^'\\r'$/;       Literal.new("\r")
+      when /^'\\t'$/;       Literal.new("\t")
+      when /^'\\\\'$/;      Literal.new("\\")
+      when /^"([^"]*)"$/;   String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
+      when /^'([^']*)'$/;   String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
       when "true";          Literal.new(true)
       when "false";         Literal.new(false)
       else                  Name.new(token)
@@ -188,13 +312,13 @@ module Bee
       when Definition
         ": #{o.name}\n  #{o.terms.map{|p| unparse(p) }.join(' ')} ;\n\n"
       when Quotation
-        o.inspect
+        o.unparse
       when Literal
-        o.inspect
+        o.unparse
       when Name
-        o.inspect
+        o.unparse
       else
-        o.inspect
+        raise "can't unparse #{o.class}"
       end
     end
   end
@@ -308,7 +432,7 @@ module Bee
 
           when "to_s"
             a = @stack.pop
-            @stack.push(a.to_s.chars.to_a)
+            @stack.push(a.to_s.reverse.chars.inject(Null){|tail,head| Cons.new(head,tail) })
 
           when *%w(to_i to_f)
             a = @stack.pop
@@ -334,7 +458,7 @@ module Bee
             @stack.push(!a)
 
           when "null" # S -> S list
-            @stack.push([])
+            @stack.push(Null)
 
           when "cons" # S list t -> S t-list
             b = @stack.pop
@@ -355,7 +479,7 @@ module Bee
             c = @stack.pop
             b = @stack.pop
             a = @stack.pop
-            if a.empty?
+            if a.null?
               @input.unshift(*b.terms)
             else
               @stack.push(a.tail)
@@ -363,17 +487,17 @@ module Bee
               @input.unshift(*c.terms)
             end
 
-          when "dump-defs" # S path -> S
+          when "dump-defs" # S string -> S
             a = @stack.pop
             p = Parser.new
 
-            File.open(a.join, "w+") do |io|
+            File.open(a.to_s, "w+") do |io|
               @dictionary.definitions.each{|d| io << p.unparse(d) }
             end
 
-          when "load-defs" # S path -> S
+          when "load-defs" # S string -> S
             a    = @stack.pop
-            t, d = Parser.new.parse(File.read(a.join))
+            t, d = Parser.new.parse(File.read(a.to_s))
             @dictionary.import(d)
 
           when "expand-def" # S (T -> U) -> S (T -> U)
@@ -412,7 +536,7 @@ module Bee
         trace.each do |t|
           $stdout.puts ".. " << t[0].rjust(maxs).yellow <<
                        " : " << t[1].rjust(maxt).cyan   <<
-                       " : " << t[2]
+                     ((" : " << t[2])[maxs+maxt .. 80] || "")
         end
       end
     end
@@ -437,7 +561,7 @@ def bee(unparsed, debug = false)
 rescue
   $vm.input.clear
   $stderr.puts $!.to_s.red
-  $stderr.puts "\n\t" << $!.backtrace.join("\n\t")
+  $stderr.puts "  " << $!.backtrace.join("\n  ")
 end
 
 def time(n, &block)
