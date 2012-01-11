@@ -549,10 +549,18 @@ end
 $vm = Bee::Interpreter.new
 $p  = Bee::Parser.new
 
+if File.exists?("runtime.bee")
+  $vm.run(false, *$p.parse(File.read("runtime.bee")))
+else
+  $stderr.puts "cannot load runtime.bee from current directory".yellow
+end
+
 #$vm.dictionary.add(Bee::Definition.new("map",
 #  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first))
+
 #$vm.dictionary.add(Bee::Definition.new("length",
 #  $p.parse("[0] [pop length 1 +] unlist").first))
+
 #$vm.dictionary.add(Bee::Definition.new("sum",
 #  $p.parse("[0] [swap sum +] unlist").first))
 
