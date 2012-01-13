@@ -31,7 +31,7 @@
   [not] [id] unbool ;
 
 : not
-  false true unbool ;
+  [false] [true] unbool ;
 
 : filter
   reverse-filter reverse ;
