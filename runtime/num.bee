@@ -15,9 +15,3 @@
 
 : %/
   dup2 / [%] dip ;
-
-: greater
-  dup2 > [pop] [swap pop] if ;
-
-: lesser
-  dup2 < [pop] [swap pop] if ;

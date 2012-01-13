@@ -1,18 +1,12 @@
-Catamorphisms
-  true false unbool
-  null cons  unlist
-  none some  unmaybe
-  left right uneither
-
 Numeric
   +   :: a a -> a
   -   :: a a -> a
   *   :: a a -> a
   /   :: a a -> a
   %   :: a a -> a
-  **  :: a a -> a
   %/  :: a a -> a a
   /%  :: a a -> a a
+  **  :: a a -> a
 
 Bitwise
   |   :: a a -> a

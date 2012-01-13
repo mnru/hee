@@ -1,5 +1,7 @@
 'runtime/num.bee'         load
 'runtime/bool.bee'        load
 'runtime/list.bee'        load
+'runtime/pair.bee'        load
 'runtime/option.bee'      load
+'runtime/ordering.bee'    load
 'runtime/combinators.bee' load

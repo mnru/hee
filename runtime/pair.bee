@@ -1,0 +1,9 @@
+:: pair
+ | pair fst snd
+ ;
+
+: fst
+  [pop] unpair ;
+
+: snd
+  [swap pop] unpair ;
