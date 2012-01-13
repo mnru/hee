@@ -1,8 +1,8 @@
 Catamorphisms
-  true false fold-bool
-  null cons  fold-list
-  none some  fold-maybe
-  left right fold-either
+  true false unbool
+  null cons  unlist
+  none some  unmaybe
+  left right uneither
 
 Numeric
   +   :: a a -> a
