@@ -7,9 +7,11 @@ class String
   # Dumb way to distinguish bee chars (modeled with ::String) from
   # bee strings (represented with Bee::String or Bee::Cons), eg 'x'
   # instead of "x"
-  alias _inspect inspect
-  def inspect
-    "'#{_inspect[1..-2]}'"
+  unless method_defined?(:_inspect)
+    alias _inspect inspect
+    def inspect
+      "'#{_inspect[1..-2]}'"
+    end
   end
 end
 
@@ -27,200 +29,168 @@ module Bee
     def quotation?
       false
     end
-  end
 
-  class Name < Term
-    attr_reader :name
+    class Name < Term
+      attr_reader :name
 
-    def initialize(name)
-      @name = name
-    end
-
-    def name?
-      true
-    end
-
-    def inspect
-      @name
-    end
-
-    def unparse
-      @name
-    end
-  end
-
-  class Literal < Term
-    attr_reader :value
-
-    def initialize(value)
-      @value = value
-    end
-
-    def literal?
-      true
-    end
-
-    def inspect
-      @value.inspect
-    end
-
-    def unparse
-      @value.inspect
-    end
-  end
-
-  class List
-    # Prepend an element
-    def cons(head)
-      Cons.new(head, self)
-    end
-
-    # Lower a bee string to Ruby's String
-    def to_s
-      lst = self
-      str = ""
-
-      until lst.null?
-        str << lst.head.to_s
-        lst  = lst.tail
+      def initialize(name)
+        @name = name
       end
 
-      str
-    end
-  end
+      def name?
+        true
+      end
 
-  Null = Class.new(List) do
-    def null?
-      true
-    end
+      def inspect
+        @name
+      end
 
-    def head
-      raise "head of empty list"
-    end
-
-    def tail
-      self
+      def unparse
+        @name
+      end
     end
 
-    def inspect
-      "null"
+    class Literal < Term
+      attr_reader :value
+
+      def initialize(value)
+        @value = value
+      end
+
+      def literal?
+        true
+      end
+
+      def inspect
+        @value.inspect
+      end
+
+      def unparse
+        @value.inspect
+      end
     end
-  end.new
 
-  class Cons < List
-    attr_reader :head, :tail
+    class Quotation < Term
+      attr_reader :terms
 
-    def initialize(head, tail)
-      @head, @tail = head, tail
+      def initialize(terms = [])
+        @terms = terms
+      end
+
+      def <<(term)
+        @terms.push(term)
+        self
+      end
+
+      def quotation?
+        true
+      end
+
+      def inspect
+        "[" + @terms.map(&:inspect).join(" ") + "]"
+      end
+
+      def unparse
+        "[" + @terms.map(&:unparse).join(" ") + "]"
+      end
     end
 
-    def null?
-      false
-    end
+    class Definition < Term
+      attr_reader :name, :terms
 
-    # Show lists of bee chars (modeled by ::String) as "strings" but
-    # format non-char lists as (a b c ...)
-    def inspect
-      fmt = "("
-      str = '"'
-      lst = self
+      alias value terms
 
-      unless lst.null?
-        until lst.null?
-          str &&= (::String === lst.head) && (str << lst.head)
-          fmt  << lst.head.inspect
-          fmt  << " "
-          lst   = lst.tail
+      def initialize(name = nil, terms = [])
+        @name, @terms = name, terms
+      end
+
+      def <<(token)
+        if @name.nil?
+          @name = token.name
+        else
+          @terms << token
         end
 
-        str ?
-          str.gsub("\n", "\\n").gsub("\r", "\\r").gsub("\t", "\\t") << '"' :
-          fmt[0..-2]  << ")"
-      else
-        "null"
+        self
+      end
+    end
+
+    class TypeBuilder
+      def initialize(name = nil, variants = [])
+        @name, @variants = name, variants
+      end
+
+      def <<(token)
+        if @name.nil?
+          @name = token.name
+        elsif token.name == "|"
+          @variants << []
+        else
+          @variants.last << token.name
+        end
+      end
+
+      def value
+        AlgebraicType.define(@name, @variants.map{|(n,*a)| [n, a.length] })
       end
     end
   end
 
-  class String < Literal
-    def initialize(value)
-      @value = value.chars.to_a
+  class AlgebraicType
+    attr_reader :name, :variants
+
+    def self.define(name, variants)
+      new(name, variants.map.with_index{|(n,a),t| Variant.new(n,t,a) })
     end
 
-    # Not used, evaluated with #value first
-    def head
-      if @value.empty?
-        raise "head of empty list"
-      else
-        @value[0]
+    def initialize(name, variants)
+      @name, @variants = name, variants
+    end
+
+    def unbox(stack, input)
+      # S boxed [1] [2] [...] unbox-type
+      boxed, *fs = stack.slice!(-(@variants.length+1), @variants.length+1)
+      boxed.unbox(stack)
+      input.unshift(*fs[boxed.tag].terms)
+    end
+
+    def inspect
+      @name
+    end
+
+    class Variant
+      attr_reader :name, :tag, :arity
+
+      def initialize(name, tag, arity)
+        @name, @tag, @arity = name, tag, arity
+      end
+
+      def box(stack)
+        Boxed.new(@name, @tag, stack.slice!(-@arity, @arity))
+      end
+
+      def inspect
+        "#{@name}[#{@arity}]"
       end
     end
 
-    # Not used, evaluated with #value first
-    def tail
-      (@value[1..-1] || []).reverse.inject(Null){|tail,head| Cons.new(head, tail) }
-    end
+    class Boxed
+      attr_reader :name, :tag
 
-    # Not used, evaluated with #value first
-    def cons(head)
-      Cons.new(head, self)
-    end
+      def initialize(name, tag, fields)
+        @name, @tag, @fields = name, tag, fields
+      end
 
-    def value
-      @value.reverse.inject(Null){|tail,head| Cons.new(head, tail) }
-    end
+      def unbox(stack)
+        stack.push(*@fields)
+      end
 
-    def inspect
-      @value.join.inspect
-    end
-
-    def unparse
-      @value.join.inspect
-    end
-
-    def to_s
-      @value.join
-    end
-  end
-
-  class Quotation < Term
-    attr_reader :terms
-
-    def initialize(terms = [])
-      @terms = terms
-    end
-
-    def append(term, *terms)
-      @terms.push(term, *terms)
-      self
-    end
-
-    def quotation?
-      true
-    end
-
-    def inspect
-      "[" + @terms.map(&:inspect).join(" ") + "]"
-    end
-
-    def unparse
-      "[" + @terms.map(&:unparse).join(" ") + "]"
-    end
-  end
-
-  class Definition
-    attr_reader :name, :terms
-
-    def initialize(name = nil, terms = [])
-      @name  = name
-      @terms = terms
-    end
-
-    def append(token, *tokens)
-      if @name.nil?
-        @name = token.name
-      else
-        @terms.push(token, *tokens)
+      def inspect
+        if @fields.empty?
+          @name
+        else
+          "(#{@fields.map(&:inspect).join(' ')} #{@name})"
+        end
       end
     end
   end
@@ -232,8 +202,8 @@ module Bee
       @storage = {}
     end
 
-    def add(definition)
-      @storage[definition.name] = definition.terms
+    def add(name, value)
+      @storage[name] = value
       self
     end
 
@@ -252,7 +222,7 @@ module Bee
     end
 
     def definitions
-      @storage.map{|name, terms| Definition.new(name, terms) }
+      @storage.map{|name, terms| Term::Definition.new(name, terms) }
     end
   end
 
@@ -260,62 +230,82 @@ module Bee
 
     # @return [[Terms], Dictionary]
     def parse(unparsed)
-      dictionary = Dictionary.new
-      nesting = [Quotation.new]
+      nested      = [[]]
+      dictionary  = Dictionary.new
+
       scanner = StringScanner.new(unparsed)
       scanner.skip(/\s+/)
 
-      while token = scanner.scan(/\[|\]|"[^"]*"|'[^']*'|[^\s\]]+/)
+      while token = scanner.scan(/\[|\]|"|'|[^\s\]]+/)
         case token
         when "["
-          Quotation.new.tap do |q|
-            nesting.last.append(q)
-            nesting.push(q)
-          end
+          nested << Term::Quotation.new
         when "]"
-          raise "unexpected ]" unless nesting.size > 1
-          nesting.pop
+          token = nested.pop
+          nested.last << token
+          raise "unexpected ]" if nested.empty?
+        when "'"
+          token = scanner.scan(/[^']*'/) or raise "unterminated '"
+          nested.last << term("'" << token)
+        when '"'
+          token = scanner.scan(/[^"]*"/) or raise 'unterminated "'
+          nested.last << term("'" << token)
         when ":"
-          nesting.push(Definition.new)
+          nested << Term::Definition.new
+        when "::"
+          nested << Term::TypeBuilder.new
         when ";"
-          dictionary.add(nesting.pop)
+          case nested.last
+          when Term::Definition
+            token = nested.pop
+            dictionary.add(token.name, token.value)
+          when Term::TypeBuilder
+            token = nested.pop
+            value = token.value
+
+            # Constructors
+            value.variants.each{|v| dictionary.add(v.name, v) }
+
+            # Deconstructor
+            dictionary.add("un#{value.name}", value)
+          else
+            nested.last << term(token)
+          end
         else
-          nesting.last.append(*term(token))
+          nested.last << term(token)
         end
 
         scanner.skip(/\s+/)
       end
 
-      raise "unexpected EOF" unless nesting.size == 1
-      return nesting.first.terms, dictionary
+      raise "unexpected eof" unless nested.size == 1
+      return nested.last, dictionary
     end
 
     def term(token)
       case token
-      when /^-?\d+$/;       Literal.new(token.to_i)
-      when /^-?\d*\.\d+$/;  Literal.new(token.to_f)
-      when /^'([^']{1})'$/; Literal.new(token[1..1])
-      when /^'\\n'$/;       Literal.new("\n")
-      when /^'\\r'$/;       Literal.new("\r")
-      when /^'\\t'$/;       Literal.new("\t")
-      when /^'\\\\'$/;      Literal.new("\\")
-      when /^"([^"]*)"$/;   String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
-      when /^'([^']*)'$/;   String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
-      when "true";          Literal.new(true)
-      when "false";         Literal.new(false)
-      else                  Name.new(token)
+      when /^-?\d+$/;       Term::Literal.new(token.to_i)
+      when /^-?\d*\.\d+$/;  Term::Literal.new(token.to_f)
+      when /^'([^']{1})'$/; Term::Literal.new(token[1..1])
+      when /^'\\n'$/;       Term::Literal.new("\n")
+      when /^'\\r'$/;       Term::Literal.new("\r")
+      when /^'\\t'$/;       Term::Literal.new("\t")
+      when /^'\\\\'$/;      Term::Literal.new("\\")
+      when /^"([^"]*)"$/;   Term::Literal.new(token[1..-2]) # String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
+      when /^'([^']*)'$/;   Term::Literal.new(token[1..-2]) # String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
+      else                  Term::Name.new(token)
       end
     end
 
     def unparse(o)
       case o
-      when Definition
+      when Term::Definition
         ": #{o.name}\n  #{o.terms.map{|p| unparse(p) }.join(' ')} ;\n\n"
-      when Quotation
+      when Term::Quotation
         o.unparse
-      when Literal
+      when Term::Literal
         o.unparse
-      when Name
+      when Term::Name
         o.unparse
       else
         raise "can't unparse #{o.class}"
@@ -333,6 +323,110 @@ module Bee
       @dictionary = Dictionary.new
     end
 
+    def id
+    end
+
+    def nop
+    end
+
+    def halt
+      @stack = []
+      @input = []
+    end
+
+    def print # S t -> S
+      a = @stack.pop
+      $stdout.puts(a.inspect)
+    end
+
+    def apply # S (S -> T) -> T
+      a = @stack.pop
+      @input.unshift(*a.terms)
+    end
+
+    def quote # S t -> S (U -> U t)
+      a = @stack.pop
+      @stack.push(Term::Quotation.new([a]))
+    end
+
+    def compose # S (X -> Y) (Y -> Z) -> S (X -> Z)
+      b = @stack.pop
+      a = @stack.pop
+      @stack.push(Term::Quotation.new(a.terms + b.terms))
+    end
+
+    def pop # S t -> S
+      @stack.pop
+    end
+
+    def swap # S t u -> S u t
+      b = @stack.pop
+      a = @stack.pop
+      @stack.push(b)
+      @stack.push(a)
+    end
+
+    def dup # S t -> S t t
+      a = @stack.pop
+      @stack.push(a)
+      @stack.push(a)
+    end
+
+    def dip # S (S -> T) u -> T u
+      b = @stack.pop
+      a = @stack.pop
+      @input.unshift(a)
+      @input.unshift(*b.terms)
+    end
+
+    def dig # S a b c -> S b c a
+      c = @stack.pop
+      b = @stack.pop
+      a = @stack.pop
+      @stack.push(b)
+      @stack.push(c)
+      @stack.push(a)
+    end
+
+    def bury # S a b c -> S c a b
+      c = @stack.pop
+      b = @stack.pop
+      a = @stack.pop
+      @stack.push(c)
+      @stack.push(a)
+      @stack.push(b)
+    end
+
+    def dump # S string -> S
+      a = @stack.pop
+      p = Parser.new
+
+      File.open(a.to_s, "w+") do |io|
+        @dictionary.definitions.each{|d| io << p.unparse(d) }
+      end
+    end
+
+    def load # S string -> S
+      a    = @stack.pop
+      t, d = Parser.new.parse(File.read(a.to_s))
+      @dictionary.import(d)
+    end
+
+    def inline # S (T -> U) -> S (T -> U)
+      a = @stack.pop
+      q = Term::Quotation.new
+
+      while t = a.terms.shift
+        if t.name? and @dictionary.defined?(t.name)
+          q.terms.push(*@dictionary.lookup(t.name))
+        else
+          q.terms.push(t)
+        end
+      end
+
+      @stack.push(q)
+    end
+
     def run(debug, terms, dictionary)
       @dictionary.import(dictionary)
       @input.concat(terms)
@@ -343,177 +437,29 @@ module Bee
       until (term = @input.shift).nil?
         trace << [@stack.map(&:inspect).join(" "), term.inspect, @input.map(&:inspect).join(" ")] if debug
 
-        if !term.is_a?(Term)
+        if AlgebraicType::Variant === term
+          @stack.push(term.box(@stack))
+        elsif AlgebraicType === term
+          term.unbox(@stack, @input)
+        elsif !(Term === term)
           @stack.push(term)
         elsif term.literal?
           @stack.push(term.value)
         elsif term.quotation?
           @stack.push(term)
         elsif term.name?
-          case term.name
-          when "id", "nop" # S -> S
-
-          when "halt" # S -> 0
-            @stack = []
-            @input = []
-
-          when "print" # S t -> S
-            a = @stack.pop
-            $stdout.puts(a.inspect)
-
-          when "apply" # S (S -> T) -> T
-            a = @stack.pop
-            @input.unshift(*a.terms)
-
-          when "quote" # S t -> S (U -> U t)
-            a = @stack.pop
-            @stack.push(Quotation.new([a]))
-
-          when "compose" # S (X -> Y) (Y -> Z) -> S (X -> Z)
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(Quotation.new(a.terms + b.terms))
-
-          when "pop" # S t -> S
-            @stack.pop
-
-          when "swap" # S t u -> S u t
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(b)
-            @stack.push(a)
-
-          when "dup" # S t -> S t t
-            a = @stack.pop
-            @stack.push(a)
-            @stack.push(a)
-
-          when "dip" # S (S -> T) u -> T u
-            b = @stack.pop
-            a = @stack.pop
-            @input.unshift(a)
-            @input.unshift(*b.terms)
-
-          when "dig" # S a b c -> S b c a
-            c = @stack.pop
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(b)
-            @stack.push(c)
-            @stack.push(a)
-
-          when "if" # S boolean t t -> S t
-            c = @stack.pop
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a ? b : c)
-
-          when "="
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a == b)
-
-          when *%w(+ - * / % ** < <= == >= > >> << & | ^)
+          if %w(+ - * / % ** << >> & | ^).include?(term.name)
             b = @stack.pop
             a = @stack.pop
             @stack.push(a.__send__(term.name.to_sym, b))
-
-          when "/%"
+          elsif %w(< <= == != >= >).include?(term.name)
             b = @stack.pop
             a = @stack.pop
-            @stack.push(a / b)
-            @stack.push(a % b)
-
-          when "%/"
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a % b)
-            @stack.push(a / b)
-
-          when "to_s"
-            a = @stack.pop
-            @stack.push(a.to_s.reverse.chars.inject(Null){|tail,head| Cons.new(head,tail) })
-
-          when *%w(to_i to_f)
-            a = @stack.pop
-            @stack.push(a.to_s.__send__(term.name.to_sym))
-
-          when "and" # S boolean boolean -> S boolean
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a && b)
-
-          when "or" # S boolean boolean -> S boolean
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a || b)
-
-          when "xor" # S boolean boolean -> S boolean
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a ^ b)
-
-          when "not" # S boolean -> S boolean
-            a = @stack.pop
-            @stack.push(!a)
-
-          when "null" # S -> S list
-            @stack.push(Null)
-
-          when "cons" # S list t -> S t-list
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a.cons(b))
-
-          # Should this be polymorphic?
-          #   boolean [true-case] [false-case] fold
-          #   option  [some-case] [none-case]  fold
-          #   either  [left-case] [right-case] fold
-          #   list    [null-case] [cons-case]  fold
-          #
-          # Probably not, because the number of cases (arguments) depends on
-          # the data type definition. Type classes can't safely handle per-
-          # instance arity -- needs research -- and readability would suffer
-          # as reading "fold" in the source could imply several meanings
-          when "unlist" # S t-list (S -> U) (S t-list t -> U) -> U
-            c = @stack.pop
-            b = @stack.pop
-            a = @stack.pop
-            if a.null?
-              @input.unshift(*b.terms)
-            else
-              @stack.push(a.tail)
-              @stack.push(a.head)
-              @input.unshift(*c.terms)
-            end
-
-          when "dump-defs" # S string -> S
-            a = @stack.pop
-            p = Parser.new
-
-            File.open(a.to_s, "w+") do |io|
-              @dictionary.definitions.each{|d| io << p.unparse(d) }
-            end
-
-          when "load-defs" # S string -> S
-            a    = @stack.pop
-            t, d = Parser.new.parse(File.read(a.to_s))
-            @dictionary.import(d)
-
-          when "expand-def" # S (T -> U) -> S (T -> U)
-            a = @stack.pop
-            q = Quotation.new
-
-            while t = a.terms.shift
-              if t.name? and @dictionary.defined?(t.name)
-                q.terms.push(*@dictionary.lookup(t.name))
-              else
-                q.terms.push(t)
-              end
-            end
-
-            @stack.push(q)
-
+            @stack.push(a.__send__(term.name.to_sym, b) ?
+              @dictionary.lookup("true") :
+              @dictionary.lookup("false"))
+          elsif respond_to?(term.name) and term.name != "run"
+            __send__(term.name)
           else
             @input.unshift(*@dictionary.lookup(term.name))
           end
@@ -546,30 +492,21 @@ end
 
 ###############################################################################
 
-$vm = Bee::Interpreter.new
-$p  = Bee::Parser.new
+@vm ||= Bee::Interpreter.new
+@p  ||= Bee::Parser.new
 
 if File.exists?("runtime.bee")
-  $vm.run(false, *$p.parse(File.read("runtime.bee")))
+  @vm.run(false, *@p.parse(File.read("runtime.bee")))
 else
   $stderr.puts "cannot load runtime.bee from current directory".yellow
 end
 
-#$vm.dictionary.add(Bee::Definition.new("map",
-#  $p.parse("swap [pop null] [dig dup dip [swap] dip map swap cons] unlist").first))
-
-#$vm.dictionary.add(Bee::Definition.new("length",
-#  $p.parse("[0] [pop length 1 +] unlist").first))
-
-#$vm.dictionary.add(Bee::Definition.new("sum",
-#  $p.parse("[0] [swap sum +] unlist").first))
-
 def bee(unparsed, debug = false)
-  $vm.run(debug, *$p.parse(unparsed))
+  @vm.run(debug, *@p.parse(unparsed))
 rescue
-  $vm.input.clear
+  @vm.input.clear
   $stderr.puts $!.to_s.red
-# $stderr.puts "  " << $!.backtrace.join("\n  ")
+  $stderr.puts "  " << $!.backtrace.join("\n  ")
 end
 
 def time(n, &block)
@@ -591,7 +528,7 @@ end
 # >> bee "5 2 -"
 # => [3]
 #
-# >> bee "'runtime.bee' load-defs"
+# >> bee "'runtime.bee' load"
 # => []
 #
 # >> bee "3 bottles"
