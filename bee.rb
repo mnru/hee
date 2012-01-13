@@ -388,15 +388,6 @@ module Bee
       @stack.push(a)
     end
 
-    def bury # S a b c -> S c a b
-      c = @stack.pop
-      b = @stack.pop
-      a = @stack.pop
-      @stack.push(c)
-      @stack.push(a)
-      @stack.push(b)
-    end
-
     def dump # S string -> S
       a = @stack.pop
       p = Parser.new
@@ -456,9 +447,11 @@ module Bee
             b = @stack.pop
             a = @stack.pop
             @stack.push(a.__send__(term.name.to_sym, b) ?
-              @dictionary.lookup("true") :
-              @dictionary.lookup("false"))
-          elsif respond_to?(term.name) and term.name != "run"
+              @dictionary.lookup("true").box(@stack) :
+              @dictionary.lookup("false").box(@stack))
+          elsif %w(! run).include?(term.name)
+            @input.unshift(*@dictionary.lookup(term.name))
+          elsif respond_to?(term.name)
             __send__(term.name)
           else
             @input.unshift(*@dictionary.lookup(term.name))
