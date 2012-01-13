@@ -15,5 +15,14 @@
 : xor
   [not] [id] unbool ;
 
+: nand
+  [not] [pop true] unbool ;
+
+: nor
+  [pop false] [not] unbool ;
+
 : not
   [false] [true] unbool ;
+
+: xnor
+  [id] [not] unbool ;
