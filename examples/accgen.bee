@@ -1,0 +1,5 @@
+: accgen'
+  quote [dup] swap compose [+] compose quote [quote] swap compose quote [dip compose compose] compose ;
+
+: accgen
+  accgen' y ;

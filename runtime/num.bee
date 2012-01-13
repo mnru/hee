@@ -1,0 +1,17 @@
+: even?
+  2 % 0 == ;
+
+: odd?
+  2 % 1 == ;
+
+: !'
+  swap dup 1 == [pop pop] [-1 + dup dig [[*] dip] dip apply] if ;
+
+: !
+  dup [!'] y ;
+
+: /%
+  dup2 % [/] dip ;
+
+: %/
+  dup2 / [%] dip ;

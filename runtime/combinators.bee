@@ -1,0 +1,20 @@
+: bury
+  swap [swap] dip ;
+
+: twice
+  dup compose apply ;
+
+: y'
+  dup quote [y'] compose quote swap compose apply ;
+
+: y
+  quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
+
+: times'
+  swap dup 0 == [pop pop pop] [1 - [[dup [apply] dip] dip] dip swap apply] if ;
+
+: times
+  [times'] y ;
+
+: dup2
+  [dup] dip dup dig swap ;

@@ -1,0 +1,47 @@
+:: list
+ | null
+ | cons head tail
+ ;
+
+: filter
+  reverse-filter reverse ;
+
+: reverse-filter
+  [swap dup] swap compose [[cons] [pop] if] compose null swap foldl ;
+
+: foldr
+  dig [pop] [swap [bury] dip bury dup [foldr] dip apply] unlist ;
+
+: foldl'
+  [dup quote compose] dip compose [quote dup] dip compose unlist ;
+
+: foldl
+  [foldl'] y ;
+
+: reverse-map
+  null [swap] dig compose [cons] compose foldl ;
+
+: reverse
+  null [swap cons] foldl ;
+
+: map
+  reverse-map reverse ;
+
+: length
+  0 [[pop] dip 1 +] foldl ;
+
+: sum
+  0 [+] foldl ;
+
+: product
+  1 [*] foldl ;
+
+: null?
+  [true] [pop pop false] unlist ;
+
+: cons?
+  [false] [pop pop true] unlist ;
+
+: concat
+  [swap cons] foldr ;
+

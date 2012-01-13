@@ -1,0 +1,2 @@
+: bottles
+  dup dup to_s ' bottles' concat print 0 == [pop] [1 - bottles] if ;

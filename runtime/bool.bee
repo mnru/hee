@@ -1,0 +1,19 @@
+:: bool
+ | true
+ | false
+ ;
+
+: if
+  unbool ;
+
+: or
+  [pop true] [id]  unbool ;
+
+: and
+  [id] [pop false] unbool ;
+
+: xor
+  [not] [id] unbool ;
+
+: not
+  [false] [true] unbool ;
