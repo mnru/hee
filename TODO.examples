@@ -1,0 +1,10 @@
+Logic simplification
+- Restrict types of gates
+- Optimize number of gates
+
+Fold fusion
+- Two-pass `xs dup 0 [+] foldl swap 1 [*] foldl`
+- One-pass `0 1 [+] [*] [foldl] two-fold`
+
+Regexp implementation
+- `"abccc" ["^ab(c*)$" regexp] apply`
