@@ -1,5 +1,46 @@
+:: bool
+ | true
+ | false
+ ;
+
+:: list
+ | null
+ | cons head tail
+ ;
+
+:: option
+ | some a
+ | none
+ ;
+
+:: either
+ | left a
+ | right b
+ ;
+
+: if
+  unbool ;
+
+: or
+  [pop true] [id]  unbool ;
+
+: and
+  [id] [pop false] unbool ;
+
+: xor
+  [not] [id] unbool ;
+
+: not
+  false true unbool ;
+
 : filter
   reverse-filter reverse ;
+
+: even?
+  2 % 0 == ;
+
+: odd?
+  2 % 1 == ;
 
 : foldr
   dig [pop] [swap [bury] dip bury dup [foldr] dip apply] unlist ;
@@ -8,7 +49,7 @@
   swap [swap] dip ;
 
 : bottles
-  dup dup to_s ' bottles' concat print 0 == [pop] [1 - bottles] if apply ;
+  dup dup to_s ' bottles' concat print 0 == [pop] [1 - bottles] if ;
 
 : twice
   dup compose apply ;
@@ -50,7 +91,7 @@
   quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
 
 : !'
-  swap dup 1 = [pop pop] [-1 + dup dig [[*] dip] dip apply] if apply ;
+  swap dup 1 == [pop pop] [-1 + dup dig [[*] dip] dip apply] if ;
 
 : !
   dup [!'] y ;
@@ -59,7 +100,7 @@
   5 cons 4 cons 3 cons 2 cons 1 cons ;
 
 : times'
-  swap dup 0 = [pop pop pop] [1 - [[dup [apply] dip] dip] dip swap apply] if apply ;
+  swap dup 0 == [pop pop pop] [1 - [[dup [apply] dip] dip] dip swap apply] if ;
 
 : times
   [times'] y ;
@@ -68,7 +109,7 @@
   [swap cons] foldr ;
 
 : reverse-filter
-  [swap dup] swap compose [[cons] [pop] if apply] compose null swap foldl ;
+  [swap dup] swap compose [[cons] [pop] if] compose null swap foldl ;
 
 : accgen'
   quote [dup] swap compose [+] compose quote [quote] swap compose quote [dip compose compose] compose ;
