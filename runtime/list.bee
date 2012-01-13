@@ -39,9 +39,18 @@
 : null?
   [true] [pop pop false] unlist ;
 
+: empty?
+  null? ;
+
 : cons?
   [false] [pop pop true] unlist ;
 
 : concat
   [swap cons] foldr ;
+
+: greatest
+  [none] [[greater] foldl some] unlist ;
+
+: least
+  [none] [[lesser] foldl some] unlist ;
 

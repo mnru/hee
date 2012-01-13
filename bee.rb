@@ -155,7 +155,7 @@ module Bee
     end
 
     def inspect
-      @name
+      "un#{@name}[#{@variants.map(&:arity).join(',')}]"
     end
 
     class Variant
@@ -499,7 +499,7 @@ def bee(unparsed, debug = false)
 rescue
   @vm.input.clear
   $stderr.puts $!.to_s.red
-  $stderr.puts "  " << $!.backtrace.join("\n  ")
+# $stderr.puts "  " << $!.backtrace.join("\n  ")
 end
 
 def time(n, &block)

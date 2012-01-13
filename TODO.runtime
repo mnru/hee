@@ -121,3 +121,6 @@ Set
   intersect
   intersect-by
 
+String, Rope, ...
+
+Regexp
