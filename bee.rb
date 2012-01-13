@@ -7,9 +7,11 @@ class String
   # Dumb way to distinguish bee chars (modeled with ::String) from
   # bee strings (represented with Bee::String or Bee::Cons), eg 'x'
   # instead of "x"
-  alias _inspect inspect
-  def inspect
-    "'#{_inspect[1..-2]}'"
+  unless method_defined?(:_inspect)
+    alias _inspect inspect
+    def inspect
+      "'#{_inspect[1..-2]}'"
+    end
   end
 end
 
