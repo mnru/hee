@@ -54,3 +54,9 @@
 : least
   [none] [[lesser] foldl some] unlist ;
 
+: head
+  [none] [swap pop some] unlist ;
+
+: tail
+  [none] [pop some] unlist ;
+
