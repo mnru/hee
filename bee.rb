@@ -136,6 +136,7 @@ module Bee
     end
 
     def unbox(stack, input)
+      raise "stack underflow" if stack.length < @variants.length + 1
       # S boxed [1] [2] [...] unbox-type
       boxed, *fs = stack.slice!(-(@variants.length+1), @variants.length+1)
       boxed.unbox(stack)
@@ -154,6 +155,7 @@ module Bee
       end
 
       def box(stack)
+        raise "stack underflow" if stack.length < @arity
         Boxed.new(@name, @tag, stack.slice!(-@arity, @arity))
       end
 

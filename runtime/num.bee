@@ -8,7 +8,7 @@
   swap dup 1 == [pop pop] [-1 + dup dig [[*] dip] dip apply] if ;
 
 : !
-  dup [!'] y ;
+  dup 0 > [dup [!'] y some] [pop none] if ;
 
 : /%
   dup2 % [/] dip ;
