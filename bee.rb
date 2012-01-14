@@ -175,7 +175,7 @@ module Bee
     end
 
     class Boxed
-      attr_reader :name, :tag
+      attr_reader :name, :tag, :fields
 
       def initialize(name, tag, fields)
         @name, @tag, @fields = name, tag, fields
@@ -283,16 +283,13 @@ module Bee
     end
 
     def term(token)
+      escape = Hash['\t' => "\t", '\n' => "\n", '\r' => "\r"]
+
       case token
       when /^-?\d+$/;       Term::Literal.new(token.to_i)
       when /^-?\d*\.\d+$/;  Term::Literal.new(token.to_f)
-      when /^'([^']{1})'$/; Term::Literal.new(token[1..1])
-      when /^'\\n'$/;       Term::Literal.new("\n")
-      when /^'\\r'$/;       Term::Literal.new("\r")
-      when /^'\\t'$/;       Term::Literal.new("\t")
-      when /^'\\\\'$/;      Term::Literal.new("\\")
-      when /^"([^"]*)"$/;   Term::Literal.new(token[1..-2]) # String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
-      when /^'([^']*)'$/;   Term::Literal.new(token[1..-2]) # String.new(token[1..-2].gsub("\\t", "\t").gsub("\\n", "\n").gsub("\\r", "\r"))
+      when /^"([^"]*)"$/;   Term::Literal.new(token[1..-2].gsub(/\\[tnr]/){|c| escapes[c] })
+      when /^'([^']*)'$/;   Term::Literal.new(token[1..-2].gsub(/\\[tnr]/){|c| escapes[c] })
       else                  Term::Name.new(token)
       end
     end
@@ -386,6 +383,31 @@ module Bee
       @stack.push(b)
       @stack.push(c)
       @stack.push(a)
+    end
+
+    def string # S (char list) -> string
+      a = @stack.pop
+      s = ""
+
+      while a.name == 'cons'
+        s << a.fields[1]
+        a  = a.fields[0]
+      end
+
+      @stack.push(s)
+    end
+
+    def chars # S string -> S (char list)
+      a = @stack.pop
+
+      null = @dictionary.lookup("null")
+      cons = @dictionary.lookup("cons")
+
+      @stack.push(null.box(@stack))
+      a.reverse.chars.each do |char|
+        @stack.push(char)
+        @stack.push(cons.box(@stack))
+      end
     end
 
     def dump # S string -> S
