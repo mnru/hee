@@ -1,19 +1,7 @@
 require "strscan"
 require "term/ansicolor"
 
-class String
-  include Term::ANSIColor
-
-  # Dumb way to distinguish bee chars (modeled with ::String) from
-  # bee strings (represented with Bee::String or Bee::Cons), eg 'x'
-  # instead of "x"
-  unless method_defined?(:_inspect)
-    alias _inspect inspect
-    def inspect
-      "'#{_inspect[1..-2]}'"
-    end
-  end
-end
+String.__send__(:include, Term::ANSIColor)
 
 module Bee
 
@@ -245,11 +233,11 @@ module Bee
           nested.last << token
           raise "unexpected ]" if nested.empty?
         when "'"
-          token = scanner.scan(/[^']*'/) or raise "unterminated '"
+          token = scanner.scan(/(?:\\'|[^'])*'/) or raise "unterminated '"
           nested.last << term("'" << token)
         when '"'
-          token = scanner.scan(/[^"]*"/) or raise 'unterminated "'
-          nested.last << term("'" << token)
+          token = scanner.scan(/(?:\\"|[^"])*"/) or raise 'unterminated "'
+          nested.last << term('"' << token)
         when ":"
           nested << Term::Definition.new
         when "::"
@@ -283,13 +271,13 @@ module Bee
     end
 
     def term(token)
-      escape = Hash['\t' => "\t", '\n' => "\n", '\r' => "\r"]
+      unescape = Hash['\t' => "\t", '\n' => "\n", '\r' => "\r", '\"' => '"', "\\'" => "'"]
 
       case token
       when /^-?\d+$/;       Term::Literal.new(token.to_i)
       when /^-?\d*\.\d+$/;  Term::Literal.new(token.to_f)
-      when /^"([^"]*)"$/;   Term::Literal.new(token[1..-2].gsub(/\\[tnr]/){|c| escapes[c] })
-      when /^'([^']*)'$/;   Term::Literal.new(token[1..-2].gsub(/\\[tnr]/){|c| escapes[c] })
+      when /^".*"$/;        Term::Literal.new(token[1..-2].gsub(/\\[tnr"]/){|c| unescape[c] })
+      when /^'.*'$/;        Term::Literal.new(token[1..-2].gsub(/\\[tnr']/){|c| unescape[c] })
       else                  Term::Name.new(token)
       end
     end
