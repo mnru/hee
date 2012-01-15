@@ -1,83 +1,83 @@
 Numeric
-  +   :: a a -> a
-  -   :: a a -> a
-  *   :: a a -> a
-  /   :: a a -> a
-  %   :: a a -> a
-  %/  :: a a -> a a
-  /%  :: a a -> a a
+- +   :: a a -> a
+- -   :: a a -> a
+- *   :: a a -> a
+- /   :: a a -> a
+- %   :: a a -> a
+- %/  :: a a -> a a
+- /%  :: a a -> a a
   **  :: a a -> a
 
 Bitwise
-  |   :: a a -> a
-  &   :: a a -> a
-  ^   :: a a -> a
-  !   :: a a -> a
-  <<  :: a a -> a
-  >>  :: a a -> a
+- |   :: a a -> a
+- &   :: a a -> a
+- ^   :: a a -> a
+  ~   :: a a -> a
+- <<  :: a a -> a
+- >>  :: a a -> a
 
 Logical
-  or    :: a a -> a
-  and   :: a a -> a
-  xor   :: a a -> a
-  not   :: a a -> a
-  nor   :: a a -> a
-  nand  :: a a -> a
+- or    :: a a -> a
+- and   :: a a -> a
+- xor   :: a a -> a
+- not   :: a a -> a
+- nor   :: a a -> a
+- nand  :: a a -> a
 
 Orderable
-  <       :: a a -> Boolean
-  >       :: a a -> Boolean
-  <=      :: a a -> Boolean
-  >=      :: a a -> Boolean
-  ==      :: a a -> Boolean
-  !=      :: a a -> Boolean
-  compare :: a a -> Ordering
-  greater :: a a -> a
-  lesser  :: a a -> a
+- <       :: a a -> Boolean
+- >       :: a a -> Boolean
+- <=      :: a a -> Boolean
+- >=      :: a a -> Boolean
+- ==      :: a a -> Boolean
+- !=      :: a a -> Boolean
+- compare :: a a -> Ordering
+- greater :: a a -> a
+- lesser  :: a a -> a
 
 List
-  nth
-  drop
+- nth
+- drop
   drop-while
   drop-until
   drop-prefix
   drop-suffix
-  take
+- take
   take-while
   take-until
   split-at
   split-when
   find
   find/index
-  filter
+- filter
   filter/index
   partition
-  concat
-  head
-  tail
+- concat
+- head
+- tail
   tails
-  init
+- init
   inits
-  last
-  null
-  cons
-  length
-  map
-  reverse
+- last
+- null
+- cons
+- length
+- map
+- reverse
   intersperse
   intercalate
   subsequences
   permutations
-  foldl
-  foldr
+- foldl
+- foldr
   flatmap
-  all?
-  any?
-  none?
-  sum
-  product
-  minimum
-  maximum
+- all?
+- any?
+- none?
+- sum
+- product
+- least
+- greatest
   minimum-by
   maximum-by
   unfoldr

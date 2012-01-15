@@ -60,3 +60,59 @@
 : tail
   [none] [pop some] unlist ;
 
+: nth'
+  swap dup 0 <
+  [pop pop pop none]
+  [dup 0 ==
+    [pop pop head]
+    [1 - dig tail
+      [pop pop pop none]
+      [bury swap apply]
+      unoption]
+    if]
+  if ;
+
+: nth
+  [nth'] y ;
+
+: drop'
+  swap dup 0 <
+  [pop pop pop none]
+  [dup 0 ==
+    [pop pop some]
+    [1 - dig tail
+      [pop pop pop none]
+      [bury swap apply]
+      unoption]
+    if]
+  if ;
+
+: drop
+  [drop'] y ;
+
+: take'
+  swap dup 0 ==
+  [pop pop pop reverse some]
+  [1 - dig
+    [pop pop pop none]
+    [bury [[swap [cons] dip] dip] dip bury swap apply]
+    unlist]
+  if ;
+
+: take
+  null bury [take'] y ;
+
+: last
+  reverse head ;
+
+: init
+  reverse tail [none] [reverse some] unoption ;
+
+: all?
+  [swap] swap compose [and] compose true swap foldl ;
+
+: any?
+  [swap] swap compose [or] compose false swap foldl ;
+
+: none?
+  [swap] swap compose [nand] compose true swap foldl ;
