@@ -136,7 +136,10 @@ module Bee
     end
 
     def unbox(stack, input)
-      raise "stack underflow" if stack.length < @variants.length + 1
+      if stack.length < @variants.length + 1
+        raise "stack underflow"
+      end
+
       # S boxed [1] [2] [...] unbox-type
       boxed, *fs = stack.slice!(-(@variants.length+1), @variants.length+1)
       boxed.unbox(stack)
@@ -155,7 +158,10 @@ module Bee
       end
 
       def box(stack)
-        raise "stack underflow" if stack.length < @arity
+        if stack.length < @arity
+          raise "stack underflow"
+        end
+
         Boxed.new(@name, @tag, stack.slice!(-@arity, @arity))
       end
 
@@ -233,9 +239,11 @@ module Bee
         when "]"
           token = nested.pop
           nested.last << token
-          raise "unexpected ]" if nested.empty?
+          if nested.empty?
+            raise "unexpected ]"
+          end
         when "'"
-          token = scanner.scan(/(?:\\'|[^'])*'/) or raise "unterminated '"
+          token = scanner.scan(/\\?.(?!\S)/) or raise "unexpected '"
           nested.last << term("'" << token)
         when '"'
           token = scanner.scan(/(?:\\"|[^"])*"/) or raise 'unterminated "'
@@ -279,7 +287,7 @@ module Bee
       when /^-?\d+$/;       Term::Literal.new(token.to_i)
       when /^-?\d*\.\d+$/;  Term::Literal.new(token.to_f)
       when /^".*"$/;        Term::Literal.new(token[1..-2].gsub(/\\[tnr"]/){|c| unescape[c] })
-      when /^'.*'$/;        Term::Literal.new(token[1..-2].gsub(/\\[tnr']/){|c| unescape[c] })
+      when /^'.*$/;         Term::Literal.new(token[1..-1].gsub(/\\[tnr']/){|c| unescape[c] })
       else                  Term::Name.new(token)
       end
     end
@@ -438,7 +446,9 @@ module Bee
       trace = []
 
       until (term = @input.shift).nil?
-        trace << [@stack.map(&:inspect).join(" "), term.inspect, @input.map(&:inspect).join(" ")] if debug
+        if debug
+          trace << [@stack.map(&:inspect).join(" "), term.inspect, @input.map(&:inspect).join(" ")]
+        end
 
         if AlgebraicType::Variant === term
           @stack.push(term.box(@stack))
