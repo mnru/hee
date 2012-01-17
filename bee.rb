@@ -461,6 +461,9 @@ module Bee
             @stack.push(a.__send__(term.name.to_sym, b) ?
               @dictionary.lookup("true").box(@stack) :
               @dictionary.lookup("false").box(@stack))
+          elsif "~" == term.name
+            a = @stack.pop
+            @stack.push(~a)
           elsif %w(! run).include?(term.name)
             @input.unshift(*@dictionary.lookup(term.name))
           elsif respond_to?(term.name)
