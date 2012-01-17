@@ -1,10 +1,21 @@
-Comments
+Comments: ( A B C )
+  define ( as a macro
+  define \ as a macro
 
-Characters
+Characters: 'A
+  define ' as a macro
 
-Strings
+Strings: "ABC"
+  define " as a macro
 
-Regular expressions
+Regular expressions:
+  "abc" regex
+  regex[abc]
 
 Type system
+
+Numbers
+  octal       0777
+  decimal     511
+  hexadecimal 0x1FF
 
