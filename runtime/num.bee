@@ -4,14 +4,36 @@
 : odd?
   2 % 1 == ;
 
+: positive?
+  0 > ;
+
+: negative?
+  0 < ;
+
+: zero?
+  0 == ;
+
 : !'
-  swap dup 1 == [pop pop] [-1 + dup dig [[*] dip] dip apply] if ;
+  swap dup 1 == [pop pop] [1- dup dig [[*] dip] dip apply] if ;
 
 : !
-  dup 0 > [dup [!'] y some] [pop none] if ;
+  dup positive? [dup [!'] y some] [pop none] if ;
 
 : /%
-  dup2 % [/] dip ;
+  2dup % [/] dip ;
 
 : %/
-  dup2 / [%] dip ;
+  2dup / [%] dip ;
+
+: negate
+  0 - ;
+
+: abs
+  dup positive? [id] [negate] if ;
+
+: 1+
+  1 + ;
+
+: 1-
+  1 - ;
+
