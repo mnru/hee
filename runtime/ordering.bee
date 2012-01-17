@@ -5,10 +5,10 @@
  ;
 
 : compare
-  dup2 < [pop pop lt] [> [gt] [eq] if] if ;
+  2dup < [pop pop lt] [> [gt] [eq] if] if ;
 
 : greater
-  dup2 > [pop] [swap pop] if ;
+  2dup > [pop] [swap pop] if ;
 
 : lesser
-  dup2 < [pop] [swap pop] if ;
+  2dup < [pop] [swap pop] if ;
