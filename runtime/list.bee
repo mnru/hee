@@ -61,34 +61,28 @@
   [none] [pop some] unlist ;
 
 : nth'
-  swap dup 0 <
-  [pop pop pop none]
-  [dup 0 ==
+  swap dup 0 ==
     [pop pop head]
     [1 - dig tail
       [pop pop pop none]
       [bury swap apply]
       unoption]
-    if]
   if ;
 
 : nth
-  [nth'] y ;
+  dup 0 < [pop pop none] [[nth'] y] if ;
 
 : drop'
-  swap dup 0 <
-  [pop pop pop none]
-  [dup 0 ==
+  swap dup 0 ==
     [pop pop some]
     [1 - dig tail
       [pop pop pop none]
       [bury swap apply]
       unoption]
-    if]
   if ;
 
 : drop
-  [drop'] y ;
+  dup 0 < [pop pop none] [[drop'] y] if ;
 
 : take'
   swap dup 0 ==
@@ -100,7 +94,7 @@
   if ;
 
 : take
-  null bury [take'] y ;
+  dup 0 < [pop pop none] [null bury [take'] y] if ;
 
 : last
   reverse head ;
