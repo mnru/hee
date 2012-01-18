@@ -84,3 +84,5 @@ data between several stacks.
 * [Stack-oriented programming language](http://en.wikipedia.org/
 Stack-oriented_programming_language)
 * [concatenative.org](http://concatenative.org/)
+* [My History with Forth Stack Machines](http://www.yosefk.com/blog/my-history-with-forth-stack-machines.html)
+* [Understanding What It's Like to Program in Forth](http://prog21.dadgum.com/33.html)
