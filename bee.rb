@@ -147,7 +147,7 @@ module Bee
     end
 
     def inspect
-      "un#{@name}[#{@variants.map(&:arity).join(',')}]"
+      "case-#{@name}[#{@variants.map(&:arity).join(',')}]"
     end
 
     class Variant
@@ -162,7 +162,7 @@ module Bee
           raise "stack underflow"
         end
 
-        Boxed.new(@name, @tag, stack.slice!(-@arity, @arity))
+        stack.push(Boxed.new(@name, @tag, stack.slice!(-@arity, @arity)))
       end
 
       def inspect
@@ -265,7 +265,7 @@ module Bee
             value.variants.each{|v| dictionary.add(v.name, v) }
 
             # Deconstructor
-            dictionary.add("un#{value.name}", value)
+            dictionary.add("case-#{value.name}", value)
           else
             nested.last << term(token)
           end
@@ -308,104 +308,219 @@ module Bee
     end
   end
 
+  class Stack < Array
+    def dup # S t -> S t t
+      push(last)
+    end
+
+    def drop # S t -> S
+      pop
+    end
+
+    def swap # S t u -> S u t
+      push(pop, pop)
+    end
+
+    def nip # S t u -> S u
+      slice!(-2)
+    end
+
+    def dig # S t u v -> S u v t
+      @stack.push(@stack.slice!(-3))
+    end
+
+    def rot # S t u v -> S u v t
+      @stack.push(@stack.slice!(-3))
+    end
+
+    def over # S t u -> S t u t
+      @stack.push(@stack.slice(-2))
+    end
+
+    def id # S -> S
+    end
+
+    def inspect
+      map(&:inspect).join(" ")
+    end
+  end
+
+  class Input < Array
+  end
+
+  module Primitives
+    module Bits
+      def showBits
+      end
+
+      def andBits
+        push(nip & pop)
+      end
+
+      def orBits
+        push(nip | pop)
+      end
+
+      def xorBits
+        push(nip ^ pop)
+      end
+
+      def notBits
+        push(~pop)
+      end
+
+      def lshiftBits
+        push(nip << pop)
+      end
+
+      def rshiftBits
+        push(nip >> pop)
+      end
+    end
+
+    module Int
+      def showInt
+      end
+
+      def negateInt
+        push(-pop)
+      end
+
+      def addInt
+        push(nip + pop)
+      end
+
+      def subInt
+        push(nip - pop)
+      end
+
+      def mulInt
+        push(nip * pop)
+      end
+
+      def divInt
+        push(nip / pop)
+      end
+
+      def modInt
+        push(nip % pop)
+      end
+
+      def ltInt
+        push(bool(pop < pop))
+      end
+
+      def gtInt
+        push(bool(pop > pop))
+      end
+
+      def eqInt
+        push(bool(pop == pop))
+      end
+    end
+
+    module Float
+      def showFloat
+      end
+
+      def negateFloat
+        push(-pop)
+      end
+
+      def addFloat
+        push(nip + pop)
+      end
+
+      def subFloat
+        push(nip - pop)
+      end
+
+      def mulFloat
+        push(nip * pop)
+      end
+
+      def divFloat
+        push(nip / pop)
+      end
+
+      def modFloat
+        push(nip % pop)
+      end
+
+      def ltFloat
+        push(bool(nip < pop))
+      end
+
+      def gtFloat
+        push(bool(nip > pop))
+      end
+
+      def eqFloat
+        push(bool(nip == pop))
+      end
+    end
+
+    module Char
+      def showChar
+      end
+
+      def ltChar
+        push(bool(nip < pop))
+      end
+
+      def gtChar
+        push(bool(nip > pop))
+      end
+
+      def eqChar
+        push(bool(nip == pop))
+      end
+    end
+
+    module String
+      def showString
+      end
+    end
+  end
+
   class Interpreter
+    include Primitives::Bits,
+            Primitives::Int,
+            Primitives::Float,
+            Primitives::Char,
+            Primitives::String
+
     attr_reader :stack, :input, :dictionary
 
     def initialize(debug = true)
       @debug = debug
-      @stack = []
-      @input = []
+      @stack = Stack.new
+      @input = Input.new
       @dictionary = Dictionary.new
+
+      @stackops = %w(pop dup drop swap nip dig rot over id)
+      @interops = (public_methods - Object.new.public_methods - [:run]).map(&:to_s)
     end
 
-    def id
-    end
-
-    def nop
-    end
-
-    def halt
-      @stack = []
-      @input = []
-    end
-
-    def print # S t -> S
-      a = @stack.pop
-      $stdout.puts(a.inspect)
+    def reset
+      @stack.clear
+      @input.clear
     end
 
     def apply # S (S -> T) -> T
-      a = @stack.pop
-      @input.unshift(*a.terms)
+      @input.unshift(*@stack.pop.terms)
     end
 
     def quote # S t -> S (U -> U t)
-      a = @stack.pop
-      @stack.push(Term::Quotation.new([a]))
+      @stack.push(Term::Quotation.new([@stack.pop]))
     end
 
     def compose # S (X -> Y) (Y -> Z) -> S (X -> Z)
-      b = @stack.pop
-      a = @stack.pop
-      @stack.push(Term::Quotation.new(a.terms + b.terms))
+      @stack.push(Term::Quotation.new(@stack.nip.terms + @stack.pop.terms))
     end
 
-    def pop # S t -> S
-      @stack.pop
-    end
-
-    def swap # S t u -> S u t
-      b = @stack.pop
-      a = @stack.pop
-      @stack.push(b)
-      @stack.push(a)
-    end
-
-    def dup # S t -> S t t
-      a = @stack.pop
-      @stack.push(a)
-      @stack.push(a)
-    end
-
-    def dip # S (S -> T) u -> T u
-      b = @stack.pop
-      a = @stack.pop
-      @input.unshift(a)
-      @input.unshift(*b.terms)
-    end
-
-    def dig # S a b c -> S b c a
-      c = @stack.pop
-      b = @stack.pop
-      a = @stack.pop
-      @stack.push(b)
-      @stack.push(c)
-      @stack.push(a)
-    end
-
-    def string # S (char list) -> string
-      a = @stack.pop
-      s = ""
-
-      while a.name == 'cons'
-        s << a.fields[1]
-        a  = a.fields[0]
-      end
-
-      @stack.push(s)
-    end
-
-    def chars # S string -> S (char list)
-      a = @stack.pop
-
-      null = @dictionary.lookup("null")
-      cons = @dictionary.lookup("cons")
-
-      @stack.push(null.box(@stack))
-      a.reverse.chars.each do |char|
-        @stack.push(char)
-        @stack.push(cons.box(@stack))
-      end
+    def dip # S u (S -> T) -> T u
+      @input.unshift(*@stack.pop.terms, @stack.pop)
     end
 
     def dump # S string -> S
@@ -447,11 +562,11 @@ module Bee
 
       until (term = @input.shift).nil?
         if debug
-          trace << [@stack.map(&:inspect).join(" "), term.inspect, @input.map(&:inspect).join(" ")]
+          trace << [@stack.inspect, term.inspect, @input.inspect]
         end
 
         if AlgebraicType::Variant === term
-          @stack.push(term.box(@stack))
+          term.box(@stack)
         elsif AlgebraicType === term
           term.unbox(@stack, @input)
         elsif !(Term === term)
@@ -461,22 +576,10 @@ module Bee
         elsif term.quotation?
           @stack.push(term)
         elsif term.name?
-          if %w(+ - * / % ** << >> & | ^).include?(term.name)
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a.__send__(term.name.to_sym, b))
-          elsif %w(< <= == != >= >).include?(term.name)
-            b = @stack.pop
-            a = @stack.pop
-            @stack.push(a.__send__(term.name.to_sym, b) ?
-              @dictionary.lookup("true").box(@stack) :
-              @dictionary.lookup("false").box(@stack))
-          elsif "~" == term.name
-            a = @stack.pop
-            @stack.push(~a)
-          elsif %w(! run).include?(term.name)
-            @input.unshift(*@dictionary.lookup(term.name))
-          elsif respond_to?(term.name)
+          case term.name
+          when *@stackops
+            @stack.__send__(term.name)
+          when *@interops
             __send__(term.name)
           else
             @input.unshift(*@dictionary.lookup(term.name))
@@ -505,7 +608,25 @@ module Bee
       end
     end
 
+  private
+
+    def nip
+      @stack.nip
+    end
+
+    def pop
+      @stack.pop
+    end
+
+    def push(*args)
+      @stack.push(*args)
+    end
+
+    def bool(value)
+      @dictionary.lookup(value ? "true" : "false").box(@stack)
+    end
   end
+
 end
 
 ###############################################################################
