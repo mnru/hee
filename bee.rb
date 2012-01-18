@@ -147,7 +147,7 @@ module Bee
     end
 
     def inspect
-      "case-#{@name}[#{@variants.map(&:arity).join(',')}]"
+      "un#{@name}[#{@variants.map(&:arity).join(',')}]"
     end
 
     class Variant
@@ -265,7 +265,7 @@ module Bee
             value.variants.each{|v| dictionary.add(v.name, v) }
 
             # Deconstructor
-            dictionary.add("case-#{value.name}", value)
+            dictionary.add("un#{value.name}", value)
           else
             nested.last << term(token)
           end
@@ -350,135 +350,189 @@ module Bee
 
   module Primitives
     module Bits
-      def showBits
+      def bitsShow
+        pop.to_s
       end
 
-      def andBits
+      def bitsAnd
         push(nip & pop)
       end
 
-      def orBits
+      def bitsOr
         push(nip | pop)
       end
 
-      def xorBits
+      def bitsXor
         push(nip ^ pop)
       end
 
-      def notBits
+      def bitsNot
         push(~pop)
       end
 
-      def lshiftBits
+      def bitsLshift
         push(nip << pop)
       end
 
-      def rshiftBits
+      def bitsRshift
         push(nip >> pop)
+      end
+
+      public_instance_methods.each do |m|
+        alias_method m.to_s.gsub(/[A-Z]/){|c| "-#{c.downcase}" }, m
+        remove_method m
       end
     end
 
     module Int
-      def showInt
+      def intShow
+        pop.to_s
       end
 
-      def negateInt
+      def intNeg
         push(-pop)
       end
 
-      def addInt
+      def intAdd
         push(nip + pop)
       end
 
-      def subInt
+      def intSub
         push(nip - pop)
       end
 
-      def mulInt
+      def intMul
         push(nip * pop)
       end
 
-      def divInt
+      def intDiv
         push(nip / pop)
       end
 
-      def modInt
+      def intMod
         push(nip % pop)
       end
 
-      def ltInt
-        push(bool(pop < pop))
+      def intLt
+        bool(nip < pop)
       end
 
-      def gtInt
-        push(bool(pop > pop))
+      def intGt
+        bool(nip > pop)
       end
 
-      def eqInt
-        push(bool(pop == pop))
+      def intLte
+        bool(nip <= pop)
+      end
+
+      def intGte
+        bool(nip >= pop)
+      end
+
+      def intEq
+        bool(nip == pop)
+      end
+
+      public_instance_methods.each do |m|
+        alias_method m.to_s.gsub(/[A-Z]/){|c| "-#{c.downcase}" }, m
+        remove_method m
       end
     end
 
     module Float
-      def showFloat
+      def floatShow
+        pop.to_s
       end
 
-      def negateFloat
+      def floatNeg
         push(-pop)
       end
 
-      def addFloat
+      def floatAdd
         push(nip + pop)
       end
 
-      def subFloat
+      def floatSub
         push(nip - pop)
       end
 
-      def mulFloat
+      def floatMul
         push(nip * pop)
       end
 
-      def divFloat
+      def floatDiv
         push(nip / pop)
       end
 
-      def modFloat
+      def floatMod
         push(nip % pop)
       end
 
-      def ltFloat
-        push(bool(nip < pop))
+      def floatLt
+        bool(nip < pop)
       end
 
-      def gtFloat
-        push(bool(nip > pop))
+      def floatGt
+        bool(nip > pop)
       end
 
-      def eqFloat
-        push(bool(nip == pop))
+      def floatLte
+        bool(nip < pop)
+      end
+
+      def floatGte
+        bool(nip > pop)
+      end
+
+      def floatEq
+        bool(nip == pop)
+      end
+
+      public_instance_methods.each do |m|
+        alias_method m.to_s.gsub(/[A-Z]/){|c| "-#{c.downcase}" }, m
+        remove_method m
       end
     end
 
     module Char
-      def showChar
+      def charShow
+        pop.to_s
       end
 
-      def ltChar
-        push(bool(nip < pop))
+      def charLt
+        bool(nip < pop)
       end
 
-      def gtChar
-        push(bool(nip > pop))
+      def charGt
+        bool(nip > pop)
       end
 
-      def eqChar
-        push(bool(nip == pop))
+      def charLte
+        bool(nip < pop)
+      end
+
+      def charGte
+        bool(nip > pop)
+      end
+
+      def charEq
+        bool(nip == pop)
+      end
+
+      public_instance_methods.each do |m|
+        alias_method m.to_s.gsub(/[A-Z]/){|c| "-#{c.downcase}" }, m
+        remove_method m
       end
     end
 
     module String
-      def showString
+      def stringShow
+        pop.to_s
+      end
+
+      public_instance_methods.each do |m|
+        alias_method m.to_s.gsub(/[A-Z]/){|c| "-#{c.downcase}" }, m
+        remove_method m
       end
     end
   end
@@ -499,7 +553,7 @@ module Bee
       @dictionary = Dictionary.new
 
       @stackops = %w(pop dup drop swap nip dig rot over id)
-      @interops = (public_methods - Object.new.public_methods - [:run]).map(&:to_s)
+      @primops  = (public_methods - Object.new.public_methods - [:run]).map(&:to_s)
     end
 
     def reset
@@ -579,7 +633,7 @@ module Bee
           case term.name
           when *@stackops
             @stack.__send__(term.name)
-          when *@interops
+          when *@primops
             __send__(term.name)
           else
             @input.unshift(*@dictionary.lookup(term.name))

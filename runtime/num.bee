@@ -1,3 +1,28 @@
+:: num-dict
+ | num-dict + - * / %
+ ;
+
+: +
+  [pop pop pop pop] unnum-dict apply ;
+
+: -
+  [pop pop pop swap pop] unnum-dict apply ;
+
+: *
+  [pop pop swap pop swap pop] unnum-dict apply ;
+
+: /
+  [pop swap pop swap pop swap pop swap pop] unnum-dict apply ;
+
+: %
+  [swap pop swap pop swap pop swap pop] unnum-dict apply ;
+
+: num-int
+  [int-add] [int-sub] [int-mul] [int-div] [int-mod] num-dict ;
+
+: num-float
+  [float-add] [float-sub] [float-mul] [float-div] [float-mod] num-dict ;
+
 : even?
   2 % 0 == ;
 
