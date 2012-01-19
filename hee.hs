@@ -3,6 +3,7 @@
 
 import List (nub, (\\), intersect, union, partition)
 import Monad (msum)
+import Maybe (isJust)
 import qualified Data.Foldable as F (concat)
 
 type Id = String
@@ -203,7 +204,7 @@ instance CanUnify Stack where
   bindvar v@(id,KiStack) t = return (v +-> TyStack t)
   bindvar _ _              = fail "bindvar failed (kind mismatch)"
 
-data Qualified t = [Predicate] :=> t
+data Qualified h = [Predicate] :=> h
   deriving (Eq, Show)
 
 data Predicate   = MemberOf Id Type
@@ -214,8 +215,8 @@ data Predicate   = MemberOf Id Type
 --   :=> (TyVariable "a" KiStar) `mkFunc` tInt
 
 instance CanSubstitute t => CanSubstitute (Qualified t) where
-  substitute s (ps :=> t) = substitute s ps :=> substitute s t
-  freevars (ps :=> t)     = freevars ps `union` freevars t
+  substitute s (ps :=> h) = substitute s ps :=> substitute s h
+  freevars (ps :=> h)     = freevars ps `union` freevars h
 
 instance CanSubstitute Predicate where
   substitute s (MemberOf id t) = MemberOf id (substitute s t)
@@ -269,6 +270,9 @@ instances ce id = F.concat $ snd `fmap` classes ce id
 
 type ClassEnvT = ClassEnv -> Maybe ClassEnv
 
+-- More meaningful name
+defined = isJust
+
 infixr       5 <:>
 (<:>)       :: ClassEnvT -> ClassEnvT -> ClassEnvT
 (<:>) f g ce = f ce >>= g
@@ -278,8 +282,6 @@ addClass id supers ce
   | defined (classes ce id)                 = fail "class already defined"
   | any (not . defined . classes ce) supers = fail "superclass not defined"
   | otherwise                               = return (modify ce id (supers, []))
-  where defined (Just _) = True
-        defined Nothing  = False
 
 addCoreClasses :: ClassEnvT
 addCoreClasses  = addClass "Eq"         []
@@ -306,21 +308,45 @@ addCoreClasses  = addClass "Eq"         []
 --                                    (TyVariable "b" KiType))
 addInstance :: [Predicate] -> Predicate -> ClassEnvT
 addInstance ps p@(MemberOf id t) ce
-  | not . defined . classes ce id = fail "class not defined"
+  | not . defined $ classes ce id = fail "class not defined"
   | any (overlap p) ps            = fail "overlapping instance"
   | otherwise                     = return (modify ce id c)
   where is = instances ce id
         qs = [q | (ps :=> q) <- is]
-        c  = (super ce id, (ps :=> p):is)
+        c  = (supers ce id, (ps :=> p):is)
 
 overlap    :: Predicate -> Predicate -> Bool
 overlap p q = defined $ unify p q
   where defined (Just _) = True
         defined Nothing  = False
 
+addCoreInstances :: ClassEnvT
+addCoreInstances  = addInstance [] (MemberOf "Ord" tUnit)
+                <:> addInstance [] (MemberOf "Ord" tChar)
+                <:> addInstance [] (MemberOf "Ord" tInt)
+                <:> addInstance [MemberOf "Ord" (TyVariable "a" KiType)
+                                ,MemberOf "Ord" (TyVariable "b" KiType)]
+                                (MemberOf "Ord" (mkPair (TyVariable "a" KiType)
+                                                        (TyVariable "b" KiType)))
+
 -- TODO:
 -- * superclasses should have the same kind as the class
 -- * left side of Qualified should only have MemberOf Id TyVariable
 -- * type variables in predicate must also appear in the head (phantom types)
 -- * head must be type constructor applied to distinct variables (flexible instances)
+
+-- True iff p holds when ps are satisfied
+entail :: ClassEnv -> [Predicate] -> Predicate -> Bool
+entail ce ps p = any (p `elem`) (map (bySuper ce) ps) ||
+                 case byInstance ce p of
+                   Nothing -> False
+                   Just qs -> all (entail ce ps) qs
+  where bySuper :: ClassEnv -> Predicate -> [Predicate]
+        bySuper ce p@(MemberOf id t)
+          = p : concat [bySuper ce (MemberOf id' t) | id' <- supers ce id]
+
+        byInstance :: ClassEnv -> Predicate -> Maybe [Predicate]
+        byInstance ce p@(MemberOf id t) = msum [tryInstance it | it <- instances ce id]
+          where tryInstance (ps :=> h)  = do u <- match h p
+                                             Just $ map (substitute u) ps
 
