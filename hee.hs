@@ -117,7 +117,7 @@ instance CanSubstitute Type where
                                        Just t  -> t
                                        Nothing -> TyVariable id k
   substitute s t = t
-  
+
   freevars (TyApplication i o) = freevars i `union` freevars o
   freevars (TyStack t)         = freevars t
   freevars (TyVariable id k)   = [(id,k)]
@@ -129,7 +129,7 @@ instance CanSubstitute Stack where
                                  Just t  -> StBottom id
                                  Nothing -> StBottom id
   substitute s t = t
-  
+
   freevars (StBottom id) = [(id,KiStack)]
   freevars _             = []
 
@@ -144,7 +144,7 @@ infixr   4 @@
 (@@) a b = [(v, substitute a t) | (v, t) <- b] ++ b
 
 -- Composition of substitutions
-merge    :: Monad m => Substitution -> Substitution -> m Substitution
+merge    :: Substitution -> Substitution -> Maybe Substitution
 merge a b = if all match (map fst a `intersect` map fst b)
             then return (a ++ b)
             else fail "merge failed"
@@ -152,9 +152,9 @@ merge a b = if all match (map fst a `intersect` map fst b)
         match (id,k)       = substitute a (TyVariable id k) == substitute b (TyVariable id k)
 
 class CanUnify t where
-  match   :: Monad m => t -> t -> m Substitution
-  unify   :: Monad m => t -> t -> m Substitution
-  bindvar :: Monad m => Variable -> t -> m Substitution
+  match   :: t -> t -> Maybe Substitution
+  unify   :: t -> t -> Maybe Substitution
+  bindvar :: Variable -> t -> Maybe Substitution
 
 instance CanUnify Type where
   match (TyStack s) (TyStack s') = match s s'
@@ -204,6 +204,7 @@ instance CanUnify Stack where
   bindvar v@(id,KiStack) t = return (v +-> TyStack t)
   bindvar _ _              = fail "bindvar failed (kind mismatch)"
 
+-- antecedents => consequent
 data Qualified h = [Predicate] :=> h
   deriving (Eq, Show)
 
@@ -329,24 +330,28 @@ addCoreInstances  = addInstance [] (MemberOf "Ord" tUnit)
                                 (MemberOf "Ord" (mkPair (TyVariable "a" KiType)
                                                         (TyVariable "b" KiType)))
 
--- TODO:
+-- Unchecked assumptions:
 -- * superclasses should have the same kind as the class
 -- * left side of Qualified should only have MemberOf Id TyVariable
--- * type variables in predicate must also appear in the head (phantom types)
--- * head must be type constructor applied to distinct variables (flexible instances)
+-- * type variables in predicate must also appear in the consequent
+-- * head must be type constructor applied to distinct variables
+
+-- Produces a flat list of predicates from superclass tree
+consequents :: ClassEnv -> Predicate -> [Predicate]
+consequents ce p@(MemberOf id t)
+  = p : concat [consequents ce (MemberOf id' t) | id' <- supers ce id]
+
+-- Antecedents (from *one* instance) that sufficiently support the given predicate
+--   > antecedents ce (MemberOf "Ord" (mkPair tInt tChar))
+--   = Just [MemberOf "Ord" tInt, MemberOf "Ord" tChar]
+antecedents :: ClassEnv -> Predicate -> Maybe [Predicate]
+antecedents ce p@(MemberOf id t) = msum [instantiate it | it <- instances ce id]
+  where instantiate (ps :=> h) = (\u -> map (substitute u) ps) `fmap` (match h p)
 
 -- True iff p holds when ps are satisfied
 entail :: ClassEnv -> [Predicate] -> Predicate -> Bool
-entail ce ps p = any (p `elem`) (map (bySuper ce) ps) ||
-                 case byInstance ce p of
-                   Nothing -> False
-                   Just qs -> all (entail ce ps) qs
-  where bySuper :: ClassEnv -> Predicate -> [Predicate]
-        bySuper ce p@(MemberOf id t)
-          = p : concat [bySuper ce (MemberOf id' t) | id' <- supers ce id]
-
-        byInstance :: ClassEnv -> Predicate -> Maybe [Predicate]
-        byInstance ce p@(MemberOf id t) = msum [tryInstance it | it <- instances ce id]
-          where tryInstance (ps :=> h)  = do u <- match h p
-                                             Just $ map (substitute u) ps
-
+entail ce ps p = if any (p `elem`) (map (consequents ce) ps)
+                 then True
+                 else case antecedents ce p of
+                        Nothing -> False
+                        Just qs -> all (entail ce ps) qs
