@@ -1,4 +1,3 @@
-
 -- private
 data PhantomExpr a
   = PhantomExpr Expr
@@ -45,8 +44,8 @@ constant :: Show a => a -> PhantomExpr a
 (.>.)    :: Ord a => PhantomExpr a -> PhantomExpr a -> PhantomExpr Bool
 (.<=.)   :: Ord a => PhantomExpr a -> PhantomExpr a -> PhantomExpr Bool
 (.>=.)   :: Ord a => PhantomExpr a -> PhantomExpr a -> PhantomExpr Bool
-(.==.)   :: Eq a => PhantomExpr a -> PhantomExpr a -> PhantomExpr a
-(./=.)   :: Eq a => PhantomExpr a -> PhantomExpr a -> PhantomExpr a
+(.==.)   :: Eq a => PhantomExpr a -> PhantomExpr a -> PhantomExpr Bool
+(./=.)   :: Eq a => PhantomExpr a -> PhantomExpr a -> PhantomExpr Bool
 
 constant a = PhantomExpr $ ConstantExpr (show a)
 (.+.)  (PhantomExpr a) (PhantomExpr b) = PhantomExpr $ BinaryExpr OpAdd a b
