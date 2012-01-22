@@ -27,6 +27,7 @@ data Kind = KiStack
 data Type = TyVariable Id Kind
           | TyConstant Id Kind
           | TyApplication Type Type
+          | TyGeneric Int
           | TyStack Stack
   deriving (Eq, Show)
 
@@ -85,17 +86,20 @@ instance HasKind Type where
   kind (TyVariable _ k)     = k
   kind (TyConstant _ k)     = k
   kind (TyStack _)          = KiStack
-  kind (TyApplication i _)  = case (kind i) of
-                                (KiCons _ k) -> k
+  kind (TyApplication i _)  = let (KiCons _ k) = kind i in k
+
 instance HasKind Kind where
   kind k = k
 
 instance HasKind Stack where
   kind t = KiStack
 
--- TyVariable -> Type
-type Variable     = (Id, Kind)
+type Variable     = (Id,Kind)
 type Substitution = [(Variable, Type)]
+
+-- HasKind Variable
+instance (HasKind b) => HasKind (a,b) where
+  kind (_,k) = kind k
 
 -- Empty subtitution
 nullSubstitution :: Substitution
@@ -144,7 +148,7 @@ infixr   4 @@
 (@@) a b = [(v, substitute a t) | (v, t) <- b] ++ b
 
 -- Composition of substitutions
-merge    :: Substitution -> Substitution -> Maybe Substitution
+merge    :: Monad m => Substitution -> Substitution -> m Substitution
 merge a b = if all match (map fst a `intersect` map fst b)
             then return (a ++ b)
             else fail "merge failed"
@@ -152,9 +156,9 @@ merge a b = if all match (map fst a `intersect` map fst b)
         match (id,k)       = substitute a (TyVariable id k) == substitute b (TyVariable id k)
 
 class CanUnify t where
-  match   :: t -> t -> Maybe Substitution
-  unify   :: t -> t -> Maybe Substitution
-  bindvar :: Variable -> t -> Maybe Substitution
+  match   :: Monad m => t -> t -> m Substitution
+  unify   :: Monad m => t -> t -> m Substitution
+  bindvar :: Monad m => Variable -> t -> m Substitution
 
 instance CanUnify Type where
   match (TyStack s) (TyStack s') = match s s'
@@ -322,7 +326,14 @@ overlap p q = defined $ unify p q
         defined Nothing  = False
 
 addCoreInstances :: ClassEnvT
-addCoreInstances  = addInstance [] (MemberOf "Ord" tUnit)
+addCoreInstances  = addInstance [] (MemberOf "Eq" tUnit)
+                <:> addInstance [] (MemberOf "Eq" tChar)
+                <:> addInstance [] (MemberOf "Eq" tInt)
+                <:> addInstance [MemberOf "Eq" (TyVariable "a" KiType)
+                                ,MemberOf "Eq" (TyVariable "b" KiType)]
+                                (MemberOf "Eq" (mkPair (TyVariable "a" KiType)
+                                                       (TyVariable "b" KiType)))
+                <:> addInstance [] (MemberOf "Ord" tUnit)
                 <:> addInstance [] (MemberOf "Ord" tChar)
                 <:> addInstance [] (MemberOf "Ord" tInt)
                 <:> addInstance [MemberOf "Ord" (TyVariable "a" KiType)
@@ -348,10 +359,69 @@ antecedents :: ClassEnv -> Predicate -> Maybe [Predicate]
 antecedents ce p@(MemberOf id t) = msum [instantiate it | it <- instances ce id]
   where instantiate (ps :=> h) = (\u -> map (substitute u) ps) `fmap` (match h p)
 
--- True iff p holds when ps are satisfied
+-- True iff p holds when all ps are satisfied. Either p is (1) trivially
+-- in ps, (2) semi-trivially in a superclass of one of ps, or (3) p is
+-- the consequent of an instance (qs :=> p') in ce, whose antecedents
+-- are, in turn, entailed by ps
+--   1. entail ce [MemberOf "Ord" tInt] (MemberOf "Ord" tInt)
+--   2. entail ce [MemberOf "Ord" tInt] (MemberOf "Eq"  tInt)
+--   3. entail ce [MemberOf "Eq" tInt ,MemberOf "Eq" tChar]
+--                (MemberOf "Ord" (mkPair tInt tChar))
 entail :: ClassEnv -> [Predicate] -> Predicate -> Bool
 entail ce ps p = if any (p `elem`) (map (consequents ce) ps)
                  then True
                  else case antecedents ce p of
                         Nothing -> False
                         Just qs -> all (entail ce ps) qs
+
+data Scheme = ForAll [Kind] (Qualified Type)
+  deriving (Eq, Show)
+
+-- No need to worry about variable capture, nice!
+instance CanSubstitute Scheme where
+  substitute s (ForAll ks qt) = ForAll ks (substitute s qt)
+  freevars (ForAll ks qt)     = freevars qt
+
+qualify      :: [Variable] -> Qualified Type -> Scheme
+qualify vs qt = ForAll ks (substitute s qt)
+  where vs' = vs `intersect` freevars qt
+        ks  = map kind vs'
+        s   = zip vs' (map TyGeneric [0..])
+
+data Assumption = Id :>: Scheme
+
+instance CanSubstitute Assumption where
+  substitute s (id :>: sc) = id :>: (substitute s sc)
+  freevars (id :>: sc)     = freevars sc
+
+--
+find                     :: Id -> [Assumption] -> Maybe Scheme
+find id []                = fail "unbound identifier"
+find id ((id' :>: sc):as) = if id == id'
+                            then return sc
+                            else find id as
+
+-- Tracks the current substitution and unique TyGeneric
+data Inference a = Inference (Substitution -> Int -> (Substitution,Int,a))
+
+instance Monad Inference where
+  return x            = Inference (\s n -> (s,n,x))
+  (Inference f) >>= g = Inference (\s n -> let (s',n',x) = f s n
+                                            in let Inference gx = g x
+                                                in gx s' n')
+
+runInference              :: Inference a -> a
+runInference (Inference f) = let (s,n,x) = f nullSubstitution 0 in x
+
+getSubstitution :: Inference Substitution
+getSubstitution  = Inference (\s n -> (s,n,s))
+
+extendSubstitution    :: Type -> Type -> Inference ()
+extendSubstitution a b = do s <- getSubstitution
+                            u <- unify (substitute s a) (substitute s b)
+                            Inference (\s' n -> (u @@ s',n,()))
+
+newVariable        :: Kind -> Inference Type
+newVariable KiStack = Inference (\s n -> (s,n+1,(TyStack (StBottom ("v" ++ show n)))))
+newVariable k       = Inference (\s n -> (s,n+1,(TyVariable ("v" ++ show n) k)))
+
