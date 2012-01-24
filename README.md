@@ -52,22 +52,40 @@ code can be spliced without accidental variable capture.
 
 The syntax of the language does not have special cases for terms
 like `if`. Primitive operators are treated the same as user-defined
-operators. Eventually the module system will allow primitives to
-be imported using aliases so terms like `if` can be redefined.
+operators. Later, a module system will allow you to import operators
+using alternate names, or to exclude operators from being imported.
+
+This means you can name your operators freely; certain names are
+not reserved for the language.
+
+### No mutable state
+
+### No heap
+
+### No lexical scope
+
+### No closures
+
+Closures provide a way for functions to reference variables outside
+of its lexical scope. Remember we don't have mutable state (variables)
+nor do we have lexical scope. But we do have function composition.
+
+Consider implementing `(a list) (a → bool) filter → (a list)` using
+`(a list) b (a → b → b) foldl → b`. Since `filter` preserves the list
+type, we need to use the `(a → bool)` argument of `filter` to build
+the `(a → (a list) → (a list))` argument of `foldl`. 
 
 ### Single stack
 
 Many stack-based languages like [Forth](http://en.wikipedia.org/
-Forth_(programming_language)) provide the ability to transfer
-data between several stacks. 
+Forth_%28programming_language%29) provide the ability to transfer
+data between different stacks. This really comes in handy to move
+operands temporarily out of the way.
 
-### No first-class stacks
-
-### No heap
-
-### No mutable state
-
-### No closures
+During this early stage in the development of the language, only
+one stack is made available. Hopefully this affords the compiler
+more freedom to target diverse platforms (which may or may not
+provide access to multiple stacks).
 
 ## Features
 
@@ -75,6 +93,7 @@ data between several stacks.
 * Higher-order functions
 * Module system
 * Type inference
+* Class polymorphism
 
 ## Applications
 
