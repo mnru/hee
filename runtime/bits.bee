@@ -1,0 +1,30 @@
+:: bitwise-dict
+ | bitwise-dict & | ^ ~ << >>
+ ;
+
+: &
+  bits-and ;
+
+: |
+  bits-or ;
+
+: ^
+  bits-xor ;
+
+: ~
+  bits-not ;
+
+: <<
+  bits-lshift ;
+
+: >>
+  bits-rshift ;
+
+: bitwise-bits
+  [bits-and]
+  [bits-or]
+  [bits-xor]
+  [bits-not]
+  [bits-lshift]
+  [bits-rshift]
+  bitwise-dict ;

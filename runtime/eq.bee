@@ -1,0 +1,14 @@
+:: eq-dict
+ | eq-dict == /=
+ ;
+
+: ==
+  int-eq ;
+
+: /=
+  int-ne ;
+
+: eq-int
+  [int-eq]
+  [int-ne]
+  eq-dict ;

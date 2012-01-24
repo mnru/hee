@@ -1,4 +1,7 @@
+"runtime/eq.bee"          load
+"runtime/ord.bee"         load
 "runtime/num.bee"         load
+"runtime/bits.bee"        load
 "runtime/bool.bee"        load
 "runtime/list.bee"        load
 "runtime/pair.bee"        load

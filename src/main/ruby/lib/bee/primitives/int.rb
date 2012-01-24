@@ -49,6 +49,10 @@ module Bee
         bool(nip == pop)
       end
 
+      def intNe
+        bool(nip != pop)
+      end
+
       public_instance_methods.each do |m|
         alias_method m.to_s.gsub(/[A-Z]/){|c| "-#{c.downcase}" }, m
         remove_method m

@@ -38,15 +38,19 @@ module Bee
       end
 
       def floatLte
-        bool(nip < pop)
+        bool(nip <= pop)
       end
 
       def floatGte
-        bool(nip > pop)
+        bool(nip >= pop)
       end
 
       def floatEq
         bool(nip == pop)
+      end
+
+      def floatNe
+        bool(nip != pop)
       end
 
       public_instance_methods.each do |m|

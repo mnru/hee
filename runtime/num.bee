@@ -3,19 +3,19 @@
  ;
 
 : +
-  [pop pop pop pop] unnum-dict apply ;
+  int-add ;
 
 : -
-  [pop pop pop [pop] dip] unnum-dict apply ;
+  int-sub ;
 
 : *
-  [pop pop [pop pop] dip] unnum-dict apply ;
+  int-mul ;
 
 : /
-  [pop [pop pop pop] dip] unnum-dict apply ;
+  int-div ;
 
 : %
-  [[pop pop pop pop] dip] unnum-dict apply ;
+  int-mod ;
 
 : num-int
   [int-add]

@@ -14,15 +14,19 @@ module Bee
       end
 
       def charLte
-        bool(nip < pop)
+        bool(nip <= pop)
       end
 
       def charGte
-        bool(nip > pop)
+        bool(nip >= pop)
       end
 
       def charEq
         bool(nip == pop)
+      end
+
+      def charNe
+        bool(nip != pop)
       end
 
       public_instance_methods.each do |m|

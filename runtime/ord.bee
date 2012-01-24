@@ -1,0 +1,15 @@
+:: ord-dict
+ | ord-dict < <= => >
+ ;
+
+: <
+  int-lt ;
+
+: <=
+  int-lte ;
+
+: >
+  int-gt ;
+
+: >=
+  int-gte ;
