@@ -353,7 +353,7 @@ consequents ce p@(MemberOf id t)
   = p : concat [consequents ce (MemberOf id' t) | id' <- supers ce id]
 
 -- Antecedents (from *one* instance) that sufficiently support the given predicate
---   > antecedents ce (MemberOf "Ord" (mkPair tInt tChar))
+--   antecedents ce (MemberOf "Ord" (mkPair tInt tChar))
 --   = Just [MemberOf "Ord" tInt, MemberOf "Ord" tChar]
 antecedents :: ClassEnv -> Predicate -> Maybe [Predicate]
 antecedents ce p@(MemberOf id t) = msum [instantiate it | it <- instances ce id]
@@ -424,4 +424,25 @@ extendSubstitution a b = do s <- getSubstitution
 newVariable        :: Kind -> Inference Type
 newVariable KiStack = Inference (\s n -> (s,n+1,(TyStack (StBottom ("v" ++ show n)))))
 newVariable k       = Inference (\s n -> (s,n+1,(TyVariable ("v" ++ show n) k)))
+
+freshVars              :: Scheme -> Inference (Qualified Type)
+freshVars (ForAll ks t) = do ts <- mapM newVariable ks
+                             Inference (\s n -> (s,n,instantiate ts t))
+
+class CanInstantiate t where
+  instantiate :: [Type] -> t -> t
+
+instance CanInstantiate Type where
+  instantiate ts (TyGeneric n)       = ts !! n
+  instantiate ts (TyApplication i o) = TyApplication (instantiate ts i) (instantiate ts o)
+  instantiate ts t                   = t
+
+instance CanInstantiate a => CanInstantiate [a] where
+  instantiate ts = map (instantiate ts)
+
+instance CanInstantiate a => CanInstantiate (Qualified a) where
+  instantiate ts (ps :=> t) = instantiate ts ps :=> instantiate ts t
+
+instance CanInstantiate Predicate where
+  instantiate ts (MemberOf id t) = MemberOf id (instantiate ts t)
 
