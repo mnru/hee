@@ -6,43 +6,65 @@ import Monad (msum)
 import Maybe (isJust)
 import qualified Data.Foldable as F (concat)
 
-type Id = String
+type Id
+  = String
 
--- Terms are either a composition of one function with another term, or
--- a higher-order function (a string of composed functions)
-data Term = TmCompose Term Id
-          | TmQuote Term
-          | TmEmpty
+-- Terms are either a composition of two functions, or a higher-order
+-- function (a string of composed functions)
+data Term
+  = TmCompose Term Term
+  | TmQuote Term
+  | TmEmpty
+  | TmName Id
+  | TmLiteral Literal
+  deriving (Eq, Show)
+
+data Literal
+  = LiInt Int
+  | LiChar Char
+  | LiFloat Float
+  | LiString String
   deriving (Eq, Show)
 
 -- Kinds classify types as either a monomorphic value type (a nullary type
 -- constructor), a unary type constructor (type => type), or a stack
-data Kind = KiStack
-          | KiType
-          | KiCons Kind Kind
+data Kind
+  = KiStack
+  | KiType
+  | KiCons Kind Kind
   deriving (Eq, Show)
 
 -- Types have the kind KiType and are distinguished from Stack because
 -- they can be used to describe first-class values.
-data Type = TyVariable Id Kind
-          | TyConstant Id Kind
-          | TyApplication Type Type
-          | TyGeneric Int
-          | TyStack Stack
+data Type
+  = TyVariable Id Kind
+  | TyConstant Id Kind
+  | TyApplication Type Type
+  | TyGeneric Int
+  | TyStack Stack
   deriving (Eq, Show)
 
 -- Stacks have the kind KiStack and are distinguished from Type because
 -- they cannot be used to describe first-class values.
-data Stack = StEmpty
-           | StBottom Id
-           | StPush Stack Type
+data Stack
+  = StEmpty
+  | StBottom Id
+  | StPush Stack Type
   deriving (Eq, Show)
 
 showTerm :: Term -> String
 showTerm TmEmpty                = ""
+showTerm (TmName id)            = id
 showTerm (TmQuote t)            = "[" ++ showTerm t ++ "]"
-showTerm (TmCompose TmEmpty u)  = u
-showTerm (TmCompose t u)        = showTerm t ++ " " ++ u
+showTerm (TmLiteral t)          = showLit t
+showTerm (TmCompose TmEmpty t)  = showTerm t
+showTerm (TmCompose s t)        = showTerm s ++ " " ++ showTerm t
+
+showLit :: Literal -> String
+showLit (LiInt l)    = show l
+showLit (LiChar l)   = show l
+showLit (LiFloat l)  = show l
+showLit (LiString l) = show l
 
 showKind :: Kind -> String
 showKind KiStack                    = "@"
@@ -62,13 +84,14 @@ showStack (StBottom id) = id
 showStack (StPush s s') = showStack s ++ "> " ++ showType s'
 
 -- Primitive types
-tInt  = TyConstant "int"  KiType
-tReal = TyConstant "real" KiType
-tChar = TyConstant "char" KiType
-tUnit = TyConstant "()"   KiType
-tPair = TyConstant "(,)"  (KiCons KiType (KiCons KiType KiType))
-tList = TyConstant "[]"   (KiCons KiType KiType)
-tFunc = TyConstant "(->)" (KiCons KiStack KiStack)
+tInt    = TyConstant "int"  KiType
+tReal   = TyConstant "real" KiType
+tChar   = TyConstant "char" KiType
+tUnit   = TyConstant "()"   KiType
+tPair   = TyConstant "(,)"  (KiCons KiType (KiCons KiType KiType))
+tList   = TyConstant "[]"   (KiCons KiType KiType)
+tFunc   = TyConstant "(->)" (KiCons KiStack KiStack)
+tString = mkList tChar
 
 mkFunc :: Stack -> Stack -> Type
 mkFunc inp out = TyApplication (TyApplication tFunc (TyStack inp)) (TyStack out)
@@ -94,8 +117,11 @@ instance HasKind Kind where
 instance HasKind Stack where
   kind t = KiStack
 
-type Variable     = (Id,Kind)
-type Substitution = [(Variable, Type)]
+type Variable
+  = (Id,Kind)
+
+type Substitution
+  = [(Variable, Type)]
 
 -- HasKind Variable
 instance (HasKind b) => HasKind (a,b) where
@@ -209,10 +235,12 @@ instance CanUnify Stack where
   bindvar _ _              = fail "bindvar failed (kind mismatch)"
 
 -- antecedents => consequent
-data Qualified h = [Predicate] :=> h
+data Qualified h
+  = [Predicate] :=> h
   deriving (Eq, Show)
 
-data Predicate   = MemberOf Id Type
+data Predicate
+  = MemberOf Id Type
   deriving (Eq, Show)
 
 -- (Num a) => a -> Int
@@ -239,8 +267,11 @@ instance CanUnify Predicate where
   bindvar v t = undefined
 
 -- Names of each superclass, instance declarations
-type Class    = ([Id], [Instance])
-type Instance = Qualified Predicate
+type Class
+  = ([Id], [Instance])
+
+type Instance
+  = Qualified Predicate
 
 -- class Eq a => Ord a                  where ...
 -- instance Ord Unit                    where ...
@@ -257,7 +288,8 @@ type Instance = Qualified Predicate
 --   :=> MemberOf "Ord" (mkPair (TyVariable "a" KiType)
 --                              (TyVariable "b" KiType))])
 
-data ClassEnv = ClassEnv { classes  :: Id -> Maybe Class }
+data ClassEnv
+  = ClassEnv { classes  :: Id -> Maybe Class }
 
 nullClassEnv :: ClassEnv
 nullClassEnv  = ClassEnv { classes = \id -> fail "class not defined" }
@@ -374,7 +406,8 @@ entail ce ps p = if any (p `elem`) (map (consequents ce) ps)
                         Nothing -> False
                         Just qs -> all (entail ce ps) qs
 
-data Scheme = ForAll [Kind] (Qualified Type)
+data Scheme
+  = ForAll [Kind] (Qualified Type)
   deriving (Eq, Show)
 
 -- No need to worry about variable capture, nice!
@@ -388,21 +421,24 @@ qualify vs qt = ForAll ks (substitute s qt)
         ks  = map kind vs'
         s   = zip vs' (map TyGeneric [0..])
 
-data Assumption = Id :>: Scheme
+data Assumption
+  = Id :>: Scheme
+  deriving (Eq, Show)
 
 instance CanSubstitute Assumption where
   substitute s (id :>: sc) = id :>: (substitute s sc)
   freevars (id :>: sc)     = freevars sc
 
 --
-find                     :: Id -> [Assumption] -> Maybe Scheme
-find id []                = fail "unbound identifier"
-find id ((id' :>: sc):as) = if id == id'
+lookupScheme                     :: Id -> [Assumption] -> Maybe Scheme
+lookupScheme id []                = fail "unbound identifier"
+lookupScheme id ((id' :>: sc):as) = if id == id'
                             then return sc
-                            else find id as
+                            else lookupScheme id as
 
 -- Tracks the current substitution and unique TyGeneric
-data Inference a = Inference (Substitution -> Int -> (Substitution,Int,a))
+data Inference a
+  = Inference (Substitution -> Int -> (Substitution,Int,a))
 
 instance Monad Inference where
   return x            = Inference (\s n -> (s,n,x))
@@ -445,4 +481,27 @@ instance CanInstantiate a => CanInstantiate (Qualified a) where
 
 instance CanInstantiate Predicate where
   instantiate ts (MemberOf id t) = MemberOf id (instantiate ts t)
+
+type Infer e t
+  = ClassEnv -> [Assumption] -> e -> Inference ([Predicate], t)
+
+tiLiteral             :: Literal -> Inference ([Predicate], Type)
+tiLiteral (LiString _) = return ([], tString)
+tiLiteral (LiChar _)   = return ([], tChar)
+tiLiteral (LiInt _)    = do v <- newVariable KiType
+                            return ([MemberOf "Num" v], v)
+tiLiteral (LiFloat _)  = do v <- newVariable KiType
+                            return ([MemberOf "Fractional" v], v)
+
+--tiTerm                      :: Infer Term Type
+--tiTerm ce as (TmLiteral t)   = do (ps, t') <- tiTerm ce as t
+--                                  return (ps, t')
+--tiTerm ce as (TmCompose s t) = do
+--tiTerm ce as (TmQuote t)     = do (ps, t') <- tiTerm ce as t
+--                                  
+--tiTerm ce as (TmName id)     = do sc <- lookupScheme id as
+--                                  (ps :=> t) <- freshVars sc
+--                                  return (ps, t)
+--tiTerm ce as TmEmpty         = do i <- newVariable KiStack
+--                                  return ([], tInt)
 
