@@ -72,8 +72,28 @@ nor do we have lexical scope. But we do have function composition.
 
 Consider implementing `(a list) (a → bool) filter → (a list)` using
 `(a list) b (a → b → b) foldl → b`. Since `filter` preserves the list
-type, we need to use the `(a → bool)` argument of `filter` to build
-the `(a → (a list) → (a list))` argument of `foldl`. 
+type, we need to use the `a → bool` argument of `filter` to build
+the `(a → (a list) → (a list))` argument of `foldl`.
+
+If we passed `foldl` a function like `[swap dup _ [cons] [pop] if]`,
+where `_` is the `a → bool` predicate function passed to `filter`,
+then we `cons` the item onto a list if the predicate is satisfied,
+and discard it otherwise. So how do we fill-in the `_`? We know that
+function is somewhere below on the stack; but digging around down
+is not only inefficient (copying a function several levels below),
+but its not safe. The function passed to `foldl` knows only that
+the stack top is `a (a list)`, there's no information about the rest
+of the stack.
+
+Instead, we can solve this problem using function composition. We
+assume `_`, the `a → bool` operand is the top of the stack. The
+function we want to build starts with `[swap dup]`, and to add `_`
+to the end of it, we simply `swap compose`. Now we have `[swap dup
+_]`. We tack the rest on with `[[cons] [pop] if] compose`.
+
+It turns out we can always manually "absorb" values in this manner
+using function composition, rather than having a compiler close over
+references to free variables automatically.
 
 ### Single stack
 
