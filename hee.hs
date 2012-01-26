@@ -430,13 +430,13 @@ instance CanSubstitute Assumption where
   freevars (id :>: sc)     = freevars sc
 
 --
-lookupScheme                     :: Id -> [Assumption] -> Maybe Scheme
+lookupScheme                     :: Monad m => Id -> [Assumption] -> m Scheme
 lookupScheme id []                = fail "unbound identifier"
 lookupScheme id ((id' :>: sc):as) = if id == id'
                             then return sc
                             else lookupScheme id as
 
--- Tracks the current substitution and unique TyGeneric
+-- Tracks the current substitution and TyGeneric counter
 data Inference a
   = Inference (Substitution -> Int -> (Substitution,Int,a))
 
@@ -488,20 +488,16 @@ type Infer e t
 tiLiteral             :: Literal -> Inference ([Predicate], Type)
 tiLiteral (LiString _) = return ([], tString)
 tiLiteral (LiChar _)   = return ([], tChar)
-tiLiteral (LiInt _)    = do v <- newVariable KiType
-                            return ([MemberOf "Num" v], v)
-tiLiteral (LiFloat _)  = do v <- newVariable KiType
-                            return ([MemberOf "Fractional" v], v)
+tiLiteral (LiInt _)    = newVariable KiType >>= \v -> return ([MemberOf "Num" v], v)
+tiLiteral (LiFloat _)  = newVariable KiType >>= \v -> return ([MemberOf "Fractional" v], v)
 
---tiTerm                      :: Infer Term Type
---tiTerm ce as (TmLiteral t)   = do (ps, t') <- tiTerm ce as t
---                                  return (ps, t')
---tiTerm ce as (TmCompose s t) = do
---tiTerm ce as (TmQuote t)     = do (ps, t') <- tiTerm ce as t
---                                  
---tiTerm ce as (TmName id)     = do sc <- lookupScheme id as
---                                  (ps :=> t) <- freshVars sc
---                                  return (ps, t)
---tiTerm ce as TmEmpty         = do i <- newVariable KiStack
---                                  return ([], tInt)
-
+tiTerm                      :: Infer Term Type
+tiTerm ce as TmEmpty         = do (TyStack t) <- newVariable KiStack
+                                  return ([], mkFunc t t)
+tiTerm ce as (TmLiteral t)   = do x <- tiLiteral t
+                                  return x
+tiTerm ce as (TmName id)     = do sc <- lookupScheme id as
+                                  (ps :=> h) <- freshVars sc
+                                  return (ps, h)
+--Term ce as (TmQuote t)     =
+--Term ce as (TmCompose s t) =
