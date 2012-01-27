@@ -400,9 +400,9 @@ antecedents ce p@(MemberOf id t) = msum [instantiate it | it <- instances ce id]
 --   3. entail ce [MemberOf "Eq" tInt ,MemberOf "Eq" tChar]
 --                (MemberOf "Ord" (mkPair tInt tChar))
 entail :: ClassEnv -> [Predicate] -> Predicate -> Bool
-entail ce ps p = if any (p `elem`) (map (consequents ce) ps)
+entail ce ps h = if any (h `elem`) (map (consequents ce) ps)
                  then True
-                 else case antecedents ce p of
+                 else case antecedents ce h of
                         Nothing -> False
                         Just qs -> all (entail ce ps) qs
 
@@ -501,3 +501,5 @@ tiTerm ce as (TmName id)     = do sc <- lookupScheme id as
                                   return (ps, h)
 --Term ce as (TmQuote t)     =
 --Term ce as (TmCompose s t) =
+
+

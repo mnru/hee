@@ -1,4 +1,5 @@
-Bee is an experimental programming language
+Bee is an experimental (read: not for production use) programming
+language.
 
 ## Fundamentals
 
