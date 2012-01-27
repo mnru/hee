@@ -16,6 +16,6 @@ namespace :sbt do
   end
 end
 
-task :console do
-  sh "irb", "-Isrc/main/ruby/lib", "-r", File.dirname(__FILE__) + "/bee.rb", "--simple-prompt"
+task :repl do
+  sh "irb", "-Isrc/main/ruby/lib", "-r", File.dirname(__FILE__) + "/bin/bee.rb", "--simple-prompt"
 end
