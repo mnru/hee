@@ -39,6 +39,10 @@ module Bee
       @input.unshift(*@stack.pop.terms, @stack.pop)
     end
 
+    def print # S a -> S
+      $stdout.puts pop.inspect
+    end
+
     def dump # S string -> S
       a = @stack.pop
       p = Parser.new
