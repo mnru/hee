@@ -1,5 +1,5 @@
 Bee is an experimental (read: not for production use) programming
-language.
+language. See this [video](http://www.youtube.com/watch?v=5J2kc4oZTVU) for no details.
 
 ## Fundamentals
 
