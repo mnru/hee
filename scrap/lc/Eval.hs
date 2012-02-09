@@ -1,27 +1,34 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Eval
  ( free
  , occurs
  , subst
  , eval
- , Var
+ , Var (..)
  , Exp (..)
  ) where
   
 import Data.List ((\\), union)
+import Data.Typeable
+import Data.Generics
 
-type Var
-	= String
+data Var
+	= V String
+  | AV String -- Antiquoted variable $var:ident
+  deriving (Show, Eq, Typeable, Data)
 
 data Exp
 	= Var Var
 	| Lam Var Exp
 	| App Exp Exp
-  deriving (Show)
+  | AE String -- Antiquoted expression $exp:ident
+  deriving (Show, Eq, Typeable, Data)
 	
 allBinders :: [Var]
-allBinders  = [[x]        | x <- ['a'..'z']] ++
-              [(x:show i) | x <- ['a'..'z'],
-                            i <- [1::Integer ..]]
+allBinders  = [V [x]        | x <- ['a'..'z']] ++
+              [V (x:show i) | x <- ['a'..'z'],
+                              i <- [1::Integer ..]]
 
 free :: Exp -> [Var]
 free (Var v)   = [v]

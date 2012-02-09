@@ -21,15 +21,16 @@ lexeme p = do x <- p
 
 symbol id = lexeme $ string id
 
-ident :: CharParser () Var
+ident :: CharParser () String
 ident = lexeme $
         do c <- small
            cs <- many idchar
            return $ c : cs
 
 var :: CharParser () Var
-var = do v <- ident
-         return v
+var = do string "$var:"
+         v <- ident
+         return $ AV v
 
 exp :: CharParser () Exp
 exp = do es <- many1 aexp
@@ -44,6 +45,9 @@ aexp = (try $ do v <- var
           e <- Parser.exp
           return $ Lam v e
    <|> parens Parser.exp
+   <|> do string "$exp:"
+          v <- ident
+          return $ AE v
 
 parse :: Monad m => String -> m Exp
 parse s = case runParser p () "" s of
