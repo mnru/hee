@@ -31,6 +31,8 @@ var :: CharParser () Var
 var = do string "$var:"
          v <- ident
          return $ AV v
+  <|> do v <- ident
+         return $ V v
 
 exp :: CharParser () Exp
 exp = do es <- many1 aexp
@@ -56,4 +58,3 @@ parse s = case runParser p () "" s of
   where p = do e <- Parser.exp
                eof
                return e
-
