@@ -1,4 +1,7 @@
-module Hee.Terms where
+module Hee.Terms
+  ( Term(..)
+  , Literal(..)
+  ) where
 
 type Id
   = String
@@ -39,4 +42,3 @@ instance Show Term where
 
 instance Show Literal where
   show = showLiteral
-
