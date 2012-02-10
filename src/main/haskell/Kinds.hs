@@ -6,4 +6,14 @@ data Kind
   = KiStack
   | KiType
   | KiCons Kind Kind
-  deriving (Eq, Show)
+  deriving (Eq)
+
+showKind :: Kind -> String
+showKind KiStack                    = "@"
+showKind KiType                     = "*"
+showKind (KiCons k@(KiCons _ _) k') = "(" ++ showKind k ++ ") => " ++ showKind k'
+showKind (KiCons k k')              = showKind k ++ " => " ++ showKind k'
+
+instance Show Kind where
+  show = showKind
+
