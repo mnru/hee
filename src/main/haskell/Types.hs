@@ -36,6 +36,11 @@ data Stack
   | StPush Stack Type
   deriving (Eq)
 
+-- Qualified types antecedents => consequent
+data Qualified h
+  = [Predicate] :=> h
+  deriving (Eq, Show)
+
 showType :: Type -> String
 showType (TyVariable id k)    = id
 showType (TyConstant id k)    = id
