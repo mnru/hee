@@ -5,6 +5,14 @@ module Bee
       push(last)
     end
 
+    def pop # S t -> S
+      if empty?
+        raise "stack underflow"
+      end
+
+      super
+    end
+
     def drop # S t -> S
       pop
     end
