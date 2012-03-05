@@ -1,0 +1,5 @@
+: fibgen'
+  [over] dip bury [dup quote] dip dig + quote compose swap compose ;
+
+: fibgen
+  [0 1 [fibgen'] y] ;
