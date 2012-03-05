@@ -1,0 +1,47 @@
+: dig
+  [swap] dip swap ;
+
+: bury
+  swap [swap] dip ;
+
+: over
+  [dup] dip swap ;
+
+: rot
+  dig ;
+
+: -rot
+  bury ;
+
+: nip
+  swap pop ;
+
+: drop
+  pop ;
+
+: tuck
+  swap over ;
+
+: 2dup
+  [dup] dip dup dig swap ;
+
+: 2pop
+  pop pop ;
+
+: 2swap
+  todo ;
+
+: 2over
+  todo ;
+
+: 2nip
+  todo ;
+
+: 2tuck
+  todo ;
+
+: 2rot
+  todo ;
+
+: -2rot
+  todo ;

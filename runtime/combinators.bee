@@ -1,60 +1,14 @@
-: bury
-  rot rot ;
-
-: twice
-  dup compose apply ;
-
 : y'
   dup quote [y'] compose quote swap compose apply ;
 
 : y
   quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
 
+: twice
+  dup compose apply ;
+
 : times'
   swap dup zero? [pop pop pop] [1- [[dup [apply] dip] dip] dip swap apply] if ;
 
 : times
   [times'] y ;
-
-: over
-  [dup] dip swap ;
-
-: rot
-  dig ;
-
-: -rot
-  rot rot ;
-
-: nip
-  swap pop ;
-
-: drop
-  pop ;
-
-: tuck
-  swap over ;
-
-: 2dup
-  [dup] dip dup dig swap ;
-
-: 2pop
-  pop pop ;
-
-: 2swap
-  todo ;
-
-: 2over
-  todo ;
-
-: 2nip
-  todo ;
-
-: 2tuck
-  todo ;
-
-: 2rot
-  todo ;
-
-: -2rot
-  todo ;
-
