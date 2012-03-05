@@ -1,6 +1,7 @@
 module Bee
   class Interpreter
-    include Primitives::Bits,
+    include Primitives,
+            Primitives::Bits,
             Primitives::Int,
             Primitives::Float,
             Primitives::Char,
@@ -14,63 +15,8 @@ module Bee
       @input = Input.new
       @dictionary = Dictionary.new
 
-      @stackops = %w(pop dup drop swap nip dig rot over id)
+      @stackops = %w(pop dup drop swap id)
       @primops  = (public_methods - Object.new.public_methods - [:run]).map(&:to_s)
-    end
-
-    def reset
-      @stack.clear
-      @input.clear
-    end
-
-    def apply # S (S -> T) -> T
-      @input.unshift(*@stack.pop.terms)
-    end
-
-    def quote # S t -> S (U -> U t)
-      @stack.push(Term::Quotation.new([@stack.pop]))
-    end
-
-    def compose # S (X -> Y) (Y -> Z) -> S (X -> Z)
-      @stack.push(Term::Quotation.new(@stack.nip.terms + @stack.pop.terms))
-    end
-
-    def dip # S u (S -> T) -> T u
-      @input.unshift(*@stack.pop.terms, @stack.pop)
-    end
-
-    def print # S a -> S
-      $stdout.puts pop.inspect
-    end
-
-    def dump # S string -> S
-      a = @stack.pop
-      p = Parser.new
-
-      File.open(a.to_s, "w+") do |io|
-        @dictionary.definitions.each{|d| io << p.unparse(d) }
-      end
-    end
-
-    def load # S string -> S
-      a    = @stack.pop
-      t, d = Parser.new.parse(File.read(a.to_s))
-      @dictionary.import(d)
-    end
-
-    def inline # S (T -> U) -> S (T -> U)
-      a = @stack.pop
-      q = Term::Quotation.new
-
-      while t = a.terms.shift
-        if t.name? and @dictionary.defined?(t.name)
-          q.terms.push(*@dictionary.lookup(t.name))
-        else
-          q.terms.push(t)
-        end
-      end
-
-      @stack.push(q)
     end
 
     def run(debug, terms, dictionary)
@@ -144,7 +90,8 @@ module Bee
   private
 
     def nip
-      @stack.nip
+      @stack.swap
+      @stack.pop
     end
 
     def pop
