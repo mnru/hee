@@ -89,6 +89,10 @@ module Bee
 
       def <<(token)
         if @name.nil?
+          unless token.respond_to?(:name) and token.name?
+            raise "token after ':' must be a name"
+          end
+
           @name = token.name
         else
           @terms << token
