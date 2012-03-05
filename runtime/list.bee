@@ -19,7 +19,7 @@
   [foldl'] y ;
 
 : reverse-map
-  null [swap] dig compose [cons] compose foldl ;
+  [swap] swap compose [cons] compose null swap foldl ;
 
 : reverse
   null [swap cons] foldl ;
