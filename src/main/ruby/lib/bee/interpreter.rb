@@ -114,16 +114,29 @@ module Bee
         t = trace.map{|_| _[1].length }.max # eval term
         c = trace.map{|_| _[2].length }.max # continuation
 
+        # Calculate size of each column
         maxs, maxt, maxc = trace.inject([0,0,0]) do |(s,t,c), _|
           [ s > _[0].length ? s : _[0].length,
             t > _[1].length ? t : _[1].length,
             c > _[2].length ? c : _[2].length ]
         end
 
-        trace.each do |t|
-          $stdout.puts ".. " << t[0].rjust(maxs).yellow <<
-                       " : " << t[1].rjust(maxt).cyan   <<
-                     ((" : " << t[2])[maxs+maxt .. 80] || "")
+        # Ensure at least 10 chars of continuation on the screen
+        if maxs + maxt > 61 # 80 - 3 - 3 - 3 - 10
+          maxs = 40 if maxs > 40
+          maxt = 61 - maxs
+          maxc = 80 - maxt - maxs
+        end
+
+        # Print a header
+        $stdout.puts " stack".rjust(maxs + 3, "=").yellow.bold <<
+                     " : " << "term ".ljust(maxt, "=").cyan.bold <<
+                     " : " << "continuation ".ljust(maxc, "=").bold
+
+        trace.each do |triple|
+          $stdout.puts (".. " << triple[0].rjust(maxs)[-maxs..-1].yellow <<
+                        " : " << triple[1].ljust(maxt)[0,   maxt].cyan   <<
+                        " : " << triple[2][0, maxc])
         end
       end
     end

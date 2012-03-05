@@ -61,7 +61,7 @@ module Bee
         if @fields.empty?
           @name
         else
-          "(#{@fields.map(&:inspect).join(' ')} #{@name})"
+          "#{@fields.map(&:inspect).join(' ')} #{@name}"
         end
       end
     end
