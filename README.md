@@ -114,7 +114,8 @@ provide access to multiple stacks).
 * Higher-order functions
 * Module system
 * Type inference
-* Class polymorphism
+* Ad-hoc polymorphism (via typeclasses)
+* Parametric polymorphism
 
 ## Applications
 

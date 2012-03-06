@@ -29,6 +29,10 @@ module Bee
     def definitions
       @storage.map{|name, terms| Term::Definition.new(name, terms) }
     end
+
+    def names
+      @storage.keys
+    end
   end
 
 end

@@ -33,7 +33,11 @@ module Bee
     end
 
     def inspect
-      map(&:inspect).join(" ")
+      if empty?
+        "(empty)"
+      else
+        map(&:inspect).join(" ")
+      end
     end
 
   end

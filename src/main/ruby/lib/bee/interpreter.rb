@@ -8,6 +8,7 @@ module Bee
             Primitives::String
 
     attr_reader :stack, :input, :dictionary
+    attr_reader :stackops, :primops
 
     def initialize(debug = true)
       @debug = debug
