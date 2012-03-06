@@ -22,19 +22,56 @@ rescue
 # $stderr.puts "  " << $!.backtrace.join("\n  ")
 end
 
+def msgbanner
+end
+
+def msghelp
+  puts <<-MSG
+Usage: #{$0} [switches] [--] [file] [arguments]
+  -h              this message
+  -v              trace execution
+  -e 'code'       execute code
+MSG
+end
+
+def msgbanner
+  puts <<-MSG
+Bee: Statically-typed functional and concatenative language
+
+Syntax
+  term term                                 composition
+  [term]                                    abstraction
+  : name term term ... ;                    term definition
+  :: name | c field field ... | ... ;       type definition
+
+  'a                                        character
+  "abc"                                     string
+  12.34                                     number
+
+Press [TAB] for tab completion
+Press ^D to exit
+
+MSG
+end
+
+# Sloppy and incorrect
 trace  = ARGV.delete("-v")
+help   = ARGV.delete("-h")
 exec   = ARGV.index("-e")
 exec &&= ARGV[exec + 1]
-
 ARGV.delete("-e")
+ARGV.delete("--")
 
-if exec
+if help
+  msghelp
+elsif exec
   bee(exec, trace)
 elsif ARGV.empty?
   require "readline"
+  msgbanner
 
   # Ignore ^C
-  trap("INT", "SIG_IGN")
+  trap("INT") { system "stty", `stty -g`.chomp; puts; exit }
 
   # Autocomplete
   Readline.completer_word_break_characters = " \t\n"
@@ -53,10 +90,17 @@ elsif ARGV.empty?
         end
       end
     else
+      if str[0] == "["
+        str    = str[1..-1]
+        prefix = "["
+      else
+        prefix = ""
+      end
+
       ( @vm.stackops \
       + @vm.primops \
       + @vm.dictionary.names ).
-      grep(/^#{Regexp.escape(str)}/).map{|o| o + " " }
+      grep(/^#{Regexp.escape(str)}/).map{|o| prefix + o + " " }
     end
   end
 
@@ -72,4 +116,5 @@ elsif ARGV.empty?
 
   puts
 else
+  bee(File.read(ARGV[1]), trace)
 end
