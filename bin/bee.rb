@@ -37,15 +37,27 @@ elsif ARGV.empty?
   trap("INT", "SIG_IGN")
 
   # Autocomplete
+  Readline.completer_word_break_characters = " \t\n"
   Readline.completion_append_character = ""
   Readline.completion_proc = lambda do |str|
     if str[0] == '"'
-      Dir[str + "*"]
+      Dir[str[1..-1] + "*"].map do |path|
+        if File.directory?(path)
+          if Dir[path + "/*"].empty?
+            '"' << path << '/"'
+          else
+            '"' << path << "/"
+          end
+        else
+          '"' << path << '" '
+        end
+      end
     else
       ( @vm.stackops \
       + @vm.primops \
-      + @vm.dictionary.names ).grep(/^#{Regexp.escape(str)}/)
-    end.map{|xs| xs + " " }
+      + @vm.dictionary.names ).
+      grep(/^#{Regexp.escape(str)}/).map{|o| o + " " }
+    end
   end
 
   while line = Readline.readline(">> ")
