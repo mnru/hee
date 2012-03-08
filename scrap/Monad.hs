@@ -1,4 +1,3 @@
-#!/usr/bin/env runhaskell
 instance Monad ((->) i) where
   f >>= g  = (\i -> g (f i) i)
   return x = (\i -> x)
