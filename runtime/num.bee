@@ -1,5 +1,5 @@
-:: num-dict
- | num-dict + - * / %
+:: dict-num
+ | dict-num + - * / %
  ;
 
 : +
@@ -23,7 +23,7 @@
   [int-mul]
   [int-div]
   [int-mod]
-  num-dict ;
+  dict-num ;
 
 : num-float
   [float-add]
@@ -31,7 +31,7 @@
   [float-mul]
   [float-div]
   [float-mod]
-  num-dict ;
+  dict-num ;
 
 : even?
   2 % 0 == ;

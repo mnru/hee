@@ -1,5 +1,5 @@
-:: ord-dict
- | ord-dict < <= => >
+:: dict-ord
+ | dict-ord < <= => >
  ;
 
 : <
@@ -13,3 +13,10 @@
 
 : >=
   int-gte ;
+
+: ord-int
+  [int-lt]
+  [int-lte]
+  [int-gte]
+  [int-gt]
+  dict-ord ;

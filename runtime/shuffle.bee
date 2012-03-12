@@ -16,9 +16,6 @@
 : nip
   swap pop ;
 
-: drop
-  pop ;
-
 : tuck
   swap over ;
 
