@@ -13,11 +13,6 @@ module Bee
       super
     end
 
-    # S t -> S
-    def drop
-      pop
-    end
-
     # S t u -> S u t
     def swap
       push(pop, pop)

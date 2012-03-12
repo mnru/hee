@@ -16,7 +16,7 @@ module Bee
       @input = Input.new
       @dictionary = Dictionary.new
 
-      @stackops = %w(pop dup drop swap id)
+      @stackops = %w(pop dup swap id)
       @primops  = (public_methods - Object.new.public_methods - [:run]).map(&:to_s)
     end
 
