@@ -16,8 +16,9 @@ module Bee
       @input = Input.new
       @dictionary = Dictionary.new
 
+      ignore    = [:run, :stack, :input, :dictionary, :stackops, :primops]
       @stackops = %w(pop dup swap id)
-      @primops  = (public_methods - Object.new.public_methods - [:run]).map(&:to_s)
+      @primops  = (public_methods - Object.new.public_methods - ignore).map(&:to_s)
     end
 
     def run(debug, terms, dictionary)
