@@ -21,14 +21,13 @@ heeName = do head <- noneOf "0123456789['\" \t\n"
              return $ TmName (head:tail)
 
 heeLiteral :: Parser Literal
-heeLiteral = undefined
---      <|> heeString
---      <|> heeChar
---      <|> "0x" >> heeInt 16
---      <|> "0o" >> heeInt 8
---      <|> "0b" >> heeInt 2
---      <|> heeInt 10
---      <|> float
+heeLiteral = heeString
+         <|> heeChar
+         <|> try (string "0x" >> heeInt "0x")
+         <|> try (string "0o" >> heeInt "0o")
+         <|> try (string "0b" >> heeInt "0b")
+         <|> try heeFloat
+         <|> heeInt ""
 
 heeString :: Parser Literal
 heeString = do char '"'
@@ -41,28 +40,17 @@ heeChar = do char '\''
              c <- anyChar
              return $ LiChar c
 
-heeInt :: Int -> Parser Int
-heeInt radix = do digits <- many1 (oneOf $ take radix "0123456789abcdef")
-                  return $ convert radix 0 digits
-  where
-    convert radix n []     = n
-    convert radix n (d:ds) = convert radix (radix*n + digit d) ds
-    digit '0' = 0
-    digit '1' = 1
-    digit '2' = 2
-    digit '3' = 3
-    digit '4' = 4
-    digit '5' = 5
-    digit '6' = 6
-    digit '7' = 7
-    digit '8' = 8
-    digit '9' = 9
-    digit 'a' = 10
-    digit 'b' = 11
-    digit 'c' = 12
-    digit 'd' = 13
-    digit 'e' = 14
-    digit 'f' = 15
+heeInt :: String -> Parser Literal
+heeInt radix = do digits <- many1 (oneOf "0123456789abcdef")
+                  let parsed = read (radix ++ digits)
+                  return $ LiInt parsed
+
+heeFloat :: Parser Literal
+heeFloat = do whole    <- many1 (oneOf "0123456789")
+              point    <- char '.'
+              fraction <- many (oneOf "0123456789")
+              let parsed = read (whole ++ "." ++ fraction ++ "0")
+              return $ LiFloat parsed
 
 heeTerm :: Parser Term
 heeTerm = heeName
