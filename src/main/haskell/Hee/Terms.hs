@@ -14,14 +14,14 @@ data Term
   | TmEmpty
   | TmName Id
   | TmLiteral Literal
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data Literal
   = LiInt Int
   | LiChar Char
   | LiFloat Float
   | LiString String
-  deriving (Eq)
+  deriving (Eq, Show)
 
 showTerm :: Term -> String
 showTerm TmEmpty                = ""
@@ -37,8 +37,8 @@ showLiteral (LiChar l)   = show l
 showLiteral (LiFloat l)  = show l
 showLiteral (LiString l) = show l
 
-instance Show Term where
-  show = showTerm
+--instance Show Term where
+--  show = showTerm
 
-instance Show Literal where
-  show = showLiteral
+--instance Show Literal where
+--  show = showLiteral
