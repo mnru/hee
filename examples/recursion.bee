@@ -1,0 +1,10 @@
+: fact-u'
+  swap
+  dup
+  1 <=
+    [pop pop 1]
+    [dup 1- dig u *]
+  if ;
+
+: fact-u
+  [fact-u'] u ;

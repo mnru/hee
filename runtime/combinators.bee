@@ -1,3 +1,6 @@
+: u
+  dup apply ;
+
 : y'
   dup quote [y'] compose quote swap compose apply ;
 
