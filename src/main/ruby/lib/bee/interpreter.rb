@@ -69,6 +69,9 @@ module Bee
             c > _[2].length ? c : _[2].length ]
         end
 
+        maxs = 6 if maxs < 6
+        maxt = 5 if maxt < 5
+
         # Ensure at least 10 chars of continuation on the screen
         if maxs + maxt > 61 # 80 - 3 - 3 - 3 - 10
           maxs = 40 if maxs > 40
