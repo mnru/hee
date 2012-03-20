@@ -4,7 +4,7 @@ module Bee
 
     # S t -> S t t
     def dup
-      push(last)
+      pop.tap{|x| push(x, x) }
     end
 
     # S t -> S
