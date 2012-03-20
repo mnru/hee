@@ -16,7 +16,7 @@
   dup compose apply ;
 
 : times'
-  swap dup zero? [pop pop pop] [1- [[dup [apply] dip] dip] dip swap apply] if ;
+  swap dup zero? [pop pop pop] [1- [[dup [apply] dip] dip] dip swap u] if ;
 
 : times
-  [times'] y ;
+  [times'] u ;
