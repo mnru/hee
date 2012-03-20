@@ -1,11 +1,16 @@
+-- [f] u == [f] f
 : u
   dup apply ;
 
+-- Recursive definition of Y
+-- [f] y' == [[f] y'] f
 : y'
-  dup quote [y'] compose quote swap compose apply ;
+  dup quote [y'] compose swap apply ;
 
+-- Non-recursive definition of Y
+-- [f] y == [[f] [y] u] f
 : y
-  quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
+  [quote [u] compose over quote swap compose swap apply] u ;
 
 : twice
   dup compose apply ;
