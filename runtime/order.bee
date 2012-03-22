@@ -1,0 +1,50 @@
+module prelude.order
+  class-ord
+  <
+  <=
+  >
+  >=
+  ordering (gt lt eq)
+  compare
+  greater
+  lesser
+
+import prelude.boolean
+
+:: class-ord
+ | class-ord < <= => >
+ ;
+
+: <
+  int-lt ;
+
+: <=
+  int-lte ;
+
+: >
+  int-gt ;
+
+: >=
+  int-gte ;
+
+: ord-int
+  [int-lt]
+  [int-lte]
+  [int-gte]
+  [int-gt]
+  class-ord ;
+
+:: ordering
+ | gt
+ | lt
+ | eq
+ ;
+
+: compare
+  2dup < [pop pop lt] [> [gt] [eq] if] if ;
+
+: greater
+  2dup > [pop] [swap pop] if ;
+
+: lesser
+  2dup < [pop] [swap pop] if ;

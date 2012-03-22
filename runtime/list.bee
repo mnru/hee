@@ -1,3 +1,36 @@
+module prelude.list
+  list (null cons)
+  filter
+  foldr
+  foldl
+  map
+  sum
+  product
+  reverse-filter
+  reverse-map
+  length
+  null?
+  cons?
+  empty?
+  concat
+  greatest
+  least
+  head
+  tail
+  nth
+  drop
+  take
+  last
+  init
+  all?
+  any?
+  none?
+
+import prelude.combinators
+import prelude.boolean
+import prelude.option
+import prelude.number
+
 :: list
  | null
  | cons head tail
@@ -38,9 +71,6 @@
 
 : null?
   [true] [pop pop false] unlist ;
-
-: empty?
-  null? ;
 
 : cons?
   [false] [pop pop true] unlist ;

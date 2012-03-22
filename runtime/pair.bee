@@ -1,3 +1,8 @@
+module prelude.pair
+  pair (..)
+  fst
+  snd
+
 :: pair
  | pair fst snd
  ;
