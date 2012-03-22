@@ -7,20 +7,23 @@ module prelude.combinators
 import prelude.boolean
 import prelude.number
 
+-- [f] u == [f] f
 : u
   dup apply ;
 
+-- [f] y' == [[f] y'] f
 : y'
-  dup quote [y'] compose quote swap compose apply ;
+  dup quote [y'] compose swap apply ;
 
+-- [f] y == [[f] [y] u] f
 : y
-  quote [dup apply] swap compose [apply] compose quote [quote] swap compose [compose] compose dup apply apply ;
+  [quote [u] compose over quote swap compose swap apply] u ;
 
 : twice
   dup compose apply ;
 
 : times'
-  swap dup zero? [pop pop pop] [1- [[dup [apply] dip] dip] dip swap apply] if ;
+  swap dup zero? [pop pop pop] [1- [[dup [apply] dip] dip] dip swap u] if ;
 
 : times
-  [times'] y ;
+  [times'] u ;

@@ -104,13 +104,49 @@ elsif ARGV.empty?
     end
   end
 
-  while line = Readline.readline(">> ")
-    bee(line, trace)
-    $stdout.puts @vm.stack.inspect
-    $stdout.puts
+  # Syntax invariant: an expression is only valid if any
+  # prefix has n '['s and m ']'s, where n - m >= 0.
+  bracket = lambda do |balance, s| 
+    s.chars.inject(balance) do |balance, c|
+      if balance < 0
+        balance
+      elsif c == "["
+        balance + 1
+      elsif c == "]"
+        balance - 1
+      else
+        balance
+      end
+    end
+  end
 
-    unless line !~ /\S/ or Readline::HISTORY.include?(line)
-      Readline::HISTORY.push(line)
+  buffer  = ""
+  prompt  = ">> "
+  balance = 0
+
+  while line = Readline.readline(prompt)
+    balance = bracket.call(balance, line)
+
+    if balance.zero?
+      line   = buffer + line
+      prompt = ">> "
+      buffer.clear
+
+      bee(line, trace)
+      $stdout.puts @vm.stack.inspect
+      $stdout.puts
+
+      unless line !~ /\S/ or Readline::HISTORY.include?(line)
+        Readline::HISTORY.push(line)
+      end
+    elsif balance > 0
+      buffer << "\n" << line
+      prompt = balance.to_s.ljust(2, ">") << " "
+    else # balance < 0
+      buffer  = ""
+      prompt  = ">> "
+      balance = 0
+      $stdout.puts "mismatched ]".red
     end
   end
 

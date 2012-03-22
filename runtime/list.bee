@@ -95,36 +95,36 @@ import prelude.number
     [pop pop head]
     [1- dig tail
       [pop pop pop none]
-      [bury swap apply]
+      [bury swap u]
       unoption]
   if ;
 
 : nth
-  dup negative? [pop pop none] [[nth'] y] if ;
+  dup negative? [pop pop none] [[nth'] u] if ;
 
 : drop'
   swap dup zero?
     [pop pop some]
     [1- dig tail
       [pop pop pop none]
-      [bury swap apply]
+      [bury swap u]
       unoption]
   if ;
 
 : drop
-  dup negative? [pop pop none] [[drop'] y] if ;
+  dup negative? [pop pop none] [[drop'] u] if ;
 
 : take'
   swap dup zero?
   [pop pop pop reverse some]
   [1- dig
     [pop pop pop none]
-    [bury [[swap [cons] dip] dip] dip bury swap apply]
+    [bury [[swap [cons] dip] dip] dip bury swap u]
     unlist]
   if ;
 
 : take
-  dup negative? [pop pop none] [null bury [take'] y] if ;
+  dup negative? [pop pop none] [null bury [take'] u] if ;
 
 : last
   reverse head ;
