@@ -3,3 +3,8 @@
 
 : fibgen
   [0 1 [fibgen'] y] ;
+
+-- Build a generator that pushes the next number in
+-- the Fibonacci series each time you call `apply`
+--   ex: fibgen apply apply apply apply apply apply
+--   ==: 0 1 1 2 3 5 [...]

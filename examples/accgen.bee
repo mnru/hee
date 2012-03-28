@@ -3,3 +3,8 @@
 
 : accgen
   accgen' y ;
+
+-- Build a generator that starts at 2 and each time
+-- you call `apply`, it pushes incrementing by 3
+--   ex: 2 3 accgen apply apply apply
+--   ==: 2 5 8 [...]
