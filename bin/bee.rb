@@ -123,30 +123,65 @@ elsif ARGV.empty?
   buffer  = ""
   prompt  = ">> "
   balance = 0
+  opendef = false
+
+  reset = lambda do |msg|
+    buffer  = ""
+    prompt  = ">> "
+    balance = 0
+    $stdout.puts msg
+  end
 
   while line = Readline.readline(prompt)
+    # Count definition opens and closes
+    a = line.scan(/(?:^| )(?:::|:)(?:$| )/).length
+    b = line.scan(/(?:^| );(?:$| )/).length
+
     balance = bracket.call(balance, line)
+    opendef =
+      if opendef
+        case a - b
+        when 0
+          opendef
+        when -1
+          false
+        else
+          reset["more ';' than '::' and ':'".red]
+        end
+      else
+        case a - b
+        when 0
+          opendef
+        when 1
+          true
+        else
+          reset["fewer ';' than '::' and ':'".red]
+        end
+      end
 
     if balance.zero?
-      line   = buffer + line
-      prompt = ">> "
-      buffer.clear
+      if opendef
+        buffer << " " << line
+        prompt = "0;   "
+      else
+        line   = buffer + " " + line
+        prompt = ">> "
+        buffer.clear
 
-      bee(line, trace)
-      $stdout.puts @vm.stack.inspect
-      $stdout.puts
+        bee(line, trace)
+        $stdout.puts @vm.stack.inspect
+        $stdout.puts
 
-      unless line !~ /\S/ or Readline::HISTORY.include?(line)
-        Readline::HISTORY.push(line)
+        unless line !~ /\S/ or Readline::HISTORY.include?(line)
+          Readline::HISTORY.push(line)
+        end
       end
     elsif balance > 0
-      buffer << "\n" << line
-      prompt = balance.to_s.ljust(2, ">") << " "
+      buffer << " " << line
+      paddng = opendef ? ";   " : "> "
+      prompt = balance.to_s.ljust(2, paddng[0]) << paddng[1..-1]
     else # balance < 0
-      buffer  = ""
-      prompt  = ">> "
-      balance = 0
-      $stdout.puts "mismatched ]".red
+      reset["mismatched ]".red]
     end
   end
 
