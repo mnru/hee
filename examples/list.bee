@@ -1,0 +1,7 @@
+-- Define aliases
+: ( null ;
+: , cons ;
+: ) cons reverse ;
+
+-- This is equivalent to null 1 cons 2 cons 3 cons reverse
+: xs ( 1 , 2 , 3 ) ;
