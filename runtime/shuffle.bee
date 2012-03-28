@@ -1,3 +1,20 @@
+module prelude.shuffle
+  dig
+  bury
+  over
+  rot
+  -rot
+  nip
+  tuck
+  2dup
+  2pop
+  2swap
+  2over
+  2nip
+  2tuck
+  2rot
+  -2rot
+
 : dig
   [swap] dip swap ;
 

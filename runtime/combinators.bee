@@ -1,13 +1,20 @@
+module prelude.combinators
+  u
+  y
+  twice
+  times
+
+import prelude.boolean
+import prelude.number
+
 -- [f] u == [f] f
 : u
   dup apply ;
 
--- Recursive definition of Y
 -- [f] y' == [[f] y'] f
 : y'
   dup quote [y'] compose swap apply ;
 
--- Non-recursive definition of Y
 -- [f] y == [[f] [y] u] f
 : y
   [quote [u] compose over quote swap compose swap apply] u ;

@@ -53,6 +53,30 @@ module Bee
         bool(nip != pop)
       end
 
+      def intAnd
+        push(nip & pop)
+      end
+
+      def intOr
+        push(nip | pop)
+      end
+
+      def intXor
+        push(nip ^ pop)
+      end
+
+      def intNot
+        push(~pop)
+      end
+
+      def intLshift
+        push(nip << pop)
+      end
+
+      def intRshift
+        push(nip >> pop)
+      end
+
       public_instance_methods.each do |m|
         alias_method m.to_s.gsub(/[A-Z]/){|c| "-#{c.downcase}" }, m
         remove_method m

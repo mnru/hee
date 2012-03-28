@@ -1,0 +1,28 @@
+:: boolean
+ | true
+ | false
+ ;
+
+: if
+  unboolean ;
+
+: or
+  [pop true] [id]  unboolean ;
+
+: and
+  [id] [pop false] unboolean ;
+
+: xor
+  [not] [id] unboolean ;
+
+: nand
+  [not] [pop true] unboolean ;
+
+: nor
+  [pop false] [not] unboolean ;
+
+: not
+  [false] [true] unboolean ;
+
+: xnor
+  [id] [not] unboolean ;

@@ -1,5 +1,5 @@
-:: dict-eq
- | dict-eq == /=
+:: class-eq
+ | class-eq == /=
  ;
 
 : ==
@@ -11,4 +11,4 @@
 : eq-int
   [int-eq]
   [int-ne]
-  dict-eq ;
+  class-eq ;
