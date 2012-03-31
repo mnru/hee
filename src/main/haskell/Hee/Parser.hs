@@ -6,34 +6,57 @@ module Hee.Parser
 import Prelude hiding (takeWhile)
 import Control.Applicative ((<|>), (*>), (<$>))
 
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as C
 import Data.Attoparsec
 import Data.ByteString (cons)
 import Data.Word
+import Data.List (foldl')
 import Hee.Terms
 
-heeExpr = undefined
---    <|> heeQuote
---    <|> heeName
---    <|> heeString
---    <|> heeNumber
---    <|> heeChar
+heeSpace = inClass " \t\r\n"
 
-heeQuote = do word8 91
-              word8 93
-              return ()
+heeExpr = do terms <- sepBy heeTerm (satisfy heeSpace)
+             return $ foldl' TmCompose TmEmpty terms
 
-heeName = do head <- satisfy $ notInClass "[] \t\r\n'\""
+heeTerm = heeQuote
+      <|> heeName
+      <|> heeNumber
+      <|> heeChar
+      <|> heeString
+
+heeQuote = do word8 91 -- [
+              skipWhile heeSpace
+              expr <- heeExpr
+              skipWhile heeSpace
+              word8 93 -- ]
+              return $ TmQuote expr
+
+heeName = do head <- satisfy   $ notInClass "[] \t\r\n'\"0123456789"
              tail <- takeWhile $ notInClass "[] \t\r\n"
-             return $ cons head tail
+             return $ TmName $ cons head tail
 
-heeNumber = undefined --
+heeNumber = do whole <- parseNum
+               return $ TmLiteral $ LiInt whole
+  where parse b = B.foldl' (digit b) 0
+        digit b accum n
+          | n <= 57   = accum * b + fromIntegral (n - 48) -- 0
+          | n <= 90   = accum * b + fromIntegral (n - 55) -- A
+          | otherwise = accum * b + fromIntegral (n - 87) -- a
 
-heeString = do word8 34
-               word8 34
-               return ()
+        parseNum = (parse  2 `fmap` radixNum "0b" "01")
+               <|> (parse  8 `fmap` radixNum "0o" "01234567")
+               <|> (parse 16 `fmap` radixNum "0x" "0123456789abcdefABCDEF")
+               <|> (parse 10 `fmap` radixNum ""   "0123456789")
+        radixNum p ds = string p >> takeWhile1 (inClass ds)
 
-heeChar = do string "'"
+heeString = do word8 34 -- "
+               word8 34 -- "
+               return $ TmLiteral $ LiString "x"
+
+heeChar = do word8 39 -- '
              escape <|> single
+             return $ TmLiteral $ LiChar 'x'
   where single = anyWord8
         escape = word8 92 >> anyWord8
         tx  92 = 92 -- '\\
