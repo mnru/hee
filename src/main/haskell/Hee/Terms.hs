@@ -3,11 +3,12 @@ module Hee.Terms
   , Literal(..)
   ) where
 
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as C
+import Data.ByteString       as B
+import Data.ByteString.Char8 as C
+import Data.Word
 
 type Id
-  = B.ByteString
+  = ByteString
 
 -- Terms are either a composition of two functions, or a higher-order
 -- function (a string of composed functions)
@@ -21,14 +22,14 @@ data Term
 
 data Literal
   = LiInt Int
-  | LiChar Char
+  | LiChar Word8
   | LiFloat Float
-  | LiString String
+  | LiString ByteString
   deriving (Eq, Show)
 
 showTerm :: Term -> String
 showTerm TmEmpty                = ""
-showTerm (TmName id)            = show id
+showTerm (TmName id)            = C.unpack id
 showTerm (TmQuote t)            = "[" ++ showTerm t ++ "]"
 showTerm (TmLiteral t)          = showLiteral t
 showTerm (TmCompose TmEmpty t)  = showTerm t
