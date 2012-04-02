@@ -1,6 +1,8 @@
-module Hee.Terms
+module Hee.Term
   ( Term(..)
   , Literal(..)
+  , showTerm
+  , showLiteral
   ) where
 
 import Data.ByteString       as B
@@ -10,8 +12,12 @@ import Data.Word
 type Id
   = String
 
--- Terms are either a composition of two functions, or a higher-order
--- function (a string of composed functions)
+-- By construction, every term is a function
+-- * TmCompose is a composition of two functions
+-- * TmLiteral is a nullary function which returns one value
+-- * TmQuote is a function literal
+-- * TmEmpty is the identity function
+-- * TmName is a function identified by name
 data Term
   = TmCompose Term Term
   | TmQuote Term

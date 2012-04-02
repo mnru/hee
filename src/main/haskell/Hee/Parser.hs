@@ -4,7 +4,7 @@ module Hee.Parser
   where
 
 import Prelude hiding (takeWhile)
-import Control.Applicative ((<|>), (*>), (<$>), pure)
+import Control.Applicative ((<|>), (*>), (<$>))
 
 import qualified Data.Attoparsec.Char8 as A
 import qualified Data.ByteString.Char8 as B
