@@ -11,51 +11,32 @@ import qualified Data.Attoparsec.Char8 as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString as BS
 import qualified Data.Attoparsec as I
---import Data.Attoparsec
+import Data.Attoparsec (Parser)
 import Data.Word
 import Data.List (foldl')
 import Hee.Terms
 
+heeExpr :: Parser Term
 heeExpr = do terms <- A.sepBy heeTerm (A.many1 A.space)
              return $ foldl' TmCompose TmEmpty terms
 
-heeTerm = heeQuote
-      <|> heeNumber
-      <|> heeName
-      <|> heeChar
-      <|> heeString
+heeTerm :: Parser Term
+heeTerm = heeQuote    -- [
+      <|> heeChar     -- '
+      <|> heeString   -- "
+      <|> heeNameOrNumber
 
+heeQuote :: Parser Term
 heeQuote = do lbracket
               A.skipSpace
               expr <- heeExpr
               A.skipSpace
               rbracket
               return $ TmQuote expr
-  where lbracket = A.char8 '['
-        rbracket = A.char8 ']'
+  where lbracket = A.char '['
+        rbracket = A.char ']'
 
-heeName = do head <- A.satisfy   $ A.notInClass "[] \t\r\n'\""
-             tail <- A.takeWhile $ A.notInClass "[] \t\r\n"
-             return $ TmName $ B.cons head tail
-
-heeNumber = do sign  <- A.option id $ A.choice [plus, minus]
-               whole <- parseNum
-               return $ TmLiteral $ LiInt $ sign whole
-  where plus  = A.char8 '+' >> return id
-        minus = A.char8 '-' >> return negate
-
-        parse b = BS.foldl' (digit b) 0
-        digit b accum n
-          | n <= 57   = accum * b + fromIntegral (n - 48) -- 0
-          | n <= 90   = accum * b + fromIntegral (n - 55) -- A
-          | otherwise = accum * b + fromIntegral (n - 87) -- a
-
-        radixNum p ds = A.string p >> A.takeWhile1 (A.inClass ds)
-        parseNum = parse  2 `fmap` radixNum "0b" "01"
-               <|> parse  8 `fmap` radixNum "0o" "01234567"
-               <|> parse 16 `fmap` radixNum "0x" "0123456789abcdefABCDEF"
-               <|> parse 10 `fmap` radixNum ""   "0123456789"
-
+heeString :: Parser Term
 heeString = do dquote
                chars <- A.manyTill (escape <|> single) dquote
                return $ TmLiteral $ LiString $ BS.pack chars
@@ -67,7 +48,8 @@ heeString = do dquote
         tx 116 = 9  -- '\t
         tx   c = c
 
-heeChar = do squote
+heeChar :: Parser Term
+heeChar = do A.char8 '\''
              char <- escape <|> single
              return $ TmLiteral $ LiChar char
   where squote = A.char8 '\''
@@ -78,7 +60,34 @@ heeChar = do squote
         tx 116 = 9  -- '\t
         tx   c = c
 
+heeNameOrNumber :: Parser Term
+heeNameOrNumber = undefined
+  -- S '-+'           -> T
+  -- S '0'            -> Z
+  -- S '123456789'    -> DEC
+  -- S '.'            -> FLT
+  -- S _              -> ID
+  -- Z 'b'            -> BIN
+  -- Z 'o'            -> OCT
+  -- Z 'x'            -> HEX
+  -- Z '0123456789'   -> DEC
+  -- Z _              -> ID
+  -- DEC '0123456789' -> DEC
+  -- DEC '.'          -> FLT
+  -- DEC _            -> ID
+  -- FLT '0123456789' -> FLT
+  -- FLT _            -> ID
+
+
+-- Notes
+--
 -- Data.Attoparsec.ByteString
+--   parse
+--   feed
+--   parseWith
+--   parseTest
+--   maybeResult
+--   eitherResult
 --
 --   Data.Attoparsec.Internal.Types
 --   T.Fail
@@ -98,35 +107,28 @@ heeChar = do squote
 --   eitherP
 --
 --   Data.Attoparsec.ByteString.Internal
---   I.try
---   I.<?>
---   I.parseOnly
---   I.word8
---   I.anyWord8
---   I.notWord8
---   I.inClass
---   I.notInClass
---   I.storable
---   I.satisfy
---   I.satisfyWith
---   I.skip
---   I.skipWhile
---   I.take
---   I.scan
---   I.string
---   I.stringTransform
---   I.takeWhile
---   I.takeWhile1
---   I.takeTill
---   I.takeByteString
---   I.takeLazyByteString
---   I.endOfLine
---   I.endOfInput
---   I.atEnd
---
---   parse
---   feed
---   parseWith
---   parseTest
---   maybeResult
---   eitherResult
+--   try
+--   <?>
+--   parseOnly
+--   word8
+--   anyWord8
+--   notWord8
+--   inClass
+--   notInClass
+--   storable
+--   satisfy
+--   satisfyWith
+--   skip
+--   skipWhile
+--   take
+--   scan
+--   string
+--   stringTransform
+--   takeWhile
+--   takeWhile1
+--   takeTill
+--   takeByteString
+--   takeLazyByteString
+--   endOfLine
+--   endOfInput
+--   atEnd
