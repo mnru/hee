@@ -8,7 +8,7 @@ import Data.ByteString.Char8 as C
 import Data.Word
 
 type Id
-  = ByteString
+  = String
 
 -- Terms are either a composition of two functions, or a higher-order
 -- function (a string of composed functions)
@@ -29,7 +29,7 @@ data Literal
 
 showTerm :: Term -> String
 showTerm TmEmpty                = ""
-showTerm (TmName id)            = C.unpack id
+showTerm (TmName id)            = id
 showTerm (TmQuote t)            = "[" ++ showTerm t ++ "]"
 showTerm (TmLiteral t)          = showLiteral t
 showTerm (TmCompose TmEmpty t)  = showTerm t
