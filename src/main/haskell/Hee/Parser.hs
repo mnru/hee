@@ -65,9 +65,9 @@ heeChar =
 
 heeNameOrNumber :: Parser Term
 heeNameOrNumber =
-  do head  <- I.satisfy   $ I.notInClass " \t\r\n\f\v[\"'"
-     tail  <- I.takeWhile $ I.notInClass " \t\r\n\f\v["
-     return $ heeHar $ show $ BS.cons head tail
+  do head  <- I.satisfy   $ I.notInClass " \t\r\n\f\v[]\"'"
+     tail  <- I.takeWhile $ I.notInClass " \t\r\n\f\v[]"
+     return $ heeHar $ B.unpack $ BS.cons head tail
 
 heeHar token =
   case token of
