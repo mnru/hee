@@ -4,7 +4,7 @@ module Hee.Parser
   where
 
 import Prelude hiding (takeWhile)
-import Control.Applicative ((<|>), (*>), (<$>))
+import Control.Applicative ((<|>), (<*), (*>), (<$>))
 
 import qualified Data.Attoparsec.Char8 as A
 import qualified Data.ByteString.Char8 as B
@@ -15,6 +15,11 @@ import Data.Word
 import Data.Char (ord)
 import Data.List (foldl')
 import Hee.Terms
+
+heeTest :: String -> Either String Term
+heeTest code   = simplify `fmap` A.eitherResult result
+  where parser = heeExpr <* A.endOfInput
+        result = A.feed (A.parse parser $ B.pack code) B.empty
 
 heeExpr :: Parser Term
 heeExpr = do terms <- A.sepBy heeTerm (A.many1 A.space)

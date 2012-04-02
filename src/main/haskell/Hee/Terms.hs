@@ -1,8 +1,9 @@
-module Hee.Term
+module Hee.Terms
   ( Term(..)
   , Literal(..)
   , showTerm
   , showLiteral
+  , simplify
   ) where
 
 import Data.ByteString       as B
@@ -52,3 +53,10 @@ showLiteral (LiString l) = show l
 
 --instance Show Literal where
 --  show = showLiteral
+
+simplify :: Term -> Term
+simplify (TmCompose TmEmpty x) = simplify x
+simplify (TmCompose x TmEmpty) = simplify x
+simplify (TmCompose x y)       = TmCompose (simplify x) (simplify y)
+simplify (TmQuote x)           = TmQuote (simplify x)
+simplify x                     = x
