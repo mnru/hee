@@ -18,7 +18,7 @@ import Hee.Terms
 
 heeTest :: String -> Either String Term
 heeTest code   = simplify `fmap` A.eitherResult result
-  where parser = heeExpr <* A.endOfInput
+  where parser = heeExpr <* A.skipSpace <* A.endOfInput
         result = A.feed (A.parse parser $ B.pack code) B.empty
 
 heeExpr :: Parser Term
@@ -86,6 +86,9 @@ heeHar token =
     positive = number id
     negative = number negate
 
+    -- Need rank-2 type for 'number' and 'whole' because we want
+    -- a polymorphic 'f' and don't want to prematurely narrow it
+    -- to (Int -> Int) or (Float -> Float).
     number :: (forall a. Num a => a -> a) -> [Char] -> Term
     number f []           = TmName token
     number f ('0':'b':xs) = whole "01"               2  f 0 xs
@@ -115,13 +118,6 @@ heeHar token =
               | x `elem` ds = loop (n*b + digit x) xs
               | otherwise   = TmName token
 
-    fract ::
-      [Char]
-      -> Float
-      -> (forall a. Num a => a -> a)
-      -> Float
-      -> [Char]
-      -> Term
     fract ds b f = loop
       where loop n []       = TmLiteral $ LiFloat $ f (n/b)
             loop n (x:xs)
