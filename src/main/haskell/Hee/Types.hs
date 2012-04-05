@@ -2,15 +2,15 @@ module Hee.Types
   ( Type(..)
   , Stack(..)
   , tInt
-  , tReal
+  , tRatn
   , tChar
-  , tUnit
   , tPair
   , tList
   , tFunc
   , tString
   , mkFunc
   , mkList
+  , mkVar
   ) where
 
 import Hee.Kinds
@@ -36,6 +36,12 @@ data Stack
   | StPush Stack Type
   deriving (Eq)
 
+-- t ∈ Eq
+-- t ∈ Num
+data Predicate
+  = MemberOf Id Type
+  deriving (Eq, Show)
+
 -- Qualified types antecedents => consequent
 data Qualified h
   = [Predicate] :=> h
@@ -59,14 +65,18 @@ instance Show Stack where
   show = showStack
 
 -- Primitive types
-tInt    = TyConstant "int"  KiType
-tReal   = TyConstant "real" KiType
-tChar   = TyConstant "char" KiType
-tUnit   = TyConstant "()"   KiType
-tPair   = TyConstant "(,)"  (KiCons KiType (KiCons KiType KiType))
-tList   = TyConstant "[]"   (KiCons KiType KiType)
-tFunc   = TyConstant "(->)" (KiCons KiStack KiStack)
-tString = mkList tChar
+tInt    = TyConstant "int"    KiType  -- LiInt
+tRatn   = TyConstant "ratn"   KiType  -- LiRatn
+tChar   = TyConstant "char"   KiType  -- LiChar
+tString = TyConstant "string" KiType  -- LiString
+
+-- Composite types
+tPair   = TyConstant "(,)"    (KiCons KiType (KiCons KiType KiType))
+tList   = TyConstant "[]"     (KiCons KiType KiType)
+tFunc   = TyConstant "(->)"   (KiCons KiStack KiStack)
+
+mkVar :: String -> Type
+mkVar id = TyVariable id KiType
 
 mkFunc :: Stack -> Stack -> Type
 mkFunc inp out = TyApplication (TyApplication tFunc (TyStack inp)) (TyStack out)

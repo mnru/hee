@@ -30,7 +30,7 @@ data Term
 data Literal
   = LiInt Int
   | LiChar Word8
-  | LiFloat Float
+  | LiRatn Double
   | LiString ByteString
   deriving (Eq, Show)
 
@@ -45,7 +45,7 @@ showTerm (TmCompose s t)        = showTerm s ++ " " ++ showTerm t
 showLiteral :: Literal -> String
 showLiteral (LiInt l)    = show l
 showLiteral (LiChar l)   = show l
-showLiteral (LiFloat l)  = show l
+showLiteral (LiRatn l)   = show l
 showLiteral (LiString l) = show l
 
 --instance Show Term where

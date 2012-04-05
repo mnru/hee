@@ -2,13 +2,6 @@ module Hee.Classes
   (
   ) where
 
--- t ∈ Eq
--- t ∈ Num
--- t ∈ Collection(s)
-data Predicate
-  = MemberOf Id Type
-  deriving (Eq, Show)
-
 instance CanSubstitute t => CanSubstitute (Qualified t) where
   substitute s (ps :=> h) = substitute s ps :=> substitute s h
   freevars (ps :=> h)     = freevars ps `union` freevars h
