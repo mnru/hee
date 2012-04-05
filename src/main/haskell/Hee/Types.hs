@@ -48,15 +48,19 @@ data Qualified h
   deriving (Eq, Show)
 
 showType :: Type -> String
-showType (TyVariable id k)    = id
-showType (TyConstant id k)    = id
-showType (TyApplication t t') = "(" ++ showType t ++ ") " ++ showType t'
-showType (TyStack s)          = "(" ++ showStack s ++ ")"
+showType (TyVariable id k)   = id
+showType (TyConstant id k)   = id
+showType (TyApplication f x) = showType f ++ " " ++ showType x
+showType (TyStack s) =
+  case s of
+    StEmpty      -> showStack s
+    (StBottom _) -> showStack s
+    _            -> "(" ++ showStack s ++ ")"
 
 showStack :: Stack -> String
 showStack StEmpty       = "|"
 showStack (StBottom id) = id
-showStack (StPush s s') = showStack s ++ "> " ++ showType s'
+showStack (StPush s s') = showStack s ++ " " ++ showType s'
 
 instance Show Type where
   show = showType
