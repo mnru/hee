@@ -119,7 +119,7 @@ heeHar token =
               | otherwise   = TmName token
 
     fract ds b f = loop
-      where loop n []       = TmLiteral $ LiFloat $ f (n/b)
+      where loop n []       = TmLiteral $ LiRatn $ f (n/b)
             loop n (x:xs)
               | x `elem` ds = loop (n/b + digit x) xs
               | otherwise   = TmName token

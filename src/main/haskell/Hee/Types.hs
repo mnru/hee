@@ -11,6 +11,8 @@ module Hee.Types
   , mkFunc
   , mkList
   , mkVar
+  , showType
+  , showStack
   ) where
 
 import Hee.Kinds
@@ -26,7 +28,7 @@ data Type
   | TyApplication Type Type
   | TyGeneric Int
   | TyStack Stack
-  deriving (Eq)
+  deriving (Eq, Show)
 
 -- Stacks have the kind KiStack and are distinguished from Type because
 -- they cannot be used to describe first-class values.
@@ -34,7 +36,7 @@ data Stack
   = StEmpty
   | StBottom Id
   | StPush Stack Type
-  deriving (Eq)
+  deriving (Eq, Show)
 
 -- t ∈ Eq
 -- t ∈ Num
@@ -50,23 +52,19 @@ data Qualified h
 showType :: Type -> String
 showType (TyVariable id k)   = id
 showType (TyConstant id k)   = id
+showType (TyApplication (TyApplication f i) o)
+  | f == tFunc               = "(" ++ showType i ++ " -> " ++ showType o ++ ")"
 showType (TyApplication f x) = showType f ++ " " ++ showType x
 showType (TyStack s) =
   case s of
     StEmpty      -> showStack s
     (StBottom _) -> showStack s
-    _            -> "(" ++ showStack s ++ ")"
+    _            -> showStack s
 
 showStack :: Stack -> String
 showStack StEmpty       = "|"
 showStack (StBottom id) = id
 showStack (StPush s s') = showStack s ++ " " ++ showType s'
-
-instance Show Type where
-  show = showType
-
-instance Show Stack where
-  show = showStack
 
 -- Primitive types
 tInt    = TyConstant "int"    KiType  -- LiInt
@@ -90,6 +88,12 @@ mkList t = TyApplication tList t
 
 mkPair :: Type -> Type -> Type
 mkPair fst snd = TyApplication (TyApplication tPair fst) snd
+
+--instance Show Type where
+--  show = showType
+
+--instance Show Stack where
+--  show = showStack
 
 instance HasKind Type where
   kind (TyVariable _ k)     = k

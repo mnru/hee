@@ -3,16 +3,37 @@ module Hee.Checker
 
 import Hee.Terms
 import Hee.Types
+import Hee.Parser
 
-checkTerm :: Stack -> Term -> Stack
-checkTerm s (TmEmpty)       = undefined
-checkTerm s (TmName id)     = undefined
-checkTerm s (TmCompose a b) = undefined
-checkTerm s (TmQuote a)     = undefined
-checkTerm s (TmLiteral x)   = undefined
+checkTerm :: Term -> Type
 
-lookupName "id"  =
-  mkFunc (StBottom "a") (StBottom "a")
+checkTerm (TmEmpty) =
+  let s = StBottom "S"
+   in mkFunc s s
+
+checkTerm (TmName id) =
+  lookupName id
+
+checkTerm (TmCompose a b) =
+  let a' = checkTerm a
+      b' = checkTerm b
+   in undefined
+
+checkTerm (TmQuote a) =
+  let s = StBottom "S"
+      f = checkTerm a
+   in mkFunc s (StPush s f)
+
+checkTerm (TmLiteral x) =
+  let s = StBottom "S"
+      a = checkLit x
+   in mkFunc s (StPush s a)
+
+lookupName :: String -> Type
+
+lookupName "id" =
+  let s = StBottom "S"
+   in mkFunc s s
 
 -- S a -> S
 lookupName "pop" =
