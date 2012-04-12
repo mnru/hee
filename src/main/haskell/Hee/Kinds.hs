@@ -8,14 +8,16 @@ module Hee.Kinds
 data Kind
   = KiStack
   | KiType
-  | KiCons Kind Kind
+  | KiConstructor Kind Kind
   deriving (Eq)
 
 showKind :: Kind -> String
-showKind KiStack                    = "@"
-showKind KiType                     = "*"
-showKind (KiCons k@(KiCons _ _) k') = "(" ++ showKind k ++ ") => " ++ showKind k'
-showKind (KiCons k k')              = showKind k ++ " => " ++ showKind k'
+showKind KiStack = "@"
+showKind KiType  = "*"
+showKind (KiConstructor k@(KiConstructor _ _) k')
+                 = "(" ++ showKind k ++ ") => " ++ showKind k'
+showKind (KiConstructor k k')
+                 = showKind k ++ " => " ++ showKind k'
 
 instance Show Kind where
   show = showKind

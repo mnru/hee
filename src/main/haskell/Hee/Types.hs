@@ -24,7 +24,7 @@ type Id
 -- they can be used to describe first-class values.
 data Type
   = TyVariable Id Kind
-  | TyConstant Id Kind
+  | TyConstructor Id Kind
   | TyApplication Type Type
   | TyGeneric Int
   | TyStack Stack
@@ -50,11 +50,11 @@ data Qualified h
   deriving (Eq, Show)
 
 showType :: Type -> String
-showType (TyVariable id k)   = id
-showType (TyConstant id k)   = id
+showType (TyVariable id k)    = id
+showType (TyConstructor id k) = id
 showType (TyApplication (TyApplication f i) o)
-  | f == tFunc               = "(" ++ showType i ++ " -> " ++ showType o ++ ")"
-showType (TyApplication f x) = showType f ++ " " ++ showType x
+  | f == tFunc                = "(" ++ showType i ++ " -> " ++ showType o ++ ")"
+showType (TyApplication f x)  = showType f ++ " " ++ showType x
 showType (TyStack s) =
   case s of
     StEmpty      -> showStack s
@@ -67,15 +67,15 @@ showStack (StBottom id) = id
 showStack (StPush s s') = showStack s ++ " " ++ showType s'
 
 -- Primitive types
-tInt    = TyConstant "int"    KiType  -- LiInt
-tRatn   = TyConstant "ratn"   KiType  -- LiRatn
-tChar   = TyConstant "char"   KiType  -- LiChar
-tString = TyConstant "string" KiType  -- LiString
+tInt    = TyConstructor "int"    KiType  -- LiInt
+tRatn   = TyConstructor "ratn"   KiType  -- LiRatn
+tChar   = TyConstructor "char"   KiType  -- LiChar
+tString = TyConstructor "string" KiType  -- LiString
 
 -- Composite types
-tPair   = TyConstant "(,)"    (KiCons KiType (KiCons KiType KiType))
-tList   = TyConstant "[]"     (KiCons KiType KiType)
-tFunc   = TyConstant "(->)"   (KiCons KiStack KiStack)
+tPair   = TyConstructor "(,)"    (KiConstructor KiType (KiConstructor KiType KiType))
+tList   = TyConstructor "[]"     (KiConstructor KiType KiType)
+tFunc   = TyConstructor "(->)"   (KiConstructor KiStack KiStack)
 
 mkVar :: String -> Type
 mkVar id = TyVariable id KiType
@@ -97,9 +97,9 @@ mkPair fst snd = TyApplication (TyApplication tPair fst) snd
 
 instance HasKind Type where
   kind (TyVariable _ k)     = k
-  kind (TyConstant _ k)     = k
+  kind (TyConstructor _ k)  = k
   kind (TyStack _)          = KiStack
-  kind (TyApplication i _)  = let (KiCons _ k) = kind i in k
+  kind (TyApplication i _)  = let (KiConstructor _ k) = kind i in k
 
 instance HasKind Stack where
   kind t = KiStack

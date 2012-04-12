@@ -82,7 +82,7 @@ class CanUnify t where
 instance CanUnify Type where
   match (TyStack s) (TyStack s') = match s s'
   match (TyVariable id k) t      = bindvar (id,k) t
-  match (TyConstant id k) (TyConstant id' k')
+  match (TyConstructor id k) (TyConstructor id' k')
     | id == id' && k == k'       = return empty
   match (TyApplication i o) (TyApplication i' o')
                                  = do a <- match i i'
@@ -93,7 +93,7 @@ instance CanUnify Type where
   unify (TyStack s) (TyStack s') = unify s s'
   unify (TyVariable id k) t      = bindvar (id,k) t
   unify t (TyVariable id k)      = bindvar (id,k) t
-  unify (TyConstant id k) (TyConstant id' k')
+  unify (TyConstructor id k) (TyConstructor id' k')
     | id == id' && k == k'       = return empty
   unify (TyApplication i o) (TyApplication i' o')
                                  = do a <- unify i i'
