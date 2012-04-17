@@ -96,13 +96,82 @@ object SymbolTable {
                          :+ WordType(Tail(2), Tail(3)),
                  Tail(0) :+ WordType(Tail(1), Tail(3)))).
 
-      /** Control flow
+      /** Control Flow
        ***********************************************************************/
-      addBinding("if", // S boolean a a if :: S a
+      addBinding("if'", // S boolean a a if :: S a
         WordType(Tail(0) :+ BooleanType :+ Variable(1) :+ Variable(1),
                  Tail(0) :+ Variable(1))).
 
+      addBinding("if", // S boolean (S -> T) (S -> T) if :: T
+        WordType(Tail(0) :+ BooleanType
+                         :+ WordType(Tail(0), Tail(1))
+                         :+ WordType(Tail(0), Tail(1)),
+                 Tail(1))).
+
       addBinding("halt", // A :: ∅
         WordType(Tail(0),
-                 StackType.empty))
+                 StackType.empty)).
+
+      /** Comparisons
+       ***********************************************************************/
+      addBinding("==", // S a a == :: S boolean
+        WordType(Tail(0) :+ Variable(1) :+ Variable(1),
+                 Tail(0) :+ BooleanType)).
+
+      addBinding("!=", // S a a == :: S boolean
+        WordType(Tail(0) :+ Variable(1) :+ Variable(1),
+                 Tail(0) :+ BooleanType)).
+
+      addBinding("<=", // S a a == :: S boolean
+        WordType(Tail(0) :+ Variable(1) :+ Variable(1),
+                 Tail(0) :+ BooleanType)).
+
+      addBinding(">=", // S a a == :: S boolean
+        WordType(Tail(0) :+ Variable(1) :+ Variable(1),
+                 Tail(0) :+ BooleanType)).
+
+      addBinding(">", // S a a == :: S boolean
+        WordType(Tail(0) :+ Variable(1) :+ Variable(1),
+                 Tail(0) :+ BooleanType)).
+
+      addBinding("<", // S a a == :: S boolean
+        WordType(Tail(0) :+ Variable(1) :+ Variable(1),
+                 Tail(0) :+ BooleanType)).
+
+      /** Primitive Operations (incorrect)
+       ***********************************************************************/
+      addBinding("+", // S num num == :: S num
+        WordType(Tail(0) :+ NumericType :+ NumericType,
+                 Tail(0) :+ NumericType)).
+
+      addBinding("*", // S num num == :: S num
+        WordType(Tail(0) :+ NumericType :+ NumericType,
+                 Tail(0) :+ NumericType)).
+
+      addBinding("-", // S num num == :: S num
+        WordType(Tail(0) :+ NumericType :+ NumericType,
+                 Tail(0) :+ NumericType)).
+
+      addBinding("/", // S num num == :: S num
+        WordType(Tail(0) :+ NumericType :+ NumericType,
+                 Tail(0) :+ NumericType)).
+
+      /** Non-Essential Combinators
+       ***********************************************************************/
+      addBinding("y", // S (S -> S) -> S
+        WordType(Tail(0) :+ WordType(Tail(0), Tail(0)),
+                 Tail(0))).
+
+      addBinding("dig", // S a b c == :: S b c a
+        WordType(Tail(0) :+ Variable(1) :+ Variable(2) :+ Variable(3),
+                 Tail(0) :+ Variable(2) :+ Variable(3) :+ Variable(1))).
+
+      addBinding("bury", // S a b c == :: S c a b
+        WordType(Tail(0) :+ Variable(1) :+ Variable(2) :+ Variable(3),
+                 Tail(0) :+ Variable(3) :+ Variable(1) :+ Variable(2))).
+
+      addBinding("over", // S a b == :: S a b a
+        WordType(Tail(0) :+ Variable(1) :+ Variable(2),
+                 Tail(0) :+ Variable(1) :+ Variable(2) :+ Variable(1)))
+
 }

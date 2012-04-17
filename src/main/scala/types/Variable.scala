@@ -14,7 +14,7 @@ object Variable {
 case class Variable(id: Int) extends Type with VariableLike {
 
   def alphabet =
-    VariableLike.lowerGreek
+    VariableLike.lowerLatin
 
   def substitute(s: Substitution) = s.getOrElse(this, this) match {
     case t: StackType => throw new UnsupportedOperationException(toString + " resolved to " + t)
