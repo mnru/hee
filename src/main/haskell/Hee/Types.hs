@@ -11,6 +11,7 @@ module Hee.Types
   , mkFunc
   , mkList
   , mkVar
+  , quote
   , showType
   , showStack
   ) where
@@ -88,6 +89,10 @@ mkList t = TyApplication tList t
 
 mkPair :: Type -> Type -> Type
 mkPair fst snd = TyApplication (TyApplication tPair fst) snd
+
+-- TODO: Free type variable
+quote :: Type -> Type
+quote t = (StBottom "a") `mkFunc` (StPush (StBottom  "a") t)
 
 --instance Show Type where
 --  show = showType

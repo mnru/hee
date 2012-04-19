@@ -3,6 +3,7 @@ module Hee.Checker
 
 import Hee.Terms
 import Hee.Types
+import Hee.Substitution
 import Hee.Unification
 import Hee.Either
 
@@ -10,7 +11,7 @@ checkTerm :: Term -> Either String Type
 
 checkTerm (TmEmpty) =
   let s = StBottom "S"
-   in return $ mkFunc s s
+   in return $ s `mkFunc` s
 
 checkTerm (TmName id) =
   lookupName id
@@ -20,65 +21,65 @@ checkTerm (TmCompose a b) =
   do (TyApplication (TyApplication _ (TyStack ai)) (TyStack ao)) <- checkTerm a
      (TyApplication (TyApplication _ (TyStack bi)) (TyStack bo)) <- checkTerm b
      s <- unify ao bi
-     return $ substitute s (mkFunc ai bo)
+     return $ substitute s (ai `mkFunc` bo)
 
 checkTerm (TmQuote a) =
   let s = StBottom "S"
    in do f <- checkTerm a
-         return $ mkFunc s (StPush s f)
+         return $ s `mkFunc` (StPush s f)
 
 checkTerm (TmLiteral a) =
   let s  = StBottom "S"
       a' = checkLit a
-   in return $ mkFunc s (StPush s a')
+   in return $ s `mkFunc` (StPush s a')
 
 lookupName :: String -> Either String Type
 
 lookupName "id" =
   let s = StBottom "S"
-   in return $ mkFunc s s
+   in return $ s `mkFunc` s
 
 -- S a -> S
 lookupName "pop" =
   let a = mkVar "a"
       s = StBottom "S"
-   in return $ mkFunc (StPush s a) s
+   in return $ (StPush s a) `mkFunc` s
 
 -- S a -> S a a
 lookupName "dup" =
   let a = mkVar "a"
       s = StBottom "S"
-   in return $ mkFunc (StPush s a) (StPush (StPush s a) a)
+   in return $ (StPush s a) `mkFunc` (StPush (StPush s a) a)
 
 -- S u (S -> T) -> T u
 lookupName "dip" =
   let u = mkVar "u"
       s = StBottom "S"
       t = StBottom "T"
-      f = mkFunc s t
-   in return $ mkFunc (StPush (StPush s u) f) (StPush t u)
+      f = s `mkFunc` t
+   in return $ (StPush (StPush s u) f) `mkFunc` (StPush t u)
 
 -- S a b -> S b a
 lookupName "swap" =
   let s = StBottom "S"
       a = mkVar "a"
       b = mkVar "b"
-   in return $ mkFunc (StPush (StPush s a) b) (StPush (StPush s b) a)
+   in return $ (StPush (StPush s a) b) `mkFunc` (StPush (StPush s b) a)
 
 -- S a -> S (T -> T a)
 lookupName "quote" =
   let s = StBottom "S"
       t = StBottom "T"
       a = mkVar "a"
-      f = mkFunc t (StPush t a)
-   in return $ mkFunc (StPush s a) (StPush s f)
+      f = t `mkFunc` (StPush t a)
+   in return $ (StPush s a) `mkFunc` (StPush s f)
 
 -- S (S -> T) -> T
 lookupName "apply" =
   let s = StBottom "S"
       t = StBottom "T"
-      f = mkFunc s t
-   in return $ mkFunc (StPush s f) t
+      f = s `mkFunc` t
+   in return $ (StPush s f) `mkFunc` t
 
 -- S (T -> U) (U -> V) -> S (T -> V)
 lookupName "compose" =
@@ -86,10 +87,10 @@ lookupName "compose" =
       t  = StBottom "T"
       u  = StBottom "U"
       v  = StBottom "V"
-      f  = mkFunc t u
-      g  = mkFunc u v
-      fg = mkFunc t v
-   in return $ mkFunc (StPush (StPush s f) g) (StPush s fg)
+      f  = t `mkFunc` u
+      g  = u `mkFunc` v
+      fg = t `mkFunc` v
+   in return $ (StPush (StPush s f) g) `mkFunc` (StPush s fg)
 
 lookupName x =
   fail $ "unbound identifier: '" ++ x ++ "'"
