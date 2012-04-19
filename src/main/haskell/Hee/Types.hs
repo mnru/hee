@@ -19,13 +19,13 @@ module Hee.Types
 import Hee.Kinds
 
 type Id
-  = String
+  = Int
 
 -- Types have the kind KiType and are distinguished from Stack because
 -- they can be used to describe first-class values.
 data Type
   = TyVariable Id Kind
-  | TyConstructor Id Kind
+  | TyConstructor String Kind
   | TyApplication Type Type
   | TyGeneric Int
   | TyStack Stack
@@ -50,22 +50,29 @@ data Qualified h
   = [Predicate] :=> h
   deriving (Eq, Show)
 
+showId id alphabet =(alphabet !! n) : (replicate k '\'')
+  where k = id `div` length alphabet
+        n = id `mod` length alphabet
+
 showType :: Type -> String
-showType (TyVariable id k)    = id
 showType (TyConstructor id k) = id
 showType (TyApplication (TyApplication f i) o)
   | f == tFunc                = "(" ++ showType i ++ " -> " ++ showType o ++ ")"
-showType (TyApplication f x)  = showType f ++ " " ++ showType x
+showType (TyApplication f x)  = "(" ++ showType f ++ " " ++ showType x ++ ")"
 showType (TyStack s) =
   case s of
     StEmpty      -> showStack s
     (StBottom _) -> showStack s
     _            -> showStack s
+showType (TyVariable id k)    = showId id alphabet
+  where
+    alphabet = "abcdefghijklmnopqrtsuvwxyz"
 
 showStack :: Stack -> String
 showStack StEmpty       = "|"
-showStack (StBottom id) = id
 showStack (StPush s s') = showStack s ++ " " ++ showType s'
+showStack (StBottom id) = showId id alphabet
+  where alphabet = "ABCDEFGHIJKLMNOPQRTSUVWXYZ"
 
 -- Primitive types
 tInt    = TyConstructor "int"    KiType  -- LiInt
@@ -78,7 +85,7 @@ tPair   = TyConstructor "(,)"    (KiConstructor KiType (KiConstructor KiType KiT
 tList   = TyConstructor "[]"     (KiConstructor KiType KiType)
 tFunc   = TyConstructor "(->)"   (KiConstructor KiStack KiStack)
 
-mkVar :: String -> Type
+mkVar :: Id -> Type
 mkVar id = TyVariable id KiType
 
 mkFunc :: Stack -> Stack -> Type
@@ -92,7 +99,7 @@ mkPair fst snd = TyApplication (TyApplication tPair fst) snd
 
 -- TODO: Free type variable
 quote :: Type -> Type
-quote t = (StBottom "a") `mkFunc` (StPush (StBottom  "a") t)
+quote t = (StBottom 0) `mkFunc` (StPush (StBottom  0) t)
 
 --instance Show Type where
 --  show = showType

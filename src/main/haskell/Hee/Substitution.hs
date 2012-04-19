@@ -13,7 +13,7 @@ import Hee.Kinds
 import Hee.Types
 
 type Id
-  = String
+  = Int
 
 type Variable
   = (Id,Kind)

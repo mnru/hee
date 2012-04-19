@@ -10,7 +10,7 @@ import Hee.Either
 checkTerm :: Term -> Either String Type
 
 checkTerm (TmEmpty) =
-  let s = StBottom "S"
+  let s = StBottom 0
    in return $ s `mkFunc` s
 
 checkTerm (TmName id) =
@@ -24,69 +24,69 @@ checkTerm (TmCompose a b) =
      return $ substitute s (ai `mkFunc` bo)
 
 checkTerm (TmQuote a) =
-  let s = StBottom "S"
+  let s = StBottom 0
    in do f <- checkTerm a
          return $ s `mkFunc` (StPush s f)
 
 checkTerm (TmLiteral a) =
-  let s  = StBottom "S"
+  let s  = StBottom 0
       a' = checkLit a
    in return $ s `mkFunc` (StPush s a')
 
 lookupName :: String -> Either String Type
 
 lookupName "id" =
-  let s = StBottom "S"
+  let s = StBottom 0
    in return $ s `mkFunc` s
 
 -- S a -> S
 lookupName "pop" =
-  let a = mkVar "a"
-      s = StBottom "S"
+  let a = mkVar 0
+      s = StBottom 0
    in return $ (StPush s a) `mkFunc` s
 
 -- S a -> S a a
 lookupName "dup" =
-  let a = mkVar "a"
-      s = StBottom "S"
+  let a = mkVar 0
+      s = StBottom 0
    in return $ (StPush s a) `mkFunc` (StPush (StPush s a) a)
 
 -- S u (S -> T) -> T u
 lookupName "dip" =
-  let u = mkVar "u"
-      s = StBottom "S"
-      t = StBottom "T"
+  let u = mkVar 0
+      s = StBottom 0
+      t = StBottom 1
       f = s `mkFunc` t
    in return $ (StPush (StPush s u) f) `mkFunc` (StPush t u)
 
 -- S a b -> S b a
 lookupName "swap" =
-  let s = StBottom "S"
-      a = mkVar "a"
-      b = mkVar "b"
+  let s = StBottom 0
+      a = mkVar 0
+      b = mkVar 1
    in return $ (StPush (StPush s a) b) `mkFunc` (StPush (StPush s b) a)
 
 -- S a -> S (T -> T a)
 lookupName "quote" =
-  let s = StBottom "S"
-      t = StBottom "T"
-      a = mkVar "a"
+  let s = StBottom 0
+      t = StBottom 1
+      a = mkVar 0
       f = t `mkFunc` (StPush t a)
    in return $ (StPush s a) `mkFunc` (StPush s f)
 
 -- S (S -> T) -> T
 lookupName "apply" =
-  let s = StBottom "S"
-      t = StBottom "T"
+  let s = StBottom 0
+      t = StBottom 1
       f = s `mkFunc` t
    in return $ (StPush s f) `mkFunc` t
 
 -- S (T -> U) (U -> V) -> S (T -> V)
 lookupName "compose" =
-  let s  = StBottom "S"
-      t  = StBottom "T"
-      u  = StBottom "U"
-      v  = StBottom "V"
+  let s  = StBottom 0
+      t  = StBottom 1
+      u  = StBottom 2
+      v  = StBottom 3
       f  = t `mkFunc` u
       g  = u `mkFunc` v
       fg = t `mkFunc` v
