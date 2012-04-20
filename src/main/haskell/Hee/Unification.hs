@@ -43,17 +43,17 @@ instance CanUnify Type where
 instance CanUnify Stack where
   match (StBottom id) t = bindvar (id,KiStack) t
   match StEmpty StEmpty = return empty
-  match (StPush t s) (StPush t' s')
+  match (StPush t h) (StPush t' h')
                         = do a <- match t t'
-                             b <- match (substitute a s) (substitute a s')
+                             b <- match (substitute a h) (substitute a h')
                              merge a b
 
   unify (StBottom id) t = bindvar (id,KiStack) t
   unify t (StBottom id) = bindvar (id,KiStack) t
   unify StEmpty StEmpty = return empty
-  unify (StPush t s) (StPush t' s')
-                        = do a <- unify t t'
-                             b <- unify (substitute a s) (substitute a s')
+  unify (StPush t h) (StPush t' h')
+                        = do a <- unify h h'
+                             b <- unify (substitute a t) (substitute a t')
                              return (a @@ b)
   unify _ _             = fail "unify failed"
 

@@ -5,7 +5,14 @@ import Hee.Terms
 import Hee.Types
 import Hee.Substitution
 import Hee.Unification
-import Hee.Either
+
+inOut f =
+  case f of
+    (TyApplication (TyApplication tc (TyStack i)) (TyStack o)) ->
+      if tc == tFunc
+      then Right (i,o)
+      else Left "compose only defined on (->) i o"
+    _ -> Left "composed only defined on (->) i o"
 
 checkTerm :: Term -> Either String Type
 
@@ -17,11 +24,14 @@ checkTerm (TmName id) =
   lookupName id
 
 checkTerm (TmCompose a b) =
-  -- Hmm, assume _ is tFunc
-  do (TyApplication (TyApplication _ (TyStack ai)) (TyStack ao)) <- checkTerm a
-     (TyApplication (TyApplication _ (TyStack bi)) (TyStack bo)) <- checkTerm b
+  do ta  <- checkTerm a
+     tb  <- checkTerm b
+     let tb' = substitute (freshVars (freeVars ta) (freeVars tb)) tb
+     (ai, ao) <- inOut ta
+     (bi, bo) <- inOut tb'
      s <- unify ao bi
      return $ substitute s (ai `mkFunc` bo)
+--  where
 
 checkTerm (TmQuote a) =
   let s = StBottom 0

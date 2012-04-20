@@ -103,7 +103,7 @@ quote t = (StBottom 0) `mkFunc` (StPush (StBottom  0) t)
 
 --instance Show Type where
 --  show = showType
-
+--
 --instance Show Stack where
 --  show = showStack
 
