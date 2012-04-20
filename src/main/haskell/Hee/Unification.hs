@@ -36,7 +36,7 @@ instance CanUnify Type where
 
   bindvar v@(id,k) t
     | t == TyVariable id k = return empty
-    | v `elem` freevars t  = fail "bindvar failed (occurs check)"
+    | v `elem` freeVars t  = fail "bindvar failed (occurs check)"
     | k /= kind t          = fail "bindvar failed (kind mismatch)"
     | otherwise            = return (v +-> t)
 

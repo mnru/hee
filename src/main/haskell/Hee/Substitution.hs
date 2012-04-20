@@ -6,9 +6,11 @@ module Hee.Substitution
   , (+->)
   , (@@)
   , merge
+  , freshVars
+  , normalizeVars
   ) where
 
-import Data.List (nub, intersect, union)
+import Data.List (nub, intersect, union, sort, foldl')
 import Hee.Kinds
 import Hee.Types
 
@@ -36,7 +38,7 @@ empty = []
 
 class CanSubstitute t where
   substitute :: Substitution -> t -> t
-  freevars   :: t -> [Variable]
+  freeVars   :: t -> [Variable]
 
 instance CanSubstitute Type where
   substitute s (TyApplication i o) = TyApplication (substitute s i) (substitute s o)
@@ -46,10 +48,10 @@ instance CanSubstitute Type where
                                        Nothing -> TyVariable id k
   substitute s t = t
 
-  freevars (TyApplication i o) = freevars i `union` freevars o
-  freevars (TyStack t)         = freevars t
-  freevars (TyVariable id k)   = [(id,k)]
-  freevars _                   = []
+  freeVars (TyApplication i o) = freeVars i `union` freeVars o
+  freeVars (TyStack t)         = freeVars t
+  freeVars (TyVariable id k)   = [(id,k)]
+  freeVars _                   = []
 
 instance CanSubstitute Stack where
   substitute s (StBottom id) = case lookup (id,KiStack) s of
@@ -58,12 +60,12 @@ instance CanSubstitute Stack where
                                  Nothing -> StBottom id
   substitute s t = t
 
-  freevars (StBottom id) = [(id,KiStack)]
-  freevars _             = []
+  freeVars (StBottom id) = [(id,KiStack)]
+  freeVars _             = []
 
 instance CanSubstitute a => CanSubstitute [a] where
   substitute s = map (substitute s)
-  freevars     = nub . concat . map freevars
+  freeVars     = nub . concat . map freeVars
 
 -- Composition of substitutions
 --   substitute (a @@ b) = substitute a . substitute b
@@ -108,7 +110,7 @@ instance CanUnify Type where
 
   bindvar v@(id,k) t
     | t == TyVariable id k = return empty
-    | v `elem` freevars t  = fail "bindvar failed (occurs check)"
+    | v `elem` freeVars t  = fail "bindvar failed (occurs check)"
     | k /= kind t          = fail "bindvar failed (kind mismatch)"
     | otherwise            = return (v +-> t)
 
@@ -131,3 +133,41 @@ instance CanUnify Stack where
 
   bindvar v@(id,KiStack) t = return (v +-> TyStack t)
   bindvar _ _              = fail "bindvar failed (kind mismatch)"
+
+normalizeVars :: [Variable] -> Substitution
+normalizeVars = freshVars []
+
+-- Returns a substitution that renames all variables in gs such that
+--   freeVars fs `intersect` freeVars gs == []
+freshVars :: [Variable] -> [Variable] -> Substitution
+freshVars fs gs = substitution
+  where
+    boundIds     = splitIds fs
+    thd (a,b,c)  = c
+    substitution = thd $ foldl' (\(id,(ts,ss),s) g ->
+                     case g of
+                       (v, KiType)  ->
+                         let (id', ts') = nextFree id ts
+                          in if v == id'
+                             then (id', (ts', ss), s)
+                             else (id', (ts', ss), (g, TyVariable id' KiType):s)
+                       (v, KiStack) ->
+                         let (id', ss') = nextFree id ss
+                          in if v == id'
+                             then (id', (ts, ss'), s)
+                             else (id', (ts, ss'), (g, TyStack $ StBottom id'):s))
+                     (-1, boundIds, empty) gs
+
+    -- Split variables into list of KiType ids and KiStack ids
+    splitIds :: [Variable] -> ([Id], [Id])
+    splitIds = (sort `fmap`) . foldl' (\(ts, ss) x ->
+                 case x of
+                   (id, KiType)  -> (id:ts, ss)
+                   (id, KiStack) -> (ts, id:ss)
+                   _             -> (ts, ss)) ([], [])
+
+    nextFree :: Id -> [Id] -> (Id, [Id])
+    nextFree current []     = (current+1, [])
+    nextFree current (v:vs) = if current+1 < v
+                              then (current+1, v:vs)
+                              else nextFree v vs
