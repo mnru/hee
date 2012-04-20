@@ -103,7 +103,7 @@ lookupName "compose" =
    in return $ (StPush (StPush s f) g) `mkFunc` (StPush s fg)
 
 lookupName x =
-  fail $ "unbound identifier: '" ++ x ++ "'"
+  Left $ "unbound identifier: '" ++ x ++ "'"
 
 checkLit :: Literal -> Type
 checkLit (LiInt _)    = tInt
