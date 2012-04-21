@@ -1,8 +1,5 @@
 # Bumbling about Pointless Programming
 
-> Kyle Putnam
-> April 21, 2012
-
 Point-free style is a paradigm in which function definitions do not include
 information about its arguments. Instead, functions are defined in terms of
 combinators and composition (Wikipedia).
