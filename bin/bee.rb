@@ -173,7 +173,7 @@ elsif ARGV.empty?
         $stdout.puts
 
         unless line !~ /\S/ or Readline::HISTORY.include?(line)
-          Readline::HISTORY.push(line)
+          Readline::HISTORY.push(line.strip)
         end
       end
     elsif balance > 0
