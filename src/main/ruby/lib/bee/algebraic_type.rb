@@ -19,7 +19,8 @@ module Bee
       # S boxed [1] [2] [...] unbox-type
       boxed, *fs = stack.slice!(-(@variants.length+1), @variants.length+1)
       boxed.unbox(stack)
-      input.unshift(*fs[boxed.tag].terms)
+      input.unshift(Term::Name.new("apply"))
+      input.unshift(fs[boxed.tag])
     end
 
     def inspect
