@@ -101,8 +101,8 @@ and the field names are ignored -- this will change.
 ## Exploiting Multiple Return Values
 
 In non stack-based languages, functions must return at most one value. Multiple
-values can be simulated by packaging them into one, and then unpacking them in
-the caller.
+values can be simulated by packaging them into one, and then unpackaging them
+in the callee.
 
     nextFree :: Int → [Int] → (Int, [Int])
     nextFree current []     = (current+1, [])
@@ -111,9 +111,10 @@ the caller.
                               else nextFree v vs
 
 In a stack-based language, "functions" can return any number of values, including
-zero, by pushing them onto the stack. The next-free function, given a sorted list
-of bound variables and a starting point, shrinks the list of bound variables that
-need to searched on the next call, and also returns the next free variable.
+zero, by pushing them onto the stack. For example, the `next-free` function,
+given a sorted list of bound variables and a starting point, shrinks the list of
+bound variables that need to searched on the next call, and also returns the next
+free variable.
 
     : next-free               -- S num-list num → S num-list num
       swap                    -- id xs
