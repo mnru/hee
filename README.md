@@ -2,13 +2,13 @@
 
 Point-free style is a paradigm in which function definitions do not include
 information about its arguments. Instead, functions are defined in terms of
-combinators and composition (Wikipedia). Bee is a concatenative, functional
+combinators and composition (Wikipedia). **Bee** is a concatenative, functional
 programming language built for no practical purpose in mind -- my goal is to
 use it as a vehicle for understanding PL topics. 
 
 ## Syntax
 
-Like many stack-based languages, Bee uses an postfix syntax for expression.
+Like many stack-based languages, **Bee** uses an postfix syntax for expression.
 Operands are written before operators, e.g. `1 3 +`.
 
 ### Kinds
@@ -17,7 +17,7 @@ Operands are written before operators, e.g. `1 3 +`.
           | *       -- manifest
           | κ → ι   -- function
 
-Kinds classify types. Bee distinguishes stack-types, value-types, and type
+Kinds classify types. **Bee** distinguishes stack-types, value-types, and type
 constructors from one another.
 
 ### Types
@@ -141,9 +141,9 @@ This lets us call `next-free` like so:
 
 ## Life Without (Implicit) Closures
 
-Bee doesn't have nested scopes, mutable bindings, or parameter names so closures
-as we know them aren't meaningful. However, we can exploit other features of the
-language to achieve similar results.
+**Bee** doesn't have nested scopes, mutable bindings, or parameter names so
+closures as we know them aren't meaningful. However, we can exploit other
+features of the language to achieve similar results.
 
     : generate-free'    -- xs x
       next-free         -- xs' x'
@@ -291,7 +291,7 @@ type of the input merely by composing with another term.
 
 ## Development Status
 
-Bee is in the very early stages of development. Some aspects of the syntax
+**Bee** is in the very early stages of development. Some aspects of the syntax
 haven't settled enough to allow providing examples. This includes the type
 syntax, comments, function declarations, and type declarations. The general
 goal is to keep the concrete syntax as minimal as possible, so I'm still
@@ -307,28 +307,27 @@ interesting problems are:
 * The Y-combinator, because `A ((B → C) → (B → C)) → A (B → C)` is not correct,
   though I need to verify that.
 
-Currently there's a REPL written in Ruby, in `bin/bee.rb`. This includes a
-few features like tab-completion, execution traces, and the ability to save
-definitions created in the REPL to an external file. The interpreter achieves
-tail-call optimization easily because it effectively implements [subroutine
-threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading),
-though not as machine code.
+Currently there's a REPL written in Ruby, in [`bin/bee.rb`](bee/blob/master/bin/bee.rb).
+This includes a few features like tab-completion, execution traces, and the
+ability to save definitions created in the REPL to an external file. The
+interpreter achieves tail-call optimization easily because it effectively
+implements [subroutine threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading).
 
-There is a small runtime library in the [runtime](bee/blob/master/runtime)
+There is a small runtime library in the [`runtime`](bee/blob/master/runtime)
 directory that is loaded when the REPL starts. Mostly this includes some type
 definitions, like lists and booleans with a number of functions to operate on
 these types. These files include what *appears* to be module declarations and
 comments, however these are parsed as top-level expressions which are discarded
 by the parser. The parser only reads *definitions* from files.
 
-One type checker, [`scrap/Checker.scala`](bee/blob/master/scrap/Checker.scala))
+One type checker, [`scrap/Checker.scala`](bee/blob/master/scrap/Checker.scala)
 is written in Scala but will be soon abandoned. The replacement type checker,
 [`src/main/haskell/Hee/Test.hs`](bee/blob/master/src/main/haskell/Hee/Test.hs)
 is under active development and will subsume the Scala version.
 
 ## Goals
 
-Since my primary motivation for developing Bee is to develop a deeper
+Since my primary motivation for developing **bee** is to develop a deeper
 theoretical and practical understanding of programming languages and type
 systems, I am less concerned with developing a practically *usable* language.
 
