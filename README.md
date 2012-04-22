@@ -314,17 +314,17 @@ tail-call optimization easily because it effectively implements [subroutine
 threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading),
 though not as machine code.
 
-There is a small runtime library in the `runtime` directory that is loaded when
-the REPL starts. Mostly this includes some type definitions, like lists and
-booleans with a number of functions to operate on these types. These files
-include what *appears* to be module declarations and comments, however these
-are parsed as top-level expressions which are discarded by the parser. The
-parser only reads *definitions* from files.
+There is a small runtime library in the [runtime](bee/blob/master/runtime)
+directory that is loaded when the REPL starts. Mostly this includes some type
+definitions, like lists and booleans with a number of functions to operate on
+these types. These files include what *appears* to be module declarations and
+comments, however these are parsed as top-level expressions which are discarded
+by the parser. The parser only reads *definitions* from files.
 
-One type checker, [`scrap/Checker.scala`](blob/master/scrap/Checker.scala))
+One type checker, [`scrap/Checker.scala`](bee/blob/master/scrap/Checker.scala))
 is written in Scala but will be soon abandoned. The replacement type checker,
-[`src/main/haskell/Hee/Test.hs`](blob/master/src/main/haskell/Hee/Test.hs) is
-under active development and will subsume the Scala version.
+[`src/main/haskell/Hee/Test.hs`](bee/blob/master/src/main/haskell/Hee/Test.hs)
+is under active development and will subsume the Scala version.
 
 ## Goals
 
@@ -335,7 +335,7 @@ systems, I am less concerned with developing a practically *usable* language.
 For example, one motivation behind using postfix syntax is it is simple to
 parse, though may be harder for humans to read and write. Using point-free
 notation means the symbol table doesn't need to maintain information about
-the current scope: there are no "local variables". These kinds ofchoices
+the current scope: there are no "local variables". These kinds of choices
 simplify the language implementation, and may (or may not) yield benefits
 for programmers using the language.
 
