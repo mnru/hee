@@ -24,6 +24,7 @@ main = sequence $ map (\t -> do putStrLn . show $ t
                 ,"compose"
                 ,"compose apply"
                 ,"compose apply dup"
+                ,"1 +"
                 --,"quote swap compose"
                 --,"quote dup"
                 --,"quote dup compose"
