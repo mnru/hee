@@ -4,6 +4,7 @@ import Hee.Unification
 import Hee.Substitution
 import Hee.Parser
 import Hee.Types
+import Hee.Kinds
 
 typeOf :: String -> Either String String
 typeOf s =
@@ -25,11 +26,11 @@ main = sequence $ map (\t -> do putStrLn . show $ t
                 ,"compose apply"
                 ,"compose apply dup"
                 ,"1 +"
-                --,"quote swap compose"
-                --,"quote dup"
-                --,"quote dup compose"
-                --,"quote swap"
+                ,"quote swap compose"
+                ,"quote dup"
+                ,"quote swap"
                 --,"dup compose"
+                --,"quote dup compose"
                 ]
 
 -- Neat: the type checker only needs to propogate constraints between

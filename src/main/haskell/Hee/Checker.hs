@@ -102,12 +102,8 @@ lookupName "compose" =
       fg = t `mkFunc` v
    in return $ (StPush (StPush s f) g) `mkFunc` (StPush s fg)
 
-lookupName "1" =
-  let s = StBottom 0
-      a = tInt
-   in return $ s `mkFunc` (StPush s a)
-
-lookupName "+" =
+lookupName op
+  | op `elem` ["+","*","-","/","^","%"] =
   let s = StBottom 0
       a = tInt
    in return $ (StPush (StPush s a) a) `mkFunc` (StPush s a)

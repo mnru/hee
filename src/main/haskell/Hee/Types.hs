@@ -83,7 +83,7 @@ tString = TyConstructor "string" KiType  -- LiString
 -- Composite types
 tPair   = TyConstructor "(,)"    (KiConstructor KiType (KiConstructor KiType KiType))
 tList   = TyConstructor "[]"     (KiConstructor KiType KiType)
-tFunc   = TyConstructor "(->)"   (KiConstructor KiStack KiStack)
+tFunc   = TyConstructor "(->)"   (KiConstructor KiStack (KiConstructor KiStack KiType))
 
 mkVar :: Id -> Type
 mkVar id = TyVariable id KiType

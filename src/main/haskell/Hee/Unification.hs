@@ -31,7 +31,7 @@ instance CanUnify Type where
   unify (TyApplication i o) (TyApplication i' o')
                                  = do a <- unify i i'
                                       b <- unify (substitute a o) (substitute a o')
-                                      return (a @@ b)
+                                      return (b @@ a)
   unify _ _                      = fail "unify failed"
 
   bindvar v@(id,k) t
@@ -54,7 +54,7 @@ instance CanUnify Stack where
   unify (StPush t h) (StPush t' h')
                         = do a <- unify h h'
                              b <- unify (substitute a t) (substitute a t')
-                             return (a @@ b)
+                             return (b @@ a)
   unify _ _             = fail "unify failed"
 
   bindvar v@(id,KiStack) t = return (v +-> TyStack t)
