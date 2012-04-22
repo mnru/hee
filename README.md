@@ -142,7 +142,7 @@ This lets us call `next-free` like so:
 ## Life Without (Implicit) Closures
 
 Bee doesn't have nested scopes, mutable bindings, or parameter names so closures
-as we know them aren't applicable. However, we can exploit other features of the
+as we know them aren't meaningful. However, we can exploit other features of the
 language to achieve similar results.
 
     : generate-free'    -- xs x
@@ -174,7 +174,7 @@ remaining free ids.
 
 ## Typing Rules
 
-Each rule corresponds to one of expressions forms
+Each rule corresponds to one of the syntactical forms for terms
 
 
     T-EMPTY   -----------
@@ -206,26 +206,54 @@ definitions (not expressions) can bind values to names.
 
 ### Example 
 
-Consider the term `swap compose apply 1 +`.
+Consider the term `swap compose apply 1 +`. We'll perform type inference
+on this expression by evaluating one type judgement at a time.
 
-              S       T                         T              U
+First, `swap`. This is viewed as a composition with the empty term, so we'll
+use `T-COMPOSE` to infer the type of `∅ swap`.
+
+      e : S → T       f :   T   →   U
+          -   -           .---.   .---.
+
+      ∅ : S → S    swap : A b c → A c b
+     ---------------------------------- T-COMPOSE
+           ∅ swap : A b c → A c b
+
+                   '----'   '---'
+              e f :  S    →   U
+
+So the pre-conditions of `T-COMPOSE` are unified with the types of `∅` and
+`swap`. That is, `S = S`, `T = S`, `T = A b c`, and `U = A c b`. We perform
+unification on the two equations for `T`, which yields the substitution:
+
+    S = A b c
+
+We apply this substitution to the post-condition of `T-COMPOSE`, which is
+`S → U`. This yields the type of `∅ swap : A b c → A c b`. This shows that
+composition with the empty term `∅` is unsurprisingly trivial.
+
+Now we compose `swap` with the term `compose`, which follows similar steps.
+
+              S   →   T                         T        →     U
             .---.   .---.              .---------------.   .-------.
 
      swap : A b c → A c b    compose : D (E → F) (F → G) → D (E → G)
     ----------------------------------------------------------------- T-COMPOSE
               swap compose : A (F → G) (E → F) → A (E → G)
 
-We've unified `A c b` with `D (E → F) (F → G)`, which results in
+
+We've unified both equations for `T` from the premise of the `T-COMPOSE`
+rule: `A c b` with `D (E → F) (F → G)`, resulting in the substitution:
 
     c = E → F
     b = F → G
 
-Then we can apply that substitution to `S`, the input type for `swap`. We also
-apply the substitution to `U`, the output type of `compose`.
+Then we can apply that substitution to `S → T`, the conclusion of `T-COMPOSE`,
+which gives us `swap compose : A (F → G) (E → F) → A (E → G)`.
 
-Next, `swap compose apply`:
+Next, compose the term `swap compose` with the term `apply`:
 
-                            S               T                    T       U
+                            S         →     T                    T     → U
                     .---------------.   .-------.            .-------.   -
 
      swap compose : A (F → G) (E → F) → A (E → G)    apply : H (H → I) → I
@@ -239,14 +267,14 @@ Here we unify `A (E → G)` with `H (H → I)`, resulting in the substitution
     H = A
     E = A
 
-This substitution is applied to `S`, the input type for `swap compose`, and `U`,
-the output type of `apply`. Notice the constraints propogated *backward* to the
-input, and now the function at the top of the stack must have a domain matching
-`A`, the stack below the second item on the stack.
+This time, the constraints propogated *backward* to the input `S`. Now the
+function at the top of the stack must have the domain `A`, matching the stack
+below the second element. Previously, its domain was `E` which was unrelated
+to `A`.
 
-Lastly, `swap compose apply +`:
+Lastly, we compose the term `swap compose apply` with the term `+`:
 
-                                  S           T            T         U
+                                  S         → T            T     →   U
                           .---------------.   -        .-------.   .---.
 
      swap compose apply : A (F → G) (A → F) → G    + : K int int → K int
@@ -257,22 +285,11 @@ Like before, we unify `G` with `K int int`, resulting in the substitution:
 
     G = K int int
 
-Then we apply this substitution to `A (F → G) (A → F) → K int`, because the
-result of T-COMPOSE is `S → U`. Notice again that constraints propogated so
-we've restricted the type of the original input by composing with another
-term.
+Then we apply this substitution to `S → U`, which is `A (F → G) (A → F) → K int`
+in this case. Notice again that constraints propogated so we've restricted the
+type of the input merely by composing with another term.
 
 ## Development Status
-
-Since my primary motivation for developing Bee is to develop a deeper
-theoretical and practical understanding of programming languages, I am less
-concerned with developing a practically *usable* language. However, some
-practical features will be studied and potentially implemented, like
-
-* Module systems
-* Type inference
-* Interactive development
-* Quasiquotation or macros
 
 Bee is in the very early stages of development. Some aspects of the syntax
 haven't settled enough to allow providing examples. This includes the type
@@ -282,7 +299,7 @@ looking for ways to implement these features without adding "extra" syntax.
 
 The preliminary type system is not usable. Several issues must be addressed
 before certain simple terms can be correctly typed. Some terms that pose
-interesting problems are
+interesting problems are:
 
 * `dup` which seems to break concatenativity without impredicative polymorphism
 * `dup apply`, the U-combinator, will probably require recursive types
@@ -309,11 +326,32 @@ is written in Scala but will be soon abandoned. The replacement type checker,
 [`src/main/haskell/Hee/Test.hs`](blob/master/src/main/haskell/Hee/Test.hs) is
 under active development and will subsume the Scala version.
 
+## Goals
+
+Since my primary motivation for developing Bee is to develop a deeper
+theoretical and practical understanding of programming languages and type
+systems, I am less concerned with developing a practically *usable* language.
+
+For example, one motivation behind using postfix syntax is it is simple to
+parse, though may be harder for humans to read and write. Using point-free
+notation means the symbol table doesn't need to maintain information about
+the current scope: there are no "local variables". These kinds ofchoices
+simplify the language implementation, and may (or may not) yield benefits
+for programmers using the language.
+
+Some features I'd like to explore include:
+
+* Module systems
+* Type inference
+* Quasiquotation
+* Interactive development
+* Comprehensible type errors
+
 ## Related Links
 
+* [BEES!](http://www.youtube.com/watch?v=5J2kc4oZTVU)
 * [Stack machine](http://en.wikipedia.org/wiki/Stack_machine)
 * [Stack-oriented programming language](http://en.wikipedia.org/Stack-oriented_programming_language)
-* [concatenative.org](http://concatenative.org/)
 * [My History with Forth Stack Machines](http://www.yosefk.com/blog/my-history-with-forth-stack-machines.html)
 * [Understanding What It's Like to Program in Forth](http://prog21.dadgum.com/33.html)
-* [BEES!](http://www.youtube.com/watch?v=5J2kc4oZTVU)
+* [concatenative.org](http://concatenative.org/)
