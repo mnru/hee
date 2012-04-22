@@ -2,7 +2,9 @@
 
 Point-free style is a paradigm in which function definitions do not include
 information about its arguments. Instead, functions are defined in terms of
-combinators and composition (Wikipedia).
+combinators and composition (Wikipedia). Bee is a concatenative, functional
+programming language built for no practical purpose in mind -- my goal is to
+use it as a vehicle for understanding PL topics. 
 
 ## Syntax
 
@@ -50,7 +52,8 @@ their sum.
 
 ## Minimal Combinators
 
-These combinators are used to manipulate function values
+These combinators are used to manipulate function values. Here are the type
+signatures of some of these combinators:
 
     quote   : S a → S (T → T a)
     apply   : S (S → T) → T
@@ -59,7 +62,7 @@ These combinators are used to manipulate function values
 
 Because arguments aren't explicitly named, they must be accessed according to
 their position on the stack. Several stack-shuffling combinators are provided
-to move values around. For example:
+to move values around. Below are type signatures of some of these:
 
     pop  : S a → S
     dup  : S a → S a a
@@ -100,9 +103,9 @@ and the field names are ignored -- this will change.
 
 ## Exploiting Multiple Return Values
 
-In non stack-based languages, functions must return at most one value. Multiple
-values can be simulated by packaging them into one, and then unpackaging them
-in the callee.
+In most non stack-based languages, functions can return at most one value.
+Multiple values can be simulated by packing them into one, and then unpacking
+them in the callee.
 
     nextFree :: Int → [Int] → (Int, [Int])
     nextFree current []     = (current+1, [])
@@ -110,11 +113,11 @@ in the callee.
                               then (current+1, v:vs)
                               else nextFree v vs
 
-In a stack-based language, "functions" can return any number of values, including
-zero, by pushing them onto the stack. For example, the `next-free` function,
-given a sorted list of bound variables and a starting point, shrinks the list of
-bound variables that need to searched on the next call, and also returns the next
-free variable.
+In a stack-based language, "functions" can return any number of values,
+including zero, by pushing them onto the stack. For example, the `next-free`
+function, given a sorted list of bound ids and a starting point, shrinks
+the list of bound ids that need to searched on the next call, and also
+returns the next free id.
 
     : next-free               -- S num-list num → S num-list num
       swap                    -- id xs
@@ -129,7 +132,8 @@ This lets us call `next-free` like so:
 
     : bound-vars null 5 cons 4 cons 2 cons ;
 
-    bound-vars 0      -- [2,4,5] 0
+    bound-vars -1     -- [2,4,5] -1
+      next-free       -- [2,4,5] 0
       next-free       -- [2,4,5] 1
       next-free       --   [4,5] 3
       next-free       --      [] 6
@@ -154,10 +158,8 @@ with `compose`. This enables state encapsulation (immutable) within a function.
     : generate-free
       quote [-1 generate-free'] compose ;
 
-These two features also enable partial application, e.g. `[-1 generate-free']`
-and applying one argument from the top of the stack is `quote swap compose`.
-Using this technique we have hidden the list of unbound variables from the
-caller.
+These two features also enable partial application, e.g. `[-1 generate-free']`.
+Using this technique we have hidden the list of unbound ids from the caller.
 
     bound-vars        -- [2,4,5]
       generate-free   -- [...]
@@ -167,8 +169,8 @@ caller.
       apply           -- 0 1 3 6 [...]
 
 Each time the function is applied, it produces the next free variable and also
-produces the next *function* embedding any necessary state to generate the
-remaining free variables.
+produces the next *function* which embeds any necessary state to generate the
+remaining free ids.
 
 ## Typing Rules
 
@@ -199,8 +201,8 @@ Each rule corresponds to one of expressions forms
 
 
 The type context Γ is elided from most rules for brevity, and also because
-expressions cannot extend it during computation. That is, only definitions
-(not expressions) can bind values to names.
+expressions cannot extend it during computation. That is, only top-level
+definitions (not expressions) can bind values to names.
 
 ### Example 
 
@@ -259,6 +261,53 @@ Then we apply this substitution to `A (F → G) (A → F) → K int`, because th
 result of T-COMPOSE is `S → U`. Notice again that constraints propogated so
 we've restricted the type of the original input by composing with another
 term.
+
+## Development Status
+
+Since my primary motivation for developing Bee is to develop a deeper
+theoretical and practical understanding of programming languages, I am less
+concerned with developing a practically *usable* language. However, some
+practical features will be studied and potentially implemented, like
+
+* Module systems
+* Type inference
+* Interactive development
+* Quasiquotation or macros
+
+Bee is in the very early stages of development. Some aspects of the syntax
+haven't settled enough to allow providing examples. This includes the type
+syntax, comments, function declarations, and type declarations. The general
+goal is to keep the concrete syntax as minimal as possible, so I'm still
+looking for ways to implement these features without adding "extra" syntax.
+
+The preliminary type system is not usable. Several issues must be addressed
+before certain simple terms can be correctly typed. Some terms that pose
+interesting problems are
+
+* `dup` which seems to break concatenativity without impredicative polymorphism
+* `dup apply`, the U-combinator, will probably require recursive types
+* `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general
+* The Y-combinator, because `A ((B → C) → (B → C)) → A (B → C)` is not correct,
+  though I need to verify that.
+
+Currently there's a REPL written in Ruby, in `bin/bee.rb`. This includes a
+few features like tab-completion, execution traces, and the ability to save
+definitions created in the REPL to an external file. The interpreter achieves
+tail-call optimization easily because it effectively implements [subroutine
+threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading),
+though not as machine code.
+
+There is a small runtime library in the `runtime` directory that is loaded when
+the REPL starts. Mostly this includes some type definitions, like lists and
+booleans with a number of functions to operate on these types. These files
+include what *appears* to be module declarations and comments, however these
+are parsed as top-level expressions which are discarded by the parser. The
+parser only reads *definitions* from files.
+
+One type checker, [`scrap/Checker.scala`](blob/master/scrap/Checker.scala))
+is written in Scala but will be soon abandoned. The replacement type checker,
+[`src/main/haskell/Hee/Test.hs`](blob/master/src/main/haskell/Hee/Test.hs) is
+under active development and will subsume the Scala version.
 
 ## Related Links
 
