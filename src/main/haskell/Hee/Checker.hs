@@ -157,14 +157,14 @@ lookupName "cons" =
       as = mkList a
    in return $ (StPush (StPush s as) a) `mkFunc` (StPush s as)
 
--- S a-list (S a-list a → T) (S → T) → T
+-- S a-list (S → T) (S a-list a → T) → T
 lookupName "unlist" =
   let s  = StBottom 0
       t  = StBottom 1
       a  = mkVar 2
       as = mkList a
-      f  = (StPush (StPush s as) a) `mkFunc` t
-      g  = s `mkFunc` t
+      f  = s `mkFunc` t
+      g  = (StPush (StPush s as) a) `mkFunc` t
    in return $ (StPush (StPush (StPush s as) f) g) `mkFunc` t
 
 -- S a b → S a b a b
@@ -177,6 +177,13 @@ lookupName "2dup" =
 -- S int int → S int
 lookupName op
   | op `elem` ["+","*","-","/","^","%"] =
+  let s = StBottom 0
+      a = tInt
+   in return $ (StPush (StPush s a) a) `mkFunc` (StPush s a)
+
+-- S int int → S bool
+lookupName op
+  | op `elem` ["<","<=","==","!=",">=",">"] =
   let s = StBottom 0
       a = tInt
    in return $ (StPush (StPush s a) a) `mkFunc` (StPush s a)
