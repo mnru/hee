@@ -19,8 +19,8 @@ main = do args <- getArgs
                                    putStrLn . show $ either id id $ typeOf t
                                    putStrLn "")
                          (tests ++ args)
-  where tests = ["swap dup"
-                ,"quote dup"
+  where tests = [--"swap dup"
+                --,"quote dup"
                 ]
 
 -- Neat: the type checker only needs to propogate constraints between

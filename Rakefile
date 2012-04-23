@@ -16,6 +16,14 @@ namespace :sbt do
   end
 end
 
+namespace :hee do
+  task :check do
+    chdir "src/main/haskell"
+    %x(ghc -O2 --make Hee/Test -optl"-Wl,-read_only_relocs,suppress")
+    exec "./Hee/Test", *ARGV[1..-1]
+  end
+end
+
 task :repl do
   sh "./bin/bee.rb", *ARGV[1..-1]
 # sh "irb", "-Isrc/main/ruby/lib", "-r", File.dirname(__FILE__) + "/bin/bee.rb", "--simple-prompt"
