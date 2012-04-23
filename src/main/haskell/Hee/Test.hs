@@ -5,6 +5,7 @@ import Hee.Substitution
 import Hee.Parser
 import Hee.Types
 import Hee.Kinds
+import System.Environment
 
 typeOf :: String -> Either String String
 typeOf s =
@@ -13,24 +14,13 @@ typeOf s =
      let t' = Hee.Substitution.normalizeType t
      return $ showType t'
 
-main = sequence $ map (\t -> do putStrLn . show $ t
-                                putStrLn . show $ either id id $ typeOf t
-                                putStrLn "") tests
-  where tests = ["dup pop"
-                ,"pop pop"
-                ,"dup dup"
-                ,"swap swap"
-                ,"quote apply"
-                ,"quote compose"
-                ,"compose"
-                ,"compose apply"
-                ,"compose apply dup"
-                ,"1 +"
-                ,"quote swap compose"
+main = do args <- getArgs
+          sequence $ map (\t -> do putStrLn . show $ t
+                                   putStrLn . show $ either id id $ typeOf t
+                                   putStrLn "")
+                         (tests ++ args)
+  where tests = ["swap dup"
                 ,"quote dup"
-                ,"quote swap"
-                --,"dup compose"
-                --,"quote dup compose"
                 ]
 
 -- Neat: the type checker only needs to propogate constraints between

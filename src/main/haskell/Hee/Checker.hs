@@ -36,7 +36,8 @@ checkTerm (TmCompose a b) =
 checkTerm (TmQuote a) =
   let s = StBottom 0
    in do f <- checkTerm a
-         return $ s `mkFunc` (StPush s f)
+         let f' = substitute (freshVars (freeVars s) (freeVars f)) f
+         return $ s `mkFunc` (StPush s f')
 
 checkTerm (TmLiteral a) =
   let s  = StBottom 0

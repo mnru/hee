@@ -8,7 +8,7 @@ use it as a vehicle for understanding PL topics.
 
 ## Syntax
 
-Like many stack-based languages, **Bee** uses an postfix syntax for expression.
+Like many stack-based languages, **bee** uses an postfix syntax for expression.
 Operands are written before operators, e.g. `1 3 +`.
 
 ### Kinds
@@ -41,8 +41,8 @@ are intended, once I understand them better.
     e,f ::= ∅         -- empty
           | e f       -- composition
           | [e]       -- abstraction
-          | name      -- 
-          | literal   --
+          | name      -- top-level definition
+          | literal   -- char, num, str, etc
 
 Unlike an applicative language, terms are built almost entirely by function
 composition. For instance, `+ *` composes an addition with a multiplication.
