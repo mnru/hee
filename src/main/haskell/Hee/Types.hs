@@ -7,6 +7,7 @@ module Hee.Types
   , tPair
   , tList
   , tFunc
+  , tBool
   , tString
   , mkFunc
   , mkList
@@ -78,6 +79,7 @@ showStack (StBottom id) = showId id alphabet
 tInt    = TyConstructor "int"    KiType  -- LiInt
 tRatn   = TyConstructor "ratn"   KiType  -- LiRatn
 tChar   = TyConstructor "char"   KiType  -- LiChar
+tBool   = TyConstructor "bool"   KiType
 tString = TyConstructor "string" KiType  -- LiString
 
 -- Composite types

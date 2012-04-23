@@ -73,14 +73,6 @@ lookupName "dup" =
       s = StBottom 0
    in return $ (StPush s a) `mkFunc` (StPush (StPush s a) a)
 
--- S u (S → T) → T u
-lookupName "dip" =
-  let u = mkVar 0
-      s = StBottom 0
-      t = StBottom 1
-      f = s `mkFunc` t
-   in return $ (StPush (StPush s u) f) `mkFunc` (StPush t u)
-
 -- S a b → S b a
 lookupName "swap" =
   let s = StBottom 0
@@ -113,6 +105,74 @@ lookupName "compose" =
       g  = u `mkFunc` v
       fg = t `mkFunc` v
    in return $ (StPush (StPush s f) g) `mkFunc` (StPush s fg)
+
+-- S a b c → S b c a
+lookupName "dig" =
+  let s = StBottom 0
+      a = mkVar 1
+      b = mkVar 2
+      c = mkVar 3
+   in return $ (StPush (StPush (StPush s a) b) c) `mkFunc` (StPush (StPush (StPush s b) c) a)
+
+-- S u (S → T) → T u
+lookupName "dip" =
+  let u = mkVar 0
+      s = StBottom 0
+      t = StBottom 1
+      f = s `mkFunc` t
+   in return $ (StPush (StPush s u) f) `mkFunc` (StPush t u)
+
+-- S → S bool
+lookupName "true" =
+  let s = StBottom 0
+   in return $ s `mkFunc` (StPush s tBool)
+
+-- S → S bool
+lookupName "false" =
+  let s = StBottom 0
+   in return $ s `mkFunc` (StPush s tBool)
+
+-- S bool (S → T) (S → T) → T
+lookupName "unboolean" =
+  let s = StBottom 0
+      t = StBottom 1
+      f = s `mkFunc` t
+   in return $ (StPush (StPush (StPush s tBool) f) f) `mkFunc` t
+
+-- S bool (S → T) (S → T) → T
+lookupName "if" =
+  lookupName "unboolean"
+
+-- S → S a-list
+lookupName "null" =
+  let s  = StBottom 0
+      a  = mkVar 1
+      as = mkList a
+   in return $ s `mkFunc` (StPush s as)
+
+-- S a-list a → S a-list
+lookupName "cons" =
+  let s  = StBottom 0
+      a  = mkVar 1
+      as = mkList a
+   in return $ (StPush (StPush s as) a) `mkFunc` (StPush s as)
+
+-- S a-list (S a-list a → T) (S → T) → T
+lookupName "unlist" =
+  let s  = StBottom 0
+      t  = StBottom 1
+      a  = mkVar 2
+      as = mkList a
+      f  = (StPush (StPush s as) a) `mkFunc` t
+      g  = s `mkFunc` t
+   in return $ (StPush (StPush (StPush s as) f) g) `mkFunc` t
+
+-- S a b → S a b a b
+lookupName "2dup" =
+  let s = StBottom 0
+      a = mkVar 1
+      b = mkVar 2
+   in return $ (StPush (StPush s a) b) `mkFunc` (StPush (StPush (StPush (StPush s a) b) a) b)
 
 -- S int int → S int
 lookupName op

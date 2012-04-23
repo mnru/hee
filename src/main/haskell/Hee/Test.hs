@@ -21,6 +21,7 @@ main = do args <- getArgs
                          (tests ++ args)
   where tests = [--"swap dup"
                 --,"quote dup"
+                --,"[-] [id] if"
                 ]
 
 -- Neat: the type checker only needs to propogate constraints between
