@@ -6,6 +6,8 @@ import Hee.Types
 import Hee.Substitution
 import Hee.Unification
 
+-- Return (in-stack-type, out-stack-type) for a given function
+inOut :: Type -> Either String (Stack, Stack)
 inOut f =
   case f of
     (TyApplication (TyApplication tc (TyStack i)) (TyStack o)) ->
@@ -14,15 +16,20 @@ inOut f =
       else Left "compose only defined on (->) i o"
     _ -> Left "composed only defined on (->) i o"
 
+
+
 checkTerm :: Term -> Either String Type
 
+-- T-EMPTY
 checkTerm (TmEmpty) =
   let s = StBottom 0
    in return $ s `mkFunc` s
 
+-- T-NAME
 checkTerm (TmName id) =
   lookupName id
 
+-- T-COMPOSE
 checkTerm (TmCompose a b) =
   do ta  <- checkTerm a
      tb  <- checkTerm b
@@ -31,38 +38,42 @@ checkTerm (TmCompose a b) =
      (bi, bo) <- inOut tb'
      s <- unify ao bi
      return $ substitute s (ai `mkFunc` bo)
---  where
 
+-- T-QUOTE
 checkTerm (TmQuote a) =
   let s = StBottom 0
    in do f <- checkTerm a
          let f' = substitute (freshVars (freeVars s) (freeVars f)) f
          return $ s `mkFunc` (StPush s f')
 
+-- T-LITERAL
 checkTerm (TmLiteral a) =
   let s  = StBottom 0
       a' = checkLit a
    in return $ s `mkFunc` (StPush s a')
 
+
+-- Γ(name) = τ
 lookupName :: String -> Either String Type
 
+-- S → S
 lookupName "id" =
   let s = StBottom 0
    in return $ s `mkFunc` s
 
--- S a -> S
+-- S a → S
 lookupName "pop" =
   let a = mkVar 0
       s = StBottom 0
    in return $ (StPush s a) `mkFunc` s
 
--- S a -> S a a
+-- S a → S a a
 lookupName "dup" =
   let a = mkVar 0
       s = StBottom 0
    in return $ (StPush s a) `mkFunc` (StPush (StPush s a) a)
 
--- S u (S -> T) -> T u
+-- S u (S → T) → T u
 lookupName "dip" =
   let u = mkVar 0
       s = StBottom 0
@@ -70,14 +81,14 @@ lookupName "dip" =
       f = s `mkFunc` t
    in return $ (StPush (StPush s u) f) `mkFunc` (StPush t u)
 
--- S a b -> S b a
+-- S a b → S b a
 lookupName "swap" =
   let s = StBottom 0
       a = mkVar 0
       b = mkVar 1
    in return $ (StPush (StPush s a) b) `mkFunc` (StPush (StPush s b) a)
 
--- S a -> S (T -> T a)
+-- S a → S (T → T a)
 lookupName "quote" =
   let s = StBottom 0
       t = StBottom 1
@@ -85,14 +96,14 @@ lookupName "quote" =
       f = t `mkFunc` (StPush t a)
    in return $ (StPush s a) `mkFunc` (StPush s f)
 
--- S (S -> T) -> T
+-- S (S → T) → T
 lookupName "apply" =
   let s = StBottom 0
       t = StBottom 1
       f = s `mkFunc` t
    in return $ (StPush s f) `mkFunc` t
 
--- S (T -> U) (U -> V) -> S (T -> V)
+-- S (T → U) (U → V) → S (T → V)
 lookupName "compose" =
   let s  = StBottom 0
       t  = StBottom 1
@@ -103,6 +114,7 @@ lookupName "compose" =
       fg = t `mkFunc` v
    in return $ (StPush (StPush s f) g) `mkFunc` (StPush s fg)
 
+-- S int int → S int
 lookupName op
   | op `elem` ["+","*","-","/","^","%"] =
   let s = StBottom 0
@@ -112,6 +124,8 @@ lookupName op
 lookupName x =
   Left $ "unbound identifier: '" ++ x ++ "'"
 
+
+-- T-LITERAL
 checkLit :: Literal -> Type
 checkLit (LiInt _)    = tInt
 checkLit (LiRatn _)   = tRatn
