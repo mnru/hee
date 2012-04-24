@@ -148,31 +148,38 @@ normalizeType t = substitute (normalizeVars $ freeVars t) t
 -- Returns a substitution that renames all variables in gs such that
 --   freeVars fs `intersect` freeVars gs == []
 freshVars :: [Variable] -> [Variable] -> Substitution
-freshVars fs gs = substitution
+freshVars fs xs = thd types @@ thd stacks
   where
-    boundIds     = splitIds fs
-    thd (a,b,c)  = c
-    substitution = thd $ foldl' (\(id,(ts,ss),s) g ->
-                     case g of
-                       (v, KiType)  ->
-                         let (id', ts') = nextFree id ts
-                          in if v == id'
-                             then (id', (ts', ss), s)
-                             else (id', (ts', ss), (g, TyVariable id' KiType):s)
-                       (v, KiStack) ->
-                         let (id', ss') = nextFree id ss
-                          in if v == id'
-                             then (id', (ts, ss'), s)
-                             else (id', (ts, ss'), (g, TyStack $ StBottom id'):s))
-                     (-1, boundIds, empty) gs
+    thd (a,b,c) = c
+
+    (tbound, sbound) = splitIds fs
+
+    types :: (Id, [Id], Substitution)
+    types  = foldl' (\(current, bound, sub) var ->
+                      case var of
+                        x@(_, KiType) ->
+                          let (current', bound') = nextFree current bound
+                           in (current', bound', (x, TyVariable current' KiType):sub)
+                        _ -> (current, bound, sub))
+                    (-1, tbound, empty) xs
+
+    stacks :: (Id, [Id], Substitution)
+    stacks = foldl' (\(current, bound, sub) var ->
+                      case var of
+                        x@(_, KiStack) ->
+                          let (current', bound') = nextFree current bound
+                           in (current', bound', (x, TyStack $ StBottom current'):sub)
+                        _ -> (current, bound, sub))
+                    (-1, sbound, empty) xs
 
 -- Split variables into list of KiType ids and KiStack ids
 splitIds :: [Variable] -> ([Id], [Id])
-splitIds = (sort `fmap`) . foldl' (\(ts, ss) x ->
-             case x of
-               (id, KiType)  -> (id:ts, ss)
-               (id, KiStack) -> (ts, id:ss)
-               _             -> (ts, ss)) ([], [])
+splitIds vars = (sort ts, sort ss)
+  where (ts,ss) = foldl' (\(ts, ss) x ->
+                    case x of
+                      (id, KiType)  -> (id:ts, ss)
+                      (id, KiStack) -> (ts, id:ss)
+                      _             -> (ts, ss)) ([], []) vars
 
 nextFree :: Id -> [Id] -> (Id, [Id])
 nextFree current []     = (current+1, [])
