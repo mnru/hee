@@ -15,11 +15,13 @@ typeOf s =
      return $ showType t'
 
 main = do args <- getArgs
-          sequence $ map (\t -> do putStrLn . show $ t
-                                   putStrLn . show $ either id id $ typeOf t
+          sequence $ map (\t -> do putStr $ t
+                                   putStr " : "
+                                   putStrLn $ either id id $ typeOf t
                                    putStrLn "")
                          (tests ++ args)
   where tests = [--"swap dup"
+                --,"swap swap"
                 --,"quote dup"
                 --,"[-] [id] if"
                 ]

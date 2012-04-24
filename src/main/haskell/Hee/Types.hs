@@ -58,7 +58,11 @@ showId id alphabet =(alphabet !! n) : (replicate k '\'')
 showType :: Type -> String
 showType (TyConstructor id k) = id
 showType (TyApplication (TyApplication f i) o)
-  | f == tFunc                = "(" ++ showType i ++ " -> " ++ showType o ++ ")"
+  | f == tFunc                = "(" ++ showType i ++ " → " ++ showType o ++ ")"
+showType (TyApplication (TyApplication f i) o)
+  | f == tPair                = "(" ++ showType i ++ "," ++ showType o ++ ")"
+showType (TyApplication f i)
+  | f == tList                = "[" ++ showType i ++ "]"
 showType (TyApplication f x)  = "(" ++ showType f ++ " " ++ showType x ++ ")"
 showType (TyStack s) =
   case s of
