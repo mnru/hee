@@ -148,7 +148,7 @@ normalizeType t = substitute (normalizeVars $ freeVars t) t
 -- Returns a substitution that renames all variables in gs such that
 --   freeVars fs `intersect` freeVars gs == []
 freshVars :: [Variable] -> [Variable] -> Substitution
-freshVars fs xs = thd types @@ thd stacks
+freshVars fs xs = thd types ++ thd stacks
   where
     thd (a,b,c) = c
 
