@@ -36,7 +36,9 @@ namespace :hee do
   end
 end
 
-task :repl do
-  sh "./bin/bee.rb", *ARGV[1..-1]
-# sh "irb", "-Isrc/main/ruby/lib", "-r", File.dirname(__FILE__) + "/bin/bee.rb", "--simple-prompt"
+namespace :bee do
+  task :repl do
+    sh "./bin/bee.rb", *ARGV[1..-1]
+  # sh "irb", "-Isrc/main/ruby/lib", "-r", File.dirname(__FILE__) + "/bin/bee.rb", "--simple-prompt"
+  end
 end

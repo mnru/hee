@@ -25,6 +25,7 @@ module prelude.list
   all?
   any?
   none?
+  elem?
 
 import prelude.combinators
 import prelude.boolean
@@ -36,57 +37,74 @@ import prelude.number
  | cons head tail
  ;
 
+-- S [a] (S a -> S boolean) -> S [a]
 : filter
   reverse-filter reverse ;
 
+-- S [a] (S a -> S boolean) -> S [a]
 : reverse-filter
   [swap dup] swap compose [[cons] [pop] if] compose null swap foldl ;
 
+-- S [a] b (S a b -> S b) -> S b
 : foldr
   dig [pop] [swap [bury] dip bury dup [foldr] dip apply] unlist ;
 
 : foldl'
   [dup quote compose] dip compose [quote dup] dip compose unlist ;
 
+-- S [a] b (S a b -> S b) -> S b
 : foldl
   [foldl'] y ;
 
+-- S [a] -> S [a]
 : reverse-map
   [swap] swap compose [cons] compose null swap foldl ;
 
+-- S [a] -> S [a]
 : reverse
   null [swap cons] foldl ;
 
+-- S [a] -> S [a]
 : map
   reverse-map reverse ;
 
+-- S [a] -> S num
 : length
   0 [[pop] dip 1 +] foldl ;
 
+-- S [num] -> S num
 : sum
   0 [+] foldl ;
 
+-- S [num] -> S num
 : product
   1 [*] foldl ;
 
+-- S [a] -> S boolean
 : null?
   [true] [pop pop false] unlist ;
 
+-- S [a] -> S boolean
 : cons?
   [false] [pop pop true] unlist ;
 
+-- S [a] [a] -> S [a]
 : concat
   [swap cons] foldr ;
 
+-- S [a] -> S (some a)
 : greatest
   [none] [[greater] foldl some] unlist ;
 
+-- S [a] -> S (some a)
 : least
   [none] [[lesser] foldl some] unlist ;
 
+-- S [a] -> S (some a)
 : head
   [none] [swap pop some] unlist ;
 
+-- S [a] -> S (some [a])
 : tail
   [none] [pop some] unlist ;
 
@@ -99,6 +117,7 @@ import prelude.number
       unoption]
   if ;
 
+-- S [a] -> S (some a)
 : nth
   dup negative? [pop pop none] [[nth'] u] if ;
 
@@ -111,6 +130,7 @@ import prelude.number
       unoption]
   if ;
 
+-- S [a] -> S (some [a])
 : drop
   dup negative? [pop pop none] [[drop'] u] if ;
 
@@ -123,20 +143,36 @@ import prelude.number
     unlist]
   if ;
 
+-- S [a] -> S (some [a])
 : take
   dup negative? [pop pop none] [null bury [take'] u] if ;
 
+-- S [a] -> S (some a)
 : last
   reverse head ;
 
+-- S [a] -> S (some [a])
 : init
   reverse tail [none] [reverse some] unoption ;
 
+-- S [boolean] -> S boolean
 : all?
   [swap] swap compose [and] compose true swap foldl ;
 
+-- S [boolean] -> S boolean
 : any?
   [swap] swap compose [or] compose false swap foldl ;
 
+-- S [boolean] -> S boolean
 : none?
   [swap] swap compose [nand] compose true swap foldl ;
+
+-- S [a] a -> S boolean
+: elem?
+  swap
+    [pop false]
+    [dig dup bury ==
+      [pop pop true]
+      [elem?]
+    if]
+  unlist ;
