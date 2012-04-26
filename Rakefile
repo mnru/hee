@@ -29,7 +29,7 @@ namespace :hee do
   task :check do
     chdir "src/main/haskell"
     extra = (RUBY_PLATFORM =~ /darwin/) ?
-      ['-optl"-Wl,-read_only_relocs,suppress"'] : []
+      ['-optl', '-Wl,-read_only_relocs,suppress'] : []
 
     system "ghc", "-O2", "--make", "Hee/Test", *extra
       exec "./Hee/Test", *ARGV[1..-1]
