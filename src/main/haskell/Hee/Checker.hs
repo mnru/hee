@@ -59,26 +59,26 @@ lookupName :: String -> Either String Type
 -- S → S
 lookupName "id" =
   let s = SBottom 0
-   in return $ s `mkFunc` s
+   in return . generalize $ s `mkFunc` s
 
 -- S a → S
 lookupName "pop" =
   let a = mkVar 0
       s = SBottom 0
-   in return $ (SPush s a) `mkFunc` s
+   in return . generalize $ (SPush s a) `mkFunc` s
 
 -- S a → S a a
 lookupName "dup" =
   let a = mkVar 0
       s = SBottom 0
-   in return $ (SPush s a) `mkFunc` (SPush (SPush s a) a)
+   in return . generalize $ (SPush s a) `mkFunc` (SPush (SPush s a) a)
 
 -- S a b → S b a
 lookupName "swap" =
   let s = SBottom 0
       a = mkVar 0
       b = mkVar 1
-   in return $ (SPush (SPush s a) b) `mkFunc` (SPush (SPush s b) a)
+   in return . generalize $ (SPush (SPush s a) b) `mkFunc` (SPush (SPush s b) a)
 
 -- S a → S (T → T a)
 lookupName "quote" =
@@ -86,14 +86,14 @@ lookupName "quote" =
       t = SBottom 1
       a = mkVar 0
       f = t `mkFunc` (SPush t a)
-   in return $ (SPush s a) `mkFunc` (SPush s f)
+   in return . generalize $ (SPush s a) `mkFunc` (SPush s f)
 
 -- S (S → T) → T
 lookupName "apply" =
   let s = SBottom 0
       t = SBottom 1
       f = s `mkFunc` t
-   in return $ (SPush s f) `mkFunc` t
+   in return . generalize $ (SPush s f) `mkFunc` t
 
 -- S (T → U) (U → V) → S (T → V)
 lookupName "compose" =
@@ -104,7 +104,7 @@ lookupName "compose" =
       f  = t `mkFunc` u
       g  = u `mkFunc` v
       fg = t `mkFunc` v
-   in return $ (SPush (SPush s f) g) `mkFunc` (SPush s fg)
+   in return . generalize $ (SPush (SPush s f) g) `mkFunc` (SPush s fg)
 
 -- S a b c → S b c a
 lookupName "dig" =
@@ -112,7 +112,7 @@ lookupName "dig" =
       a = mkVar 1
       b = mkVar 2
       c = mkVar 3
-   in return $ (SPush (SPush (SPush s a) b) c) `mkFunc` (SPush (SPush (SPush s b) c) a)
+   in return . generalize $ (SPush (SPush (SPush s a) b) c) `mkFunc` (SPush (SPush (SPush s b) c) a)
 
 -- S u (S → T) → T u
 lookupName "dip" =
@@ -120,24 +120,24 @@ lookupName "dip" =
       s = SBottom 0
       t = SBottom 1
       f = s `mkFunc` t
-   in return $ (SPush (SPush s u) f) `mkFunc` (SPush t u)
+   in return . generalize $ (SPush (SPush s u) f) `mkFunc` (SPush t u)
 
 -- S → S bool
 lookupName "true" =
   let s = SBottom 0
-   in return $ s `mkFunc` (SPush s tBool)
+   in return . generalize $ s `mkFunc` (SPush s tBool)
 
 -- S → S bool
 lookupName "false" =
   let s = SBottom 0
-   in return $ s `mkFunc` (SPush s tBool)
+   in return . generalize $ s `mkFunc` (SPush s tBool)
 
 -- S bool (S → T) (S → T) → T
 lookupName "unboolean" =
   let s = SBottom 0
       t = SBottom 1
       f = s `mkFunc` t
-   in return $ (SPush (SPush (SPush s tBool) f) f) `mkFunc` t
+   in return . generalize $ (SPush (SPush (SPush s tBool) f) f) `mkFunc` t
 
 -- S bool (S → T) (S → T) → T
 lookupName "if" =
@@ -148,14 +148,14 @@ lookupName "null" =
   let s  = SBottom 0
       a  = mkVar 1
       as = mkList a
-   in return $ s `mkFunc` (SPush s as)
+   in return . generalize $ s `mkFunc` (SPush s as)
 
 -- S a-list a → S a-list
 lookupName "cons" =
   let s  = SBottom 0
       a  = mkVar 1
       as = mkList a
-   in return $ (SPush (SPush s as) a) `mkFunc` (SPush s as)
+   in return . generalize $ (SPush (SPush s as) a) `mkFunc` (SPush s as)
 
 -- S a-list (S → T) (S a-list a → T) → T
 lookupName "unlist" =
@@ -165,28 +165,28 @@ lookupName "unlist" =
       as = mkList a
       f  = s `mkFunc` t
       g  = (SPush (SPush s as) a) `mkFunc` t
-   in return $ (SPush (SPush (SPush s as) f) g) `mkFunc` t
+   in return . generalize $ (SPush (SPush (SPush s as) f) g) `mkFunc` t
 
 -- S a b → S a b a b
 lookupName "2dup" =
   let s = SBottom 0
       a = mkVar 1
       b = mkVar 2
-   in return $ (SPush (SPush s a) b) `mkFunc` (SPush (SPush (SPush (SPush s a) b) a) b)
+   in return . generalize $ (SPush (SPush s a) b) `mkFunc` (SPush (SPush (SPush (SPush s a) b) a) b)
 
 -- S int int → S int
 lookupName op
   | op `elem` ["+","*","-","/","^","%"] =
   let s = SBottom 0
       a = tInt
-   in return $ (SPush (SPush s a) a) `mkFunc` (SPush s a)
+   in return . generalize $ (SPush (SPush s a) a) `mkFunc` (SPush s a)
 
 -- S int int → S bool
 lookupName op
   | op `elem` ["<","<=","==","!=",">=",">"] =
   let s = SBottom 0
       a = tInt
-   in return $ (SPush (SPush s a) a) `mkFunc` (SPush s a)
+   in return . generalize $ (SPush (SPush s a) a) `mkFunc` (SPush s a)
 
 lookupName x =
   Left $ "unbound identifier: '" ++ x ++ "'"
@@ -194,7 +194,57 @@ lookupName x =
 
 -- T-LITERAL
 checkLit :: Literal -> Type
-checkLit (LiInt _)    = tInt
-checkLit (LiRatn _)   = tRatn
-checkLit (LiChar _)   = tChar
-checkLit (LiString _) = tString
+checkLit (LInt _)    = tInt
+checkLit (LRatn _)   = tRatn
+checkLit (LChar _)   = tChar
+checkLit (LString _) = tString
+
+normalizeVars :: [Variable] -> Substitution t
+normalizeVars = freshVars []
+
+normalizeType :: (CanUnify a, CanSubstitute a) => a -> a
+normalizeType t = substitute (normalizeVars $ freeVars t) t
+
+-- Returns a substitution that renames all variables in gs such that
+--   freeVars fs `intersect` freeVars gs == []
+freshVars :: [Variable] -> [Variable] -> Substitution
+freshVars fs xs = thd types ++ thd stacks
+  where
+    thd (a,b,c) = c
+    (tbound,sbound) = splitIds fs
+
+    types :: (Id, [Id], Substitution)
+    types  = foldl' (\(current, bound, sub) var ->
+                      case var of
+                        x@(_,KType) ->
+                          let (current', bound') = nextFree current bound
+                           in (current', bound', (x, TVariable current' KType):sub)
+                        _ -> (current, bound, sub))
+                    (-1, tbound, empty) xs
+
+    stacks :: (Id, [Id], Substitution)
+    stacks = foldl' (\(current, bound, sub) var ->
+                      case var of
+                        x@(_,KStack) ->
+                          let (current', bound') = nextFree current bound
+                           in (current', bound', (x, TStack $ SBottom current'):sub)
+                        _ -> (current, bound, sub))
+                    (-1, sbound, empty) xs
+
+-- Split variables into list of KType ids and KStack ids
+splitIds :: [Variable] -> ([Id], [Id])
+splitIds vars = (sort ts, sort ss)
+  where (ts,ss) = foldl' (\(ts, ss) x ->
+                    case x of
+                      (id,KType)  -> (id:ts, ss)
+                      (id,KStack) -> (ts, id:ss)
+                      _             -> (ts, ss)) ([], []) vars
+
+nextFree :: Id -> [Id] -> (Id, [Id])
+nextFree current []     = (current+1, [])
+nextFree current (v:vs) = if current+1 < v
+                          then (current+1, v:vs)
+                          else nextFree v vs
+
+generalize :: Type -> Type
+generalize t = foldl' (\t (id,k) -> TForall id k [] t) t $ freeVars t

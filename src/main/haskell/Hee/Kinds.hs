@@ -1,6 +1,7 @@
 module Hee.Kinds
   ( Kind(..)
   , HasKind(..)
+  , showKind
   ) where
 
 -- Kinds classify types as either a monomorphic value type (a nullary type
