@@ -22,22 +22,21 @@ import Hee.Kinds
 type Id
   = Int
 
--- Types have the kind KiType and are distinguished from Stack because
+-- Types have the kind KType and are distinguished from Stack because
 -- they can be used to describe first-class values.
 data Type
-  = TyVariable Id Kind
-  | TyConstructor String Kind
-  | TyApplication Type Type
-  | TyGeneric Int
-  | TyStack Stack
+  = TVariable Id Kind
+  | TConstructor String Kind
+  | TApplication Type Type
+  | TStack Stack
   deriving (Eq, Show)
 
--- Stacks have the kind KiStack and are distinguished from Type because
+-- Stacks have the kind KStack and are distinguished from Type because
 -- they cannot be used to describe first-class values.
 data Stack
-  = StEmpty
-  | StBottom Id
-  | StPush Stack Type
+  = SEmpty
+  | SBottom Id
+  | SPush Stack Type
   deriving (Eq, Show)
 
 -- t ∈ Eq
@@ -56,56 +55,50 @@ showId id alphabet =(alphabet !! n) : (replicate k '\'')
         n = id `mod` length alphabet
 
 showType :: Type -> String
-showType (TyConstructor id k) = id
-showType (TyApplication (TyApplication f i) o)
-  | f == tFunc                = "(" ++ showType i ++ " → " ++ showType o ++ ")"
-showType (TyApplication (TyApplication f i) o)
-  | f == tPair                = "(" ++ showType i ++ "," ++ showType o ++ ")"
-showType (TyApplication f i)
-  | f == tList                = "[" ++ showType i ++ "]"
-showType (TyApplication f x)  = "(" ++ showType f ++ " " ++ showType x ++ ")"
-showType (TyStack s) =
+showType (TConstructor id k) = id
+showType (TVariable id k)    = showId id "abcdefghijklmnopqrtsuvwxyz"
+showType (TApplication (TApplication f i) o) | f == tFunc = "(" ++ showType i ++ " → " ++ showType o ++ ")"
+showType (TApplication (TApplication f i) o) | f == tPair = "(" ++ showType i ++ "," ++ showType o ++ ")"
+showType (TApplication f i)                  | f == tList = "[" ++ showType i ++ "]"
+showType (TApplication f x)                               = "(" ++ showType f ++ " " ++ showType x ++ ")"
+showType (TStack s) =
   case s of
-    StEmpty      -> showStack s
-    (StBottom _) -> showStack s
+    SEmpty      -> showStack s
+    (SBottom _) -> showStack s
     _            -> showStack s
-showType (TyVariable id k)    = showId id alphabet
-  where
-    alphabet = "abcdefghijklmnopqrtsuvwxyz"
 
 showStack :: Stack -> String
-showStack StEmpty       = "|"
-showStack (StPush s s') = showStack s ++ " " ++ showType s'
-showStack (StBottom id) = showId id alphabet
-  where alphabet = "ABCDEFGHIJKLMNOPQRTSUVWXYZ"
+showStack SEmpty       = "∅"
+showStack (SPush s s') = showStack s ++ " " ++ showType s'
+showStack (SBottom id) = showId id "ABCDEFGHIJKLMNOPQRTSUVWXYZ"
 
 -- Primitive types
-tInt    = TyConstructor "int"    KiType  -- LiInt
-tRatn   = TyConstructor "ratn"   KiType  -- LiRatn
-tChar   = TyConstructor "char"   KiType  -- LiChar
-tBool   = TyConstructor "bool"   KiType
-tString = TyConstructor "string" KiType  -- LiString
+tInt    = TConstructor "int"    KType  -- LiInt
+tRatn   = TConstructor "ratn"   KType  -- LiRatn
+tChar   = TConstructor "char"   KType  -- LiChar
+tBool   = TConstructor "bool"   KType
+tString = TConstructor "string" KType  -- LiString
 
 -- Composite types
-tPair   = TyConstructor "(,)"    (KiConstructor KiType (KiConstructor KiType KiType))
-tList   = TyConstructor "[]"     (KiConstructor KiType KiType)
-tFunc   = TyConstructor "(->)"   (KiConstructor KiStack (KiConstructor KiStack KiType))
+tPair   = TConstructor "(,)"  (KConstructor KType (KConstructor KType KType))
+tFunc   = TConstructor "(->)" (KConstructor KStack (KConstructor KStack KType))
+tList   = TConstructor "[]"   (KConstructor KType KType)
 
 mkVar :: Id -> Type
-mkVar id = TyVariable id KiType
+mkVar id = TVariable id KType
 
 mkFunc :: Stack -> Stack -> Type
-mkFunc inp out = TyApplication (TyApplication tFunc (TyStack inp)) (TyStack out)
+mkFunc inp out = TApplication (TApplication tFunc (TStack inp)) (TStack out)
 
 mkList :: Type -> Type
-mkList t = TyApplication tList t
+mkList t = TApplication tList t
 
 mkPair :: Type -> Type -> Type
-mkPair fst snd = TyApplication (TyApplication tPair fst) snd
+mkPair fst snd = TApplication (TApplication tPair fst) snd
 
 -- TODO: Free type variable
 quote :: Type -> Type
-quote t = (StBottom 0) `mkFunc` (StPush (StBottom  0) t)
+quote t = (SBottom 0) `mkFunc` (SPush (SBottom  0) t)
 
 --instance Show Type where
 --  show = showType
@@ -114,10 +107,10 @@ quote t = (StBottom 0) `mkFunc` (StPush (StBottom  0) t)
 --  show = showStack
 
 instance HasKind Type where
-  kind (TyVariable _ k)     = k
-  kind (TyConstructor _ k)  = k
-  kind (TyStack _)          = KiStack
-  kind (TyApplication i _)  = let (KiConstructor _ k) = kind i in k
+  kind (TVariable _ k)     = k
+  kind (TConstructor _ k)  = k
+  kind (TStack _)          = KStack
+  kind (TApplication i _)  = let (KConstructor _ k) = kind i in k
 
 instance HasKind Stack where
-  kind t = KiStack
+  kind t = KStack
