@@ -28,10 +28,10 @@ data Term
   deriving (Eq, Show)
 
 data Literal
-  = LiInt Int
-  | LiChar Word8
-  | LiRatn Double
-  | LiString ByteString
+  = LInt Int
+  | LChar Word8
+  | LRatn Double
+  | LString ByteString
   deriving (Eq, Show)
 
 showTerm :: Term -> String
@@ -43,10 +43,10 @@ showTerm (TmCompose TmEmpty t)  = showTerm t
 showTerm (TmCompose s t)        = showTerm s ++ " " ++ showTerm t
 
 showLiteral :: Literal -> String
-showLiteral (LiInt l)    = show l
-showLiteral (LiChar l)   = show l
-showLiteral (LiRatn l)   = show l
-showLiteral (LiString l) = show l
+showLiteral (LInt l)    = show l
+showLiteral (LChar l)   = show l
+showLiteral (LRatn l)   = show l
+showLiteral (LString l) = show l
 
 --instance Show Term where
 --  show = showTerm

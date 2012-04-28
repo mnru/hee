@@ -1,6 +1,5 @@
 module Hee.Types
   ( Type(..)
-  , Stack(..)
   , tInt
   , tRatn
   , tChar
@@ -14,110 +13,116 @@ module Hee.Types
   , mkVar
   , quote
   , showType
-  , showStack
   ) where
 
 import Hee.Kinds
+import Hee.Stack
+import Hee.Substitution
+import Hee.Unification
 
 type Id
   = Int
 
--- Types have the kind KiType and are distinguished from Stack because
+-- Types have the kind KType and are distinguished from Stack because
 -- they can be used to describe first-class values.
 data Type
-  = TyVariable Id Kind
-  | TyConstructor String Kind
-  | TyApplication Type Type
-  | TyGeneric Int
-  | TyStack Stack
+  = TVariable Id Kind
+  | TConstructor String Kind
+  | TApplication Type Type
+  | TForall Id Kind [Predicate] Type
+  | TStack Stack
   deriving (Eq, Show)
 
--- Stacks have the kind KiStack and are distinguished from Type because
--- they cannot be used to describe first-class values.
-data Stack
-  = StEmpty
-  | StBottom Id
-  | StPush Stack Type
-  deriving (Eq, Show)
-
--- t ∈ Eq
--- t ∈ Num
 data Predicate
-  = MemberOf Id Type
+  = MemberOf Type
   deriving (Eq, Show)
 
--- Qualified types antecedents => consequent
-data Qualified h
-  = [Predicate] :=> h
-  deriving (Eq, Show)
-
-showId id alphabet =(alphabet !! n) : (replicate k '\'')
+showId :: Id -> String -> String
+showId id alphabet = (alphabet !! n) : (replicate k '\'')
   where k = id `div` length alphabet
         n = id `mod` length alphabet
 
-showType :: Type -> String
-showType (TyConstructor id k) = id
-showType (TyApplication (TyApplication f i) o)
-  | f == tFunc                = "(" ++ showType i ++ " → " ++ showType o ++ ")"
-showType (TyApplication (TyApplication f i) o)
-  | f == tPair                = "(" ++ showType i ++ "," ++ showType o ++ ")"
-showType (TyApplication f i)
-  | f == tList                = "[" ++ showType i ++ "]"
-showType (TyApplication f x)  = "(" ++ showType f ++ " " ++ showType x ++ ")"
-showType (TyStack s) =
-  case s of
-    StEmpty      -> showStack s
-    (StBottom _) -> showStack s
-    _            -> showStack s
-showType (TyVariable id k)    = showId id alphabet
-  where
-    alphabet = "abcdefghijklmnopqrtsuvwxyz"
+showVar :: Id -> Kind -> String
+showVar id KStack = showId id "ABCDEFGHIJKLMNOPQRTSUVWXYZ"
+showVar id _      = showId id "abcdefghijklmnopqrtsuvwxyz"
 
-showStack :: Stack -> String
-showStack StEmpty       = "|"
-showStack (StPush s s') = showStack s ++ " " ++ showType s'
-showStack (StBottom id) = showId id alphabet
-  where alphabet = "ABCDEFGHIJKLMNOPQRTSUVWXYZ"
+showType :: Type -> String
+showType (TStack s)          = showStack s
+showType (TConstructor id k) = id
+showType (TVariable id k)    = showVar id k
+showType (TForall id k ps t) = "∀" ++ (showVar id k) ++ ". " ++ showType t
+showType (TApplication (TApplication f i) o) | f == tFunc = "(" ++ showType i ++ " → " ++ showType o ++ ")"
+showType (TApplication (TApplication f i) o) | f == tPair = "(" ++ showType i ++ ", " ++ showType o ++ ")"
+showType (TApplication f i)                  | f == tList = "[" ++ showType i ++ "]"
+showType (TApplication f x)                               = "(" ++ showType f ++ " " ++ showType x ++ ")"
 
 -- Primitive types
-tInt    = TyConstructor "int"    KiType  -- LiInt
-tRatn   = TyConstructor "ratn"   KiType  -- LiRatn
-tChar   = TyConstructor "char"   KiType  -- LiChar
-tBool   = TyConstructor "bool"   KiType
-tString = TyConstructor "string" KiType  -- LiString
+tInt    = TConstructor "int"    KType
+tRatn   = TConstructor "ratn"   KType
+tChar   = TConstructor "char"   KType
+tBool   = TConstructor "bool"   KType
+tString = TConstructor "string" KType
 
 -- Composite types
-tPair   = TyConstructor "(,)"    (KiConstructor KiType (KiConstructor KiType KiType))
-tList   = TyConstructor "[]"     (KiConstructor KiType KiType)
-tFunc   = TyConstructor "(->)"   (KiConstructor KiStack (KiConstructor KiStack KiType))
+tPair   = TConstructor "(,)"  (KConstructor KType (KConstructor KType KType))
+tFunc   = TConstructor "(->)" (KConstructor KStack (KConstructor KStack KType))
+tList   = TConstructor "[]"   (KConstructor KType KType)
 
 mkVar :: Id -> Type
-mkVar id = TyVariable id KiType
+mkVar id = TVariable id KType
 
 mkFunc :: Stack -> Stack -> Type
-mkFunc inp out = TyApplication (TyApplication tFunc (TyStack inp)) (TyStack out)
+mkFunc inp out = TApplication (TApplication tFunc (TStack inp)) (TStack out)
 
 mkList :: Type -> Type
-mkList t = TyApplication tList t
+mkList t = TApplication tList t
 
 mkPair :: Type -> Type -> Type
-mkPair fst snd = TyApplication (TyApplication tPair fst) snd
-
--- TODO: Free type variable
-quote :: Type -> Type
-quote t = (StBottom 0) `mkFunc` (StPush (StBottom  0) t)
-
---instance Show Type where
---  show = showType
---
---instance Show Stack where
---  show = showStack
+mkPair fst snd = TApplication (TApplication tPair fst) snd
 
 instance HasKind Type where
-  kind (TyVariable _ k)     = k
-  kind (TyConstructor _ k)  = k
-  kind (TyStack _)          = KiStack
-  kind (TyApplication i _)  = let (KiConstructor _ k) = kind i in k
+  kind (TVariable _ k)     = k
+  kind (TConstructor _ k)  = k
+  kind (TStack _)          = KStack
+  kind (TApplication i _)  = let (KConstructor _ k) = kind i in k
 
-instance HasKind Stack where
-  kind t = KiStack
+instance CanSubstitute Type where
+  substitute s (TApplication i o) = TApplication (substitute s i) (substitute s o)
+  substitute s (TStack t)         = TStack (substitute s t)
+  substitute s (TVariable id k)   = case lookup (id,k) s of
+                                      Just t  -> t
+                                      Nothing -> TVariable id k
+  substitute s t = t
+
+  freeVars (TApplication i o) = freeVars i `union` freeVars o
+  freeVars (TStack t)         = freeVars t
+  freeVars (TVariable id k)   = [(id,k)]
+  freeVars _                  = []
+
+instance CanUnify Type where
+  match (TStack s) (TStack s') = match s s'
+  match (TVariable id k) t     = bindvar (id,k) t
+  match (TConstructor id k) (TConstructor id' k')
+    | id == id' && k == k'     = return empty
+  match (TApplication i o) (TApplication i' o')
+                               = do a <- match i i'
+                                    b <- match (substitute a o) (substitute a o')
+                                    merge a b
+  match _ _                    = fail "merge failed"
+
+  unify (TStack s) (TStack s') = unify s s'
+  unify (TVariable id k) t     = bindvar (id,k) t
+  unify t (TVariable id k)     = bindvar (id,k) t
+  unify (TConstructor id k) (TConstructor id' k')
+    | id == id' && k == k'     = return empty
+  unify (TApplication i o) (TApplication i' o')
+                               = do a <- unify i i'
+                                    b <- unify (substitute a o) (substitute a o')
+                                    return (a @@ b)
+  unify _ _                    = fail "unify failed"
+
+  bindvar v@(id,k) t
+    | t == TVariable id k = return empty
+    | v `elem` freeVars t  = fail "bindvar failed (occurs check)"
+    | k /= kind t          = fail "bindvar failed (kind mismatch)"
+    | otherwise            = return (v +-> t)

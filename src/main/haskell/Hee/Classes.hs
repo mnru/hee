@@ -95,17 +95,17 @@ addCoreInstances :: ClassEnvT
 addCoreInstances  = addInstance [] (MemberOf "Eq" tUnit)
                 <:> addInstance [] (MemberOf "Eq" tChar)
                 <:> addInstance [] (MemberOf "Eq" tInt)
-                <:> addInstance [MemberOf "Eq" (TyVariable "a" KiType)
-                                ,MemberOf "Eq" (TyVariable "b" KiType)]
-                                (MemberOf "Eq" (mkPair (TyVariable "a" KiType)
-                                                       (TyVariable "b" KiType)))
+                <:> addInstance [MemberOf "Eq" (TVariable 0 KType)
+                                ,MemberOf "Eq" (TVariable 1 KType)]
+                                (MemberOf "Eq" (mkPair (TVariable 0 KType)
+                                                       (TVariable 1 KType)))
                 <:> addInstance [] (MemberOf "Ord" tUnit)
                 <:> addInstance [] (MemberOf "Ord" tChar)
                 <:> addInstance [] (MemberOf "Ord" tInt)
-                <:> addInstance [MemberOf "Ord" (TyVariable "a" KiType)
-                                ,MemberOf "Ord" (TyVariable "b" KiType)]
-                                (MemberOf "Ord" (mkPair (TyVariable "a" KiType)
-                                                        (TyVariable "b" KiType)))
+                <:> addInstance [MemberOf "Ord" (TVariable 0 KType)
+                                ,MemberOf "Ord" (TVariable 1 KType)]
+                                (MemberOf "Ord" (mkPair (TVariable 0 KType)
+                                                        (TVariable 1 KType)))
 
 -- Produces a flat list of predicates from superclass tree
 consequents :: ClassEnv -> Predicate -> [Predicate]
@@ -147,7 +147,7 @@ qualify      :: [Variable] -> Qualified Type -> Scheme
 qualify vs qt = ForAll ks (substitute s qt)
   where vs' = vs `intersect` freevars qt
         ks  = map kind vs'
-        s   = zip vs' (map TyGeneric [0..])
+        s   = zip vs' (map TGeneric [0..])
 
 data Assumption
   = Id :>: Scheme
@@ -158,13 +158,14 @@ instance CanSubstitute Assumption where
   freevars (id :>: sc)     = freevars sc
 
 --
-lookupScheme                     :: Monad m => Id -> [Assumption] -> m Scheme
-lookupScheme id []                = fail "unbound identifier"
-lookupScheme id ((id' :>: sc):as) = if id == id'
-                            then return sc
-                            else lookupScheme id as
+lookupScheme      :: Monad m => Id -> [Assumption] -> m Scheme
+lookupScheme id [] = fail "unbound identifier"
+lookupScheme id ((id' :>: sc):as) =
+  if id == id'
+  then return sc
+  else lookupScheme id as
 
--- Tracks the current substitution and TyGeneric counter
+-- Tracks the current substitution and TGeneric counter
 data Inference a
   = Inference (Substitution -> Int -> (Substitution,Int,a))
 
@@ -174,7 +175,7 @@ instance Monad Inference where
                                             in let Inference gx = g x
                                                 in gx s' n')
 
-runInference              :: Inference a -> a
+runInference :: Inference a -> a
 runInference (Inference f) = let (s,n,x) = f nullSubstitution 0 in x
 
 getSubstitution :: Inference Substitution
@@ -186,8 +187,8 @@ extendSubstitution a b = do s <- getSubstitution
                             Inference (\s' n -> (u @@ s',n,()))
 
 newVariable        :: Kind -> Inference Type
-newVariable KiStack = Inference (\s n -> (s,n+1,(TyStack (StBottom ("v" ++ show n)))))
-newVariable k       = Inference (\s n -> (s,n+1,(TyVariable ("v" ++ show n) k)))
+newVariable KStack = Inference (\s n -> (s,n+1,(TStack (StBottom ("v" ++ show n)))))
+newVariable k       = Inference (\s n -> (s,n+1,(TVariable ("v" ++ show n) k)))
 
 freshVars              :: Scheme -> Inference (Qualified Type)
 freshVars (ForAll ks t) = do ts <- mapM newVariable ks
@@ -197,8 +198,8 @@ class CanInstantiate t where
   instantiate :: [Type] -> t -> t
 
 instance CanInstantiate Type where
-  instantiate ts (TyGeneric n)       = ts !! n
-  instantiate ts (TyApplication i o) = TyApplication (instantiate ts i) (instantiate ts o)
+  instantiate ts (TGeneric n)       = ts !! n
+  instantiate ts (TApplication i o) = TApplication (instantiate ts i) (instantiate ts o)
   instantiate ts t                   = t
 
 instance CanInstantiate a => CanInstantiate [a] where
@@ -216,11 +217,11 @@ type Infer e t
 tiLiteral             :: Literal -> Inference ([Predicate], Type)
 tiLiteral (LiString _) = return ([], tString)
 tiLiteral (LiChar _)   = return ([], tChar)
-tiLiteral (LiInt _)    = newVariable KiType >>= \v -> return ([MemberOf "Num" v], v)
-tiLiteral (LiFloat _)  = newVariable KiType >>= \v -> return ([MemberOf "Fractional" v], v)
+tiLiteral (LiInt _)    = newVariable KType >>= \v -> return ([MemberOf "Num" v], v)
+tiLiteral (LiFloat _)  = newVariable KType >>= \v -> return ([MemberOf "Fractional" v], v)
 
 tiTerm                      :: Infer Term Type
-tiTerm ce as TmEmpty         = do (TyStack t) <- newVariable KiStack
+tiTerm ce as TmEmpty         = do (TStack t) <- newVariable KStack
                                   return ([], mkFunc t t)
 tiTerm ce as (TmLiteral t)   = do x <- tiLiteral t
                                   return x
