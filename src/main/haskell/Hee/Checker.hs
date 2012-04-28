@@ -6,6 +6,28 @@ import Hee.Types
 import Hee.Substitution
 import Hee.Unification
 
+
+-- Primitive types
+tInt    = TConstructor "int"    KType
+tRatn   = TConstructor "ratn"   KType
+tChar   = TConstructor "char"   KType
+tBool   = TConstructor "bool"   KType
+tString = TConstructor "string" KType
+
+-- Composite types
+tPair   = TConstructor "(,)"  (KConstructor KType (KConstructor KType KType))
+tFunc   = TConstructor "(->)" (KConstructor KStack (KConstructor KStack KType))
+tList   = TConstructor "[]"   (KConstructor KType KType)
+
+mkFunc :: Stack -> Stack -> Type
+mkFunc inp out = TApplication (TApplication tFunc (TStack inp)) (TStack out)
+
+mkList :: Type -> Type
+mkList t = TApplication tList t
+
+mkPair :: Type -> Type -> Type
+mkPair fst snd = TApplication (TApplication tPair fst) snd
+
 -- Return (in-stack-type, out-stack-type) for a given function
 inOut :: Type -> Either String (Stack, Stack)
 inOut f =

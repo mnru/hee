@@ -1,113 +1,76 @@
-module Hee.Types
-  ( Type(..)
-  , tInt
-  , tRatn
-  , tChar
-  , tPair
-  , tList
-  , tFunc
-  , tBool
-  , tString
-  , mkFunc
-  , mkList
-  , mkVar
-  , quote
-  , showType
-  ) where
-
-import Hee.Kinds
-import Hee.Stack
-import Hee.Substitution
-import Hee.Unification
+import Data.List (nub, intersect, union, sort, foldl')
 
 type Id
   = Int
 
--- Types have the kind KType and are distinguished from Stack because
--- they can be used to describe first-class values.
+type Variable
+  = (Id,Kind)
+
+type Substitution
+  = [(Variable, Type)]
+
+---------------------------------------------------------------------
+
 data Type
   = TVariable Id Kind
   | TConstructor String Kind
   | TApplication Type Type
   | TForall Id Kind [Predicate] Type
   | TStack Stack
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data Predicate
   = MemberOf Type
-  deriving (Eq, Show)
+  deriving (Eq)
 
-showId :: Id -> String -> String
-showId id alphabet = (alphabet !! n) : (replicate k '\'')
-  where k = id `div` length alphabet
-        n = id `mod` length alphabet
+data Stack
+  = SEmpty
+  | SBottom Id
+  | SPush Stack Type
+  deriving (Eq)
 
-showVar :: Id -> Kind -> String
-showVar id KStack = showId id "ABCDEFGHIJKLMNOPQRTSUVWXYZ"
-showVar id _      = showId id "abcdefghijklmnopqrtsuvwxyz"
+data Kind
+  = KStack
+  | KType
+  | KConstructor Kind Kind
+  deriving (Eq)
 
-showType :: Type -> String
-showType (TStack s)          = showStack s
-showType (TConstructor id k) = id
-showType (TVariable id k)    = showVar id k
-showType (TForall id k ps t) = "∀" ++ (showVar id k) ++ ". " ++ showType t
-showType (TApplication (TApplication f i) o) | f == tFunc = "(" ++ showType i ++ " → " ++ showType o ++ ")"
-showType (TApplication (TApplication f i) o) | f == tPair = "(" ++ showType i ++ ", " ++ showType o ++ ")"
-showType (TApplication f i)                  | f == tList = "[" ++ showType i ++ "]"
-showType (TApplication f x)                               = "(" ++ showType f ++ " " ++ showType x ++ ")"
+---------------------------------------------------------------------
 
--- Primitive types
-tInt    = TConstructor "int"    KType
-tRatn   = TConstructor "ratn"   KType
-tChar   = TConstructor "char"   KType
-tBool   = TConstructor "bool"   KType
-tString = TConstructor "string" KType
+class HasKind t where
+  kind :: t -> Kind
 
--- Composite types
-tPair   = TConstructor "(,)"  (KConstructor KType (KConstructor KType KType))
-tFunc   = TConstructor "(->)" (KConstructor KStack (KConstructor KStack KType))
-tList   = TConstructor "[]"   (KConstructor KType KType)
+instance HasKind Kind where
+  kind k = k
 
-mkVar :: Id -> Type
-mkVar id = TVariable id KType
-
-mkFunc :: Stack -> Stack -> Type
-mkFunc inp out = TApplication (TApplication tFunc (TStack inp)) (TStack out)
-
-mkList :: Type -> Type
-mkList t = TApplication tList t
-
-mkPair :: Type -> Type -> Type
-mkPair fst snd = TApplication (TApplication tPair fst) snd
+instance HasKind Stack where
+  kind t = KStack
 
 instance HasKind Type where
-  kind (TVariable _ k)     = k
-  kind (TConstructor _ k)  = k
-  kind (TStack _)          = KStack
-  kind (TApplication i _)  = let (KConstructor _ k) = kind i in k
+  kind (TVariable _ k)    = k
+  kind (TConstructor _ k) = k
+  kind (TStack _)         = KStack
+  kind (TApplication i _) = let (KConstructor _ k) = kind i in k
 
-instance CanSubstitute Type where
-  substitute s (TApplication i o) = TApplication (substitute s i) (substitute s o)
-  substitute s (TStack t)         = TStack (substitute s t)
-  substitute s (TVariable id k)   = case lookup (id,k) s of
-                                      Just t  -> t
-                                      Nothing -> TVariable id k
-  substitute s t = t
+instance (HasKind b) => HasKind (a,b) where
+  kind (_,k) = kind k
 
-  freeVars (TApplication i o) = freeVars i `union` freeVars o
-  freeVars (TStack t)         = freeVars t
-  freeVars (TVariable id k)   = [(id,k)]
-  freeVars _                  = []
+---------------------------------------------------------------------
+
+class CanUnify t where
+  match   :: Monad m => t -> t -> m Substitution
+  unify   :: Monad m => t -> t -> m Substitution
+  bindvar :: Monad m => Variable -> t -> m Substitution
 
 instance CanUnify Type where
-  match (TStack s) (TStack s') = match s s'
-  match (TVariable id k) t     = bindvar (id,k) t
-  match (TConstructor id k) (TConstructor id' k')
-    | id == id' && k == k'     = return empty
   match (TApplication i o) (TApplication i' o')
                                = do a <- match i i'
                                     b <- match (substitute a o) (substitute a o')
                                     merge a b
+  match (TConstructor id k) (TConstructor id' k')
+    | id == id' && k == k'     = return empty
+  match (TStack s) (TStack s') = match s s'
+  match (TVariable id k) t     = bindvar (id,k) t
   match _ _                    = fail "merge failed"
 
   unify (TStack s) (TStack s') = unify s s'
@@ -123,6 +86,88 @@ instance CanUnify Type where
 
   bindvar v@(id,k) t
     | t == TVariable id k = return empty
-    | v `elem` freeVars t  = fail "bindvar failed (occurs check)"
-    | k /= kind t          = fail "bindvar failed (kind mismatch)"
-    | otherwise            = return (v +-> t)
+    | v `elem` freeVars t = fail "bindvar failed (occurs check)"
+    | k /= kind t         = fail "bindvar failed (kind mismatch)"
+    | otherwise           = return (v +-> t)
+
+instance CanUnify Stack where
+  match (SBottom id) t = bindvar (id,KStack) t
+  match SEmpty SEmpty  = return empty
+  match (SPush t s) (SPush t' s')
+                       = do a <- match t t'
+                            b <- match (substitute a s) (substitute a s')
+                            merge a b
+
+  unify (SBottom id) t = bindvar (id,KStack) t
+  unify t (SBottom id) = bindvar (id,KStack) t
+  unify SEmpty SEmpty  = return empty
+  unify (SPush t s) (SPush t' s')
+                       = do a <- unify t t'
+                            b <- unify (substitute a s) (substitute a s')
+                            return (a @@ b)
+  unify _ _            = fail "unify failed"
+
+  bindvar v@(id,KStack) t = return (v +-> TStack t)
+  bindvar _ _             = fail "bindvar failed (kind mismatch)"
+
+---------------------------------------------------------------------
+
+class CanSubstitute t where
+  substitute :: Substitution -> t -> t
+  freeVars   :: t -> [Variable]
+
+instance CanSubstitute a => CanSubstitute [a] where
+  substitute s = map (substitute s)
+  freeVars     = nub . concat . map freeVars
+
+instance CanSubstitute Type where
+  substitute s (TApplication i o) = TApplication (substitute s i) (substitute s o)
+  substitute s (TStack t)         = TStack (substitute s t)
+  substitute s (TVariable id k)   = case lookup (id,k) s of
+                                      Just t  -> t
+                                      Nothing -> TVariable id k
+  substitute s t = t
+
+  freeVars (TApplication i o) = freeVars i `union` freeVars o
+  freeVars (TStack t)         = freeVars t
+  freeVars (TVariable id k)   = [(id,k)]
+  freeVars _                  = []
+
+instance CanSubstitute Stack where
+  substitute s (SPush t h)  = SPush (substitute s t) (substitute s h)
+  substitute s (SBottom id) = case lookup (id,KStack) s of
+                                 Just (TStack t) -> t
+                                 Just t  -> SBottom id
+                                 Nothing -> SBottom id
+  substitute s t = t
+
+  freeVars (SBottom id) = [(id,KStack)]
+  freeVars (SPush t h)  = freeVars t `union` freeVars h
+  freeVars _             = []
+
+---------------------------------------------------------------------
+
+-- Composition of substitutions
+merge :: Monad m => Substitution -> Substitution -> m Substitution
+merge a b = if all match (map fst a `intersect` map fst b)
+            then return (a ++ b)
+            else fail "merge failed"
+  where match (id,KStack) = substitute a (SBottom id) == substitute b (SBottom id)
+        match (id,k)      = substitute a (TVariable id k) == substitute b (TVariable id k)
+
+-- Composition of substitutions
+--   substitute (a @@ b) = substitute a . substitute b
+infixr 4 @@
+(@@) :: Substitution -> Substitution -> Substitution
+(@@) a b = [(v, substitute a t) | (v, t) <- b] ++ a
+
+-- Empty subtitution
+empty :: Substitution
+empty = []
+
+-- Singleton substitution
+--   kind preserving iff (kind v) == (kind t)
+(+->) :: Variable -> Type -> Substitution
+(+->) v t = [(v, t)]
+
+---------------------------------------------------------------------

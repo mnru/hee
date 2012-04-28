@@ -1,11 +1,3 @@
-import Hee
-import Hee.Checker
-import Hee.Unification
-import Hee.Substitution
-import Hee.Parser
-import Hee.Types
-import Hee.Kinds
-import System.Environment
 
 typeOf :: String -> Either String String
 typeOf s =
