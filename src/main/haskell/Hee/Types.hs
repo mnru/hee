@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleInstances #-}
+
 import Data.List (nub, intersect, union, sort, foldl')
 
 type Id
@@ -15,7 +17,8 @@ data Type
   = TVariable Id Kind
   | TConstructor String Kind
   | TApplication Type Type
-  | TForall Id Kind [Predicate] Type
+  | TForall Id Kind Type
+  | TQualified [Predicate] Type
   | TStack Stack
   deriving (Eq)
 
@@ -50,6 +53,8 @@ instance HasKind Type where
   kind (TVariable _ k)    = k
   kind (TConstructor _ k) = k
   kind (TStack _)         = KStack
+  kind (TForall _ _ t)    = kind t
+  kind (TQualified _ t)   = kind t
   kind (TApplication i _) = let (KConstructor _ k) = kind i in k
 
 instance (HasKind b) => HasKind (a,b) where
@@ -57,37 +62,56 @@ instance (HasKind b) => HasKind (a,b) where
 
 ---------------------------------------------------------------------
 
+data EUnify
+  = EOccursCheck
+  | EKindMismatch
+  | EExprMismatch
+  deriving (Eq, Show)
+
+instance Monad (Either EUnify) where
+  return x      = Right x
+  Right r >>= f = f r
+  Left l  >>= _ = Left l
+
 class CanUnify t where
-  match   :: Monad m => t -> t -> m Substitution
-  unify   :: Monad m => t -> t -> m Substitution
-  bindvar :: Monad m => Variable -> t -> m Substitution
+  match   :: t -> t -> Either EUnify Substitution
+  unify   :: t -> t -> Either EUnify Substitution
+  bindvar :: Variable -> t -> Either EUnify Substitution
 
 instance CanUnify Type where
-  match (TApplication i o) (TApplication i' o')
-                               = do a <- match i i'
-                                    b <- match (substitute a o) (substitute a o')
-                                    merge a b
-  match (TConstructor id k) (TConstructor id' k')
-    | id == id' && k == k'     = return empty
-  match (TStack s) (TStack s') = match s s'
-  match (TVariable id k) t     = bindvar (id,k) t
-  match _ _                    = fail "merge failed"
-
   unify (TStack s) (TStack s') = unify s s'
   unify (TVariable id k) t     = bindvar (id,k) t
   unify t (TVariable id k)     = bindvar (id,k) t
   unify (TConstructor id k) (TConstructor id' k')
     | id == id' && k == k'     = return empty
+  unify (TQualified ps t) (TQualified ps' t')
+                               = undefined
+  unify (TForall id k t) (TForall id' k' t')
+                               = undefined
   unify (TApplication i o) (TApplication i' o')
                                = do a <- unify i i'
                                     b <- unify (substitute a o) (substitute a o')
                                     return (a @@ b)
-  unify _ _                    = fail "unify failed"
+  unify _ _                    = Left EExprMismatch
+
+  match (TStack s) (TStack s') = match s s'
+  match (TVariable id k) t     = bindvar (id,k) t
+  match (TConstructor id k) (TConstructor id' k')
+    | id == id' && k == k'     = return empty
+  match (TQualified ps t) (TQualified ps' t')
+                               = undefined
+  match (TForall id k t) (TForall id' k' t')
+                               = undefined
+  match (TApplication i o) (TApplication i' o')
+                               = do a <- match i i'
+                                    b <- match (substitute a o) (substitute a o')
+                                    merge a b
+  match _ _                    = Left EExprMismatch
 
   bindvar v@(id,k) t
     | t == TVariable id k = return empty
-    | v `elem` freeVars t = fail "bindvar failed (occurs check)"
-    | k /= kind t         = fail "bindvar failed (kind mismatch)"
+    | v `elem` freeVars t = Left EOccursCheck
+    | k /= kind t         = Left EKindMismatch
     | otherwise           = return (v +-> t)
 
 instance CanUnify Stack where
@@ -105,10 +129,10 @@ instance CanUnify Stack where
                        = do a <- unify t t'
                             b <- unify (substitute a s) (substitute a s')
                             return (a @@ b)
-  unify _ _            = fail "unify failed"
+  unify _ _            = Left EExprMismatch
 
   bindvar v@(id,KStack) t = return (v +-> TStack t)
-  bindvar _ _             = fail "bindvar failed (kind mismatch)"
+  bindvar _ _             = Left EOccursCheck
 
 ---------------------------------------------------------------------
 
@@ -123,14 +147,18 @@ instance CanSubstitute a => CanSubstitute [a] where
 instance CanSubstitute Type where
   substitute s (TApplication i o) = TApplication (substitute s i) (substitute s o)
   substitute s (TStack t)         = TStack (substitute s t)
+  substitute s (TForall id k t)   = undefined
+  substitute s (TQualified ps t)  = undefined
   substitute s (TVariable id k)   = case lookup (id,k) s of
                                       Just t  -> t
                                       Nothing -> TVariable id k
-  substitute s t = t
+  substitute _ t                  = t
 
   freeVars (TApplication i o) = freeVars i `union` freeVars o
   freeVars (TStack t)         = freeVars t
   freeVars (TVariable id k)   = [(id,k)]
+  freeVars (TForall id k t)   = undefined
+  freeVars (TQualified ps t)  = undefined
   freeVars _                  = []
 
 instance CanSubstitute Stack where
@@ -139,20 +167,20 @@ instance CanSubstitute Stack where
                                  Just (TStack t) -> t
                                  Just t  -> SBottom id
                                  Nothing -> SBottom id
-  substitute s t = t
+  substitute _ t            = t
 
   freeVars (SBottom id) = [(id,KStack)]
   freeVars (SPush t h)  = freeVars t `union` freeVars h
-  freeVars _             = []
+  freeVars _            = []
 
 ---------------------------------------------------------------------
 
 -- Composition of substitutions
-merge :: Monad m => Substitution -> Substitution -> m Substitution
+merge :: Substitution -> Substitution -> Either EUnify Substitution
 merge a b = if all match (map fst a `intersect` map fst b)
             then return (a ++ b)
-            else fail "merge failed"
-  where match (id,KStack) = substitute a (SBottom id) == substitute b (SBottom id)
+            else Left EExprMismatch
+  where match (id,KStack) = substitute a (SBottom id)     == substitute b (SBottom id)
         match (id,k)      = substitute a (TVariable id k) == substitute b (TVariable id k)
 
 -- Composition of substitutions
