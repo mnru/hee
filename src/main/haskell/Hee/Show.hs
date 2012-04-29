@@ -1,3 +1,13 @@
+module Hee.Show
+  ( showKind
+  , showStack
+  , showType
+  , showVar
+  , showId
+  ) where
+
+import Hee.Types
+
 instance Show Kind where
   show = showKind
 
@@ -28,10 +38,10 @@ showType :: Type -> String
 showType (TStack s)          = showStack s
 showType (TConstructor id k) = id
 showType (TVariable id k)    = showVar id k
-showType (TForall id k ps t) = "∀" ++ (showVar id k) ++ ". " ++ showType t
-showType (TApplication (TApplication f i) o) | f == tFunc = "(" ++ showType i ++ " → " ++ showType o ++ ")"
-showType (TApplication (TApplication f i) o) | f == tPair = "(" ++ showType i ++ ", " ++ showType o ++ ")"
-showType (TApplication f i)                  | f == tList = "[" ++ showType i ++ "]"
+showType (TForall id k t)    = "forall " ++ (showVar id k) ++ ". " ++ showType t
+--showType (TApplication (TApplication f i) o) | f == tFunc = "(" ++ showType i ++ " → " ++ showType o ++ ")"
+--showType (TApplication (TApplication f i) o) | f == tPair = "(" ++ showType i ++ ", " ++ showType o ++ ")"
+--showType (TApplication f i)                  | f == tList = "[" ++ showType i ++ "]"
 showType (TApplication f x)                               = "(" ++ showType f ++ " " ++ showType x ++ ")"
 
 showStack :: Stack -> String

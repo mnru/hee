@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-import Data.List (nub, intersect, union, sort, foldl')
+module Hee.Types
+  where
+
+import Data.List (nub, intersect, union, sort, foldl', (\\))
 
 type Id
   = Int
@@ -147,8 +150,8 @@ instance CanSubstitute a => CanSubstitute [a] where
 instance CanSubstitute Type where
   substitute s (TApplication i o) = TApplication (substitute s i) (substitute s o)
   substitute s (TStack t)         = TStack (substitute s t)
-  substitute s (TForall id k t)   = undefined
-  substitute s (TQualified ps t)  = undefined
+  substitute s (TForall id k t)   = TForall id k (substitute (filter (\(v,_) -> (id,k) /= v) s) t)
+  substitute s (TQualified ps t)  = TQualified ps (substitute s t)
   substitute s (TVariable id k)   = case lookup (id,k) s of
                                       Just t  -> t
                                       Nothing -> TVariable id k
@@ -157,8 +160,8 @@ instance CanSubstitute Type where
   freeVars (TApplication i o) = freeVars i `union` freeVars o
   freeVars (TStack t)         = freeVars t
   freeVars (TVariable id k)   = [(id,k)]
-  freeVars (TForall id k t)   = undefined
-  freeVars (TQualified ps t)  = undefined
+  freeVars (TForall id k t)   = freeVars t \\ [(id,k)]
+  freeVars (TQualified ps t)  = freeVars t
   freeVars _                  = []
 
 instance CanSubstitute Stack where
