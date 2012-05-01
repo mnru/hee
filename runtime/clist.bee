@@ -1,0 +1,60 @@
+module prelude.clist
+-- C[a] = forall b. S b (S a b -> S b) -> S b
+  foldr
+  null
+  cons
+  null?
+  cons?
+  map
+  append
+  reverse
+  length
+  sum
+  product
+
+-- foldr : S C[a] b (S a b -> S b) -> S b
+: foldr
+  dig apply ;
+
+-- S -> S C[a]
+: null
+  [pop] ;
+
+-- S C[a] a -> S C[a]
+: cons
+  quote swap
+  quote [[bury] dip bury dup [foldr] dip apply]
+  compose compose ;
+
+-- S C[a] -> S boolean
+: null?
+  true [pop pop false] foldr ;
+
+-- S C[a] -> S boolean
+: cons?
+  false [pop pop true] foldr ;
+
+-- S C[a] (S a -> S b) -> S C[b]
+: map
+  [swap] swap compose [cons] compose null swap foldr ;
+
+-- S C[a] C[a] -> S C[a]
+: append
+  [swap cons] foldr
+
+-- S C[a] -> S C[a]
+: reverse
+  null [swap null swap cons append] foldr ;
+
+-- S C[a] -> S num
+: length
+  0 [swap pop 1 +] foldr ;
+
+-- S C[num] -> num
+: sum
+  0 [+] foldr ;
+
+-- S C[num] -> num
+: product
+  1 [*] foldr ;
+
