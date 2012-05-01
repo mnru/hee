@@ -22,20 +22,6 @@ import qualified Data.List (foldr, map, reverse, length, sort)
 
 import Test.QuickCheck
 
-instance Show a => Show (SList a) where
-  show as = let head = foldr as (\a tail -> ',':(show a) ++ tail) "]"
-             in case head of
-                  (',':tail) -> '[':tail
-                  _          -> '[':head
-
-instance Eq a => Eq (SList a) where
-  (==) as bs = lengthMatch && elemsMatch
-    where
-      lengthMatch = length as == length bs
-      elemsMatch  = fst $ foldr as
-                            (\a (ok, bs) -> (ok && a == head bs, tail bs))
-                            (True, reverse bs)
-
 instance Arbitrary a => Arbitrary (SList a) where
   arbitrary = do xs <- arbitrary
                  return $ fromList xs
@@ -43,15 +29,46 @@ instance Arbitrary a => Arbitrary (SList a) where
 pfromList   = \xs -> (toList . fromList) xs == xs
 ptoList     = \xs -> (fromList . toList) xs == xs
 plength     = \xs -> length xs                  == Data.List.length (toList xs)
-pmap        = \xs -> toList (map (+ 1) xs)      == Data.List.map (+ 1) (toList xs)
 preverse    = \xs -> toList (reverse xs)        == Data.List.reverse (toList xs)
 psort       = \xs -> toList (sort xs)           == Data.List.sort (toList xs)
+pshow       = \xs -> show xs                    == show (toList xs)
 pappend     = \xs ys -> toList (xs `append` ys) == toList xs ++ toList ys
+peq         = \xs ys -> (xs == ys)              == (toList xs == toList ys)
+pmap        = \f xs  -> toList (map f xs)       == Data.List.map f (toList xs)
+pfoldr      = \f xs a -> foldr xs f a           == Data.List.foldr f a (toList xs)
+
+main = do qc (pfromList   :: [Int]      -> Bool)
+          qc (ptoList     :: SList Char -> Bool)
+          qc (plength     :: SList Bool -> Bool)
+          qc (preverse    :: SList Char -> Bool)
+          qc (psort       :: SList Int  -> Bool)
+          qc (pshow       :: SList Int  -> Bool)
+          qc (pappend     :: SList Int  -> SList Int  -> Bool)
+          qc (peq         :: SList Char -> SList Char -> Bool)
+          qc (pmap (* 2)  :: SList Int  -> Bool)
+          qc (pfoldr (*)  :: SList Int  -> Int -> Bool)
+  where qc = quickCheck
 
 ---------------------------------------------------------------------------
 
 -- Encode lists as their own foldr operation
 newtype SList a = SList { foldr :: forall b. (a -> b -> b) -> b -> b }
+
+-- Make them printable in the GHCi console
+instance Show a => Show (SList a) where
+  show as = let head = foldr as (\a tail -> ',':(show a) ++ tail) "]"
+             in case head of
+                  (',':tail) -> '[':tail
+                  _          -> '[':head
+
+-- Define equality
+instance Eq a => Eq (SList a) where
+  (==) as bs = lengthMatch && elemsMatch
+    where
+      lengthMatch = length as == length bs
+      elemsMatch  = fst $ foldr as
+                            (\a (ok, bs) -> (ok && a == head bs, tail bs))
+                            (True, reverse bs)
 
 -- Folding an empty list just returns the original seed value
 null :: SList a
@@ -101,15 +118,15 @@ length as = foldr as (\a sum -> sum + 1) 0
 
 sort :: Ord a => SList a -> SList a
 sort as = foldr as (\a sorted -> insert sorted a) null
-
--- Inserts an element into a pre-sorted list,
---   returning (as, as') where as' contains the new element x
---   and all elements in as <= all elements in as'
-insert :: Ord a => SList a -> a -> SList a
-insert as x = snd $ foldr as (\a (rest, restE) ->
-                           let rest'  = cons a rest
-                               restE' = if x <= a
-                                        then cons x (cons a rest)
-                                        else cons a restE
-                            in (rest', restE'))
-                       (null, cons x null)
+  where
+    -- Inserts an element into a pre-sorted list,
+    --   returning (as, as') where as' contains the new element x
+    --   and all elements in as <= all elements in as'
+    insert :: Ord a => SList a -> a -> SList a
+    insert as x = snd $ foldr as (\a (rest, restE) ->
+                               let rest'  = cons a rest
+                                   restE' = if x <= a
+                                            then cons x (cons a rest)
+                                            else cons a restE
+                                in (rest', restE'))
+                           (null, cons x null)
