@@ -20,10 +20,24 @@ data Type
   = TVariable Id Kind
   | TConstructor String Kind
   | TApplication Type Type
-  | TForall Id Kind Type
+  | TForall Id Kind Bound Type
   | TQualified [Predicate] Type
   | TStack Stack
   deriving (Eq)
+
+-- List of identity functions:
+--   ∀(β≽∀α.α→α).[β] ⊑ [∀α.α→α]
+--   ∀(β≽∀α.α→α).[β] ⊑ ∀α.[α→α]
+--
+-- (⊑) ⊆ (⊧) ⊆ (≡)
+--   ≡, equivalence relation
+--   ⊧, abstraction relation
+--   ⊑, instance relation
+
+data Bound
+  = Rigid     -- ∀(α=υ).τ means τ where α is as polymorphic as υ
+  | Flexible  -- ∀(α≽υ).τ means τ where α is equal to or is an instance of υ
+  | Bottom    -- ∀α.τ     means τ where α is equal to or is an instance of ⊥
 
 data Predicate
   = MemberOf Type
@@ -56,7 +70,7 @@ instance HasKind Type where
   kind (TVariable _ k)    = k
   kind (TConstructor _ k) = k
   kind (TStack _)         = KStack
-  kind (TForall _ _ t)    = kind t
+  kind (TForall _ _ _ t)  = kind t
   kind (TQualified _ t)   = kind t
   kind (TApplication i _) = let (KConstructor _ k) = kind i in k
 
@@ -89,7 +103,7 @@ instance CanUnify Type where
     | id == id' && k == k'     = return empty
   unify (TQualified ps t) (TQualified ps' t')
                                = undefined
-  unify (TForall id k t) (TForall id' k' t')
+  unify (TForall id k b t) (TForall id' k' b' t')
                                = undefined
   unify (TApplication i o) (TApplication i' o')
                                = do a <- unify i i'
@@ -103,7 +117,7 @@ instance CanUnify Type where
     | id == id' && k == k'     = return empty
   match (TQualified ps t) (TQualified ps' t')
                                = undefined
-  match (TForall id k t) (TForall id' k' t')
+  match (TForall id k b t) (TForall id' k' b' t')
                                = undefined
   match (TApplication i o) (TApplication i' o')
                                = do a <- match i i'
@@ -150,7 +164,7 @@ instance CanSubstitute a => CanSubstitute [a] where
 instance CanSubstitute Type where
   substitute s (TApplication i o) = TApplication (substitute s i) (substitute s o)
   substitute s (TStack t)         = TStack (substitute s t)
-  substitute s (TForall id k t)   = TForall id k (substitute (filter (\(v,_) -> (id,k) /= v) s) t)
+  substitute s (TForall id k b t) = TForall id k b (substitute (filter (\(v,_) -> (id,k) /= v) s) t)
   substitute s (TQualified ps t)  = TQualified ps (substitute s t)
   substitute s (TVariable id k)   = case lookup (id,k) s of
                                       Just t  -> t
@@ -160,7 +174,7 @@ instance CanSubstitute Type where
   freeVars (TApplication i o) = freeVars i `union` freeVars o
   freeVars (TStack t)         = freeVars t
   freeVars (TVariable id k)   = [(id,k)]
-  freeVars (TForall id k t)   = freeVars t \\ [(id,k)]
+  freeVars (TForall id k b t) = freeVars t \\ [(id,k)]
   freeVars (TQualified ps t)  = freeVars t
   freeVars _                  = []
 

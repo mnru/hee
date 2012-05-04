@@ -9,6 +9,7 @@ module Hee.Terms
 import Data.ByteString       as B
 import Data.ByteString.Char8 as C
 import Data.Word
+import Hee.Types (Type)
 
 type Id
   = String
@@ -25,6 +26,7 @@ data Term
   | TmEmpty
   | TmName Id
   | TmLiteral Literal
+  | TmAnnotate Type Term
   deriving (Eq, Show)
 
 data Literal
