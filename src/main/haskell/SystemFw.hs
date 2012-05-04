@@ -22,7 +22,6 @@ module Hee.SystemFw
   , list
   , null
   , cons
-  , empty
   , unbindvar
   ) where
 
@@ -73,9 +72,6 @@ instance HasKind Kind where
 type Variable       = (Id, Kind)
 type Substitution a = [(Variable, a)]
 
-empty :: Substitution a
-empty = []
-
 unbindvar :: Variable -> Substitution a -> Substitution a
 unbindvar v s = filter (\(w, _) -> w /= v) s
 
@@ -100,16 +96,53 @@ instance CanSubstitute Type where
 
 ---------------------------------------------------------------------------
 
+instance Monad (Either a) where
+  return x        = Right x
+  (Left x) >>= f  = Left x
+  (Right x) >>= f = f x
+
 data EUnify t
   = EOccursCheck t t
   | EKindMismatch t t
-  | EExprMismatch t t
+  | ETypeMismatch t t
   deriving (Eq, Show)
 
 class CanUnify t where
-  unify   :: t -> t -> Either (EUnify t) (Substitution t)
-  match   :: t -> t -> Either (EUnify t) (Substitution t)
-  bindvar :: Variable -> t -> Either (EUnify t) (Substitution t)
+  unify       :: t -> t -> Either (EUnify t) (Substitution t)
+  instantiate :: t -> t -> Either (EUnify t) (Substitution t)
+  bindvar     :: Variable -> t -> Either (EUnify t) (Substitution t)
+
+instance CanUnify Type where
+  unify (TVariable a k) t = bindvar (a, k) t
+  unify t (TVariable a k) = bindvar (a, k) t
+  unify (TOperator t u) (TOperator t' u') = undefined
+  unify (TApplication t u) (TApplication t' v') = undefined
+  unify (TAbstraction a k t) (TAbstraction b k' t') = undefined
+  unify (TQuantification a k t) (TQuantification b k' t') = undefined
+  unify t u = Left (ETypeMismatch t u)
+
+  instantiate (TVariable a k) t = bindvar (a, k) t
+  instantiate (TOperator t u) (TOperator t' u')
+    | kind t /= kind t' = Left (EKindMismatch t t')
+    | kind u /= kind u' = Left (EKindMismatch u u')
+    | otherwise         = instantiate t t' >>= \s -> instantiate (substitute s u) (substitute s u')
+  instantiate (TApplication t u) (TApplication t' u')
+    | kind t /= kind t' = Left (EKindMismatch t t')
+    | kind u /= kind u' = Left (EKindMismatch u u')
+    | otherwise         = instantiate t t' >>= \s -> instantiate (substitute s u) (substitute s u')
+  instantiate u@(TAbstraction a k t) u'@(TAbstraction b k' t')
+    | kind k /= kind k' = Left (EKindMismatch u u')
+    | otherwise         = instantiate t t'
+  instantiate u@(TQuantification a k t) u'@(TQuantification b k' t')
+    | kind k /= kind k' = Left (EKindMismatch u u')
+    | otherwise         = undefined
+  instantiate t u = Left (ETypeMismatch t u)
+
+  bindvar v@(a, k) t
+    | v `elem` freevars t = Left (EOccursCheck (TVariable a k) t)
+    | k /= kind t         = Left (EKindMismatch (TVariable a k) t)
+    | t == TVariable a k  = return []
+    | otherwise           = return [(v, t)]
 
 ---------------------------------------------------------------------------
 
