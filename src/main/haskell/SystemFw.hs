@@ -4,6 +4,9 @@ module Hee.SystemFw
   ( Term(..)
   , Type(..)
   , Kind(..)
+  , EUnify(..)
+  , CanSubstitute
+  , CanUnify
   , bool
   , tru
   , fls
@@ -19,6 +22,8 @@ module Hee.SystemFw
   , list
   , null
   , cons
+  , empty
+  , unbindvar
   ) where
 
 import Prelude hiding (succ, fst, snd, sum, null)
@@ -68,14 +73,20 @@ instance HasKind Kind where
 type Variable       = (Id, Kind)
 type Substitution a = [(Variable, a)]
 
+empty :: Substitution a
+empty = []
+
+unbindvar :: Variable -> Substitution a -> Substitution a
+unbindvar v s = filter (\(w, _) -> w /= v) s
+
 class CanSubstitute t where
-  substitute :: Substitution a -> t -> t
+  substitute :: Substitution t -> t -> t
   freevars   :: t -> [Variable]
 
 instance CanSubstitute Type where
   substitute s (TOperator t u)          = TOperator (substitute s t) (substitute s u)
-  substitute s (TQuantification a k t)  = TQuantification a k (substitute (s \\ [(a, k)]) t)
-  substitute s (TAbstraction a k t)     = TAbstraction a k (substitute (s \\ [(a, k)]) t)
+  substitute s (TQuantification a k t)  = TQuantification a k (substitute (unbindvar (a, k) s) t)
+  substitute s (TAbstraction a k t)     = TAbstraction a k (substitute (unbindvar (a, k) s) t)
   substitute s (TApplication t u)       = TApplication (substitute s t) (substitute s u)
   substitute s (TVariable a k)          = case lookup (a, k) s of
                                             Just t  -> t
@@ -86,6 +97,19 @@ instance CanSubstitute Type where
   freevars (TQuantification a k t) = freevars t \\ [(a, k)]
   freevars (TAbstraction a k t)    = freevars t \\ [(a, k)]
   freevars (TApplication t u)      = freevars t `union` freevars u
+
+---------------------------------------------------------------------------
+
+data EUnify t
+  = EOccursCheck t t
+  | EKindMismatch t t
+  | EExprMismatch t t
+  deriving (Eq, Show)
+
+class CanUnify t where
+  unify   :: t -> t -> Either (EUnify t) (Substitution t)
+  match   :: t -> t -> Either (EUnify t) (Substitution t)
+  bindvar :: Variable -> t -> Either (EUnify t) (Substitution t)
 
 ---------------------------------------------------------------------------
 
