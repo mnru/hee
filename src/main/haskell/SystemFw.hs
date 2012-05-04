@@ -22,6 +22,7 @@ module Hee.SystemFw
   ) where
 
 import Prelude hiding (succ, fst, snd, sum, null)
+import Data.List (union, (\\))
 
 type Id
   = Int
@@ -61,6 +62,30 @@ instance HasKind Type where
 
 instance HasKind Kind where
   kind = id
+
+---------------------------------------------------------------------------
+
+type Variable       = (Id, Kind)
+type Substitution a = [(Variable, a)]
+
+class CanSubstitute t where
+  substitute :: Substitution a -> t -> t
+  freevars   :: t -> [Variable]
+
+instance CanSubstitute Type where
+  substitute s (TOperator t u)          = TOperator (substitute s t) (substitute s u)
+  substitute s (TQuantification a k t)  = TQuantification a k (substitute (s \\ [(a, k)]) t)
+  substitute s (TAbstraction a k t)     = TAbstraction a k (substitute (s \\ [(a, k)]) t)
+  substitute s (TApplication t u)       = TApplication (substitute s t) (substitute s u)
+  substitute s (TVariable a k)          = case lookup (a, k) s of
+                                            Just t  -> t
+                                            Nothing -> TVariable a k
+
+  freevars (TVariable a k)         = [(a, k)]
+  freevars (TOperator t u)         = freevars t `union` freevars u
+  freevars (TQuantification a k t) = freevars t \\ [(a, k)]
+  freevars (TAbstraction a k t)    = freevars t \\ [(a, k)]
+  freevars (TApplication t u)      = freevars t `union` freevars u
 
 ---------------------------------------------------------------------------
 
