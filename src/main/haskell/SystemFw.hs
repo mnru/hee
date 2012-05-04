@@ -23,13 +23,14 @@ module Hee.SystemFw
   , null
   , cons
   , unbindvar
+  , normalize
   ) where
 
-import Prelude hiding (succ, fst, snd, sum, null)
-import Data.List (union, (\\))
+import Data.List (union, (\\), foldl')
+import Control.Applicative ((<|>), (<*), (*>), (<$>))
+import Prelude hiding (succ, fst, snd, sum, null, takeWhile)
 
-type Id
-  = Int
+type Id = Int
 
 data Term
   = TmVariable Id                 -- x,y         term variable
@@ -112,6 +113,26 @@ class CanUnify t where
   instantiate :: t -> t -> Either (EUnify t) (Substitution t)
   bindvar     :: Variable -> t -> Either (EUnify t) (Substitution t)
 
+-- * We can re-order directly nested quantifiers
+--     (∀α. (∀β. τ)) ≡ (∀β. (∀α. τ))
+--
+-- * We can't re-order indirectly nested quantifiers
+--     (∀α. (∀β. τ)) ≡ (∀β. (∀α. τ))
+--
+-- * We can lift quantifiers on the right of an arrow
+--     (∀α. τ → (∀β. τ)) ≡ (∀α. (∀β. τ → τ))
+--
+-- * We can't lift quantifiers on the left of an arrow
+--     (∀α. (∀β. τ) → τ) ≢ (∀α. (∀β. τ → τ))
+normalize (TQuantification b k t@(TQuantification a k' t'))
+  | b > a                         = normalize (TQuantification a k' (TQuantification b k t'))
+normalize (TQuantification a k t) = TQuantification a k (normalize t)
+normalize (TApplication t u)      = TApplication (normalize t) (normalize u)
+normalize (TAbstraction a k t)    = TAbstraction a k (normalize t)
+normalize (TOperator t (TQuantification a k u)) = normalize (TQuantification a k (TOperator t u))
+normalize (TOperator t u)         = TOperator (normalize t) (normalize u)
+normalize (TVariable a k)         = TVariable a k
+
 instance CanUnify Type where
   unify (TVariable a k) t = bindvar (a, k) t
   unify t (TVariable a k) = bindvar (a, k) t
@@ -191,6 +212,10 @@ instance Show Type where
 
 instance Show Kind where
   show = showKind 0
+
+---------------------------------------------------------------------------
+
+
 
 ---------------------------------------------------------------------------
 
