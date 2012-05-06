@@ -70,6 +70,35 @@ instance HasKind Kind where
 
 ---------------------------------------------------------------------------
 
+-- * Can re-order directly nested quantifiers
+--     (∀α:★. (∀β:★. τ)) ≡ (∀β:★. (∀α:★. τ))
+--
+-- * Can't re-order indirectly nested quantifiers
+--     (∀α:★. υ (∀β:★. τ)) ≢  (∀β:★. υ (∀α:★. τ))
+--
+-- * Can lift quantifiers on the right of an arrow
+--     (∀α:★. τ → (∀β:★. υ)) ≡ (∀α:★. (∀β:★. τ → υ))
+--
+-- * Can't lift quantifiers on the left of an arrow
+--     (∀α:★. (∀β:★. τ) → τ) ≢ (∀α:★. (∀β:★. τ → τ))
+
+normalize (TVariable a k)         = TVariable a k
+normalize (TApplication t u)      = TApplication (normalize t) (normalize u)
+normalize (TAbstraction a k t)    = TAbstraction a k (normalize t)
+normalize (TOperator t u)         =
+  case normalize u of
+    (TQuantification b k u') -> normalize (TQuantification b k (TOperator (normalize t) u'))
+    u'                       -> TOperator (normalize t) u'
+normalize (TQuantification a k t) =
+  case normalize t of
+    (TQuantification b k' t') ->
+      if b < a
+      then normalize (TQuantification b k' (TQuantification a k  t'))
+      else TQuantification a k  (TQuantification b k' t')
+    t' -> TQuantification a k t'
+
+---------------------------------------------------------------------------
+
 type Variable       = (Id, Kind)
 type Substitution a = [(Variable, a)]
 
@@ -97,10 +126,10 @@ instance CanSubstitute Type where
 
 ---------------------------------------------------------------------------
 
-instance Monad (Either a) where
-  return x        = Right x
-  (Left x) >>= f  = Left x
-  (Right x) >>= f = f x
+--instance Monad (Either a) where
+--  return x        = Right x
+--  (Left x) >>= f  = Left x
+--  (Right x) >>= f = f x
 
 data EUnify t
   = EOccursCheck t t
@@ -112,26 +141,6 @@ class CanUnify t where
   unify       :: t -> t -> Either (EUnify t) (Substitution t)
   instantiate :: t -> t -> Either (EUnify t) (Substitution t)
   bindvar     :: Variable -> t -> Either (EUnify t) (Substitution t)
-
--- * We can re-order directly nested quantifiers
---     (∀α. (∀β. τ)) ≡ (∀β. (∀α. τ))
---
--- * We can't re-order indirectly nested quantifiers
---     (∀α. (∀β. τ)) ≡ (∀β. (∀α. τ))
---
--- * We can lift quantifiers on the right of an arrow
---     (∀α. τ → (∀β. τ)) ≡ (∀α. (∀β. τ → τ))
---
--- * We can't lift quantifiers on the left of an arrow
---     (∀α. (∀β. τ) → τ) ≢ (∀α. (∀β. τ → τ))
-normalize (TQuantification b k t@(TQuantification a k' t'))
-  | b > a                         = normalize (TQuantification a k' (TQuantification b k t'))
-normalize (TQuantification a k t) = TQuantification a k (normalize t)
-normalize (TApplication t u)      = TApplication (normalize t) (normalize u)
-normalize (TAbstraction a k t)    = TAbstraction a k (normalize t)
-normalize (TOperator t (TQuantification a k u)) = normalize (TQuantification a k (TOperator t u))
-normalize (TOperator t u)         = TOperator (normalize t) (normalize u)
-normalize (TVariable a k)         = TVariable a k
 
 instance CanUnify Type where
   unify (TVariable a k) t = bindvar (a, k) t
