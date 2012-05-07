@@ -257,18 +257,17 @@ parseLAMBDA = discard (string "Λ" <|> string "/\\" <|> string "LAMBDA ")
 parseKind :: Parser Kind
 parseKind =
   do skipSpace
-     (    parseParen parseKind
-      <|> parseKType
-      <|> parseKOperator)
+     (    parseKOperator
+      <|> parseParen parseKind
+      <|> parseKType)
   where
     parseKType :: Parser Kind
-    parseKType =
-      do char '★' <|> char '*'
-         return $ KType
+    parseKType = (char '★' <|> char '*') *> return KType
 
     parseKOperator :: Parser Kind
     parseKOperator =
-      do k <- parseKind -- TODO: left factor
+      do k <- (parseParen parseKind) <|> parseKType
+         _ <- skipSpace
          _ <- parseArrow
          l <- parseKind
          return $ KOperator k l
