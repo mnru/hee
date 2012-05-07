@@ -268,7 +268,7 @@ parseKind =
 
     parseKOperator :: Parser Kind
     parseKOperator =
-      do k <- parseKind
+      do k <- parseKind -- TODO: left factor
          _ <- parseArrow
          l <- parseKind
          return $ KOperator k l
@@ -317,7 +317,7 @@ parseType s =
     -- τ υ
     parseTApplication :: TVariableScope -> Parser Type
     parseTApplication s =
-      do t <- parseType s
+      do t <- parseType s -- TODO: left factor
          u <- parseType s
          return $ TApplication t u
 
@@ -342,8 +342,8 @@ parseType s =
     -- τ → υ
     parseTOperator :: TVariableScope -> Parser Type
     parseTOperator s =
-      do parseArrow
-         t <- parseType s
+      do t <- parseType s -- TODO: left factor
+         _ <- parseArrow
          u <- parseType s
          return $ TOperator t u
 
@@ -374,7 +374,7 @@ parseTerm s =
     -- f e
     parseTmApplication :: TVariableScope -> Parser Term
     parseTmApplication s =
-      do f <- parseTerm s
+      do f <- parseTerm s -- TODO: left factor
          e <- parseTerm s
          return $ TmApplication f e
 
@@ -399,7 +399,7 @@ parseTerm s =
     -- f τ
     parseTmUApplication :: TVariableScope -> Parser Term
     parseTmUApplication s =
-      do f <- parseTerm s
+      do f <- parseTerm s -- TODO: left factor
          t <- parseType s
          return $ TmUApplication f t
 
