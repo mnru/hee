@@ -1,4 +1,4 @@
-{-# LANGUAGE UnicodeSyntax #-}
+{-# LANGUAGE UnicodeSyntax, OverloadedStrings #-}
 
 module Hee.SystemFw
   ( Term(..)
@@ -24,9 +24,16 @@ module Hee.SystemFw
   , cons
   , unbindvar
   , normalize
+  , parseKind
+  , parseType
+  , parseTerm
   ) where
 
-import Data.List (union, (\\), foldl')
+import qualified Data.Text as T
+import Data.Text (Text)
+import Data.Attoparsec.Text
+
+import Data.List (union, (\\), foldl', elemIndex)
 import Control.Applicative ((<|>), (<*), (*>), (<$>))
 import Prelude hiding (succ, fst, snd, sum, null, takeWhile)
 
@@ -146,7 +153,7 @@ instance CanUnify Type where
   unify (TVariable a k) t = bindvar (a, k) t
   unify t (TVariable a k) = bindvar (a, k) t
   unify (TOperator t u) (TOperator t' u') = undefined
-  unify (TApplication t u) (TApplication t' v') = undefined
+  unify (TApplication t u) (TApplication t' u') = undefined
   unify (TAbstraction a k t) (TAbstraction b k' t') = undefined
   unify (TQuantification a k t) (TQuantification b k' t') = undefined
   unify t u = Left (ETypeMismatch t u)
@@ -224,7 +231,177 @@ instance Show Kind where
 
 ---------------------------------------------------------------------------
 
+discard :: Parser a -> Parser ()
+discard p = do p; return ()
 
+parseParen :: Parser a -> Parser a
+parseParen inner =
+  do char '('
+     e <- inner
+     skipSpace
+     char ')'
+     return e
+
+parseArrow :: Parser ()
+parseArrow  = discard (string "→" <|> string "->")
+
+parseForall :: Parser ()
+parseForall = discard (string "∀" <|> string "forall ")
+
+parseLambda :: Parser ()
+parseLambda = discard (string "λ" <|> string ",\\" <|> string "lambda ")
+
+parseLAMBDA :: Parser ()
+parseLAMBDA = discard (string "Λ" <|> string "/\\" <|> string "LAMBDA ")
+
+parseKind :: Parser Kind
+parseKind =
+  do skipSpace
+     (    parseParen parseKind
+      <|> parseKType
+      <|> parseKOperator)
+  where
+    parseKType :: Parser Kind
+    parseKType =
+      do char '★' <|> char '*'
+         return $ KType
+
+    parseKOperator :: Parser Kind
+    parseKOperator =
+      do k <- parseKind
+         _ <- parseArrow
+         l <- parseKind
+         return $ KOperator k l
+
+type TVariableScope = [Variable]
+
+extendScope :: TVariableScope -> Variable -> TVariableScope
+extendScope vs v = v:vs
+
+parseTBinding :: TVariableScope -> Parser Id
+parseTBinding s =
+  do a <- satisfy (inClass alphabet)
+     n <- T.length `fmap` takeWhile (== '\'')
+     let (Just m) = elemIndex a alphabet
+     return $ m + n * length alphabet
+  where
+    alphabet = "αβγδεζηθικλμνξοπρςστυφχψω"
+
+parseType :: TVariableScope -> Parser Type
+parseType s =
+  do skipSpace
+     (    parseParen (parseType s)
+      <|> parseTAbstraction s
+      <|> parseTQuantification s
+      <|> parseTVariable s
+      <|> parseTApplication s
+      <|> parseTOperator s)
+  where
+    -- α,β
+    parseTVariable :: TVariableScope -> Parser Type
+    parseTVariable s =
+      do a <- satisfy (inClass alphabet)
+         n <- T.length `fmap` takeWhile (== '\'')
+         let (Just m) = elemIndex a alphabet
+         let id       = m + n * length alphabet
+         return $ TVariable id (searchScope s id)
+      where
+        alphabet = "αβγδεζηθικλμνξοπρςστυφχψω"
+
+        searchScope :: TVariableScope -> Id -> Kind
+        searchScope ((b, k):vs) a
+          | b == a       = k
+          | otherwise    = searchScope vs a
+        searchScope [] a = error "type variable is not bound"
+
+    -- τ υ
+    parseTApplication :: TVariableScope -> Parser Type
+    parseTApplication s =
+      do t <- parseType s
+         u <- parseType s
+         return $ TApplication t u
+
+    -- λα:κ. τ
+    parseTAbstraction :: TVariableScope -> Parser Type
+    parseTAbstraction s =
+      do parseLambda
+         a <- parseTBinding s; char ':'
+         k <- parseKind;       char '.'
+         t <- parseType $ extendScope s (a, k)
+         return $ TAbstraction a k t
+
+    -- ∀α:κ. τ
+    parseTQuantification :: TVariableScope -> Parser Type
+    parseTQuantification s =
+      do parseForall
+         a <- parseTBinding s; char ':'
+         k <- parseKind;       char '.'
+         t <- parseType $ extendScope s (a, k)
+         return $ TQuantification a k t
+
+    -- τ → υ
+    parseTOperator :: TVariableScope -> Parser Type
+    parseTOperator s =
+      do parseArrow
+         t <- parseType s
+         u <- parseType s
+         return $ TOperator t u
+
+parseTerm :: TVariableScope -> Parser Term
+parseTerm s =
+  do skipSpace
+     (    parseParen (parseTerm s)
+      <|> parseTmAbstraction s
+      <|> parseTmUAbstraction s
+      <|> parseTmVariable s
+      <|> parseTmApplication s
+      <|> parseTmUApplication s)
+  where
+    -- x,y
+    parseTmBinding :: TVariableScope -> Parser Id
+    parseTmBinding s =
+      do x <- satisfy (inClass alphabet)
+         n <- takeWhile (== '\'')
+         let (Just m) = elemIndex x alphabet
+         let       id = m + (length alphabet) * (T.length n)
+         return $ id
+      where alphabet = "abcdefghijklmnopqrstuvwxyz"
+
+    -- x,y
+    parseTmVariable :: TVariableScope -> Parser Term
+    parseTmVariable s = parseTmBinding s >>= return . TmVariable
+
+    -- f e
+    parseTmApplication :: TVariableScope -> Parser Term
+    parseTmApplication s =
+      do f <- parseTerm s
+         e <- parseTerm s
+         return $ TmApplication f e
+
+    -- λx:τ. e
+    parseTmAbstraction :: TVariableScope -> Parser Term
+    parseTmAbstraction s =
+      do parseLambda
+         x <- parseTmBinding s; char ':'
+         t <- parseType s;      char '.'
+         e <- parseTerm s
+         return $ TmAbstraction x t e
+
+    -- Λα:κ. e
+    parseTmUAbstraction :: TVariableScope -> Parser Term
+    parseTmUAbstraction s =
+      do parseLAMBDA
+         a <- parseTBinding s; char ':'
+         k <- parseKind;       char '.'
+         e <- parseTerm $ extendScope s (a, k)
+         return $ TmUAbstraction a k e
+
+    -- f τ
+    parseTmUApplication :: TVariableScope -> Parser Term
+    parseTmUApplication s =
+      do f <- parseTerm s
+         t <- parseType s
+         return $ TmUApplication f t
 
 ---------------------------------------------------------------------------
 
