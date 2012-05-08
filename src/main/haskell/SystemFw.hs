@@ -37,6 +37,8 @@ import Data.List (union, (\\), foldl', elemIndex)
 import Control.Applicative ((<|>), (<*), (*>), (<$>))
 import Prelude hiding (succ, fst, snd, sum, null, takeWhile)
 
+trace n msg = id
+
 type Id = Int
 
 data Term
@@ -45,7 +47,7 @@ data Term
   | TmAbstraction Id Type Term    -- λx:τ. e     term abstraction
   | TmUAbstraction Id Kind Term   -- Λα:κ. e     universal abstraction
   | TmUApplication Term Type      -- f τ         universal application
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data Type
   = TVariable Id Kind             -- α,β         type variable
@@ -53,12 +55,12 @@ data Type
   | TAbstraction Id Kind Type     -- λα:κ. τ     type abstraction
   | TQuantification Id Kind Type  -- ∀α:κ. τ     type quantification
   | TOperator Type Type           -- τ → υ       type of operator on terms
-  deriving (Eq)
+  deriving (Eq, Show)
 
 data Kind
   = KType                         -- ★           kind of manifest type
   | KOperator Kind Kind           -- κ → ι       kind of operator on types
-  deriving (Eq)
+  deriving (Eq, Show)
 
 ---------------------------------------------------------------------------
 
@@ -220,14 +222,14 @@ showKind 0 (KOperator k l)  = showKind 1 k ++ " → " ++ showKind 1 l
 showKind n (KType)          = "★"
 showKind n (KOperator k l)  = "(" ++ showKind (n+1) k ++ " → " ++ showKind (n+1) l ++ ")"
 
-instance Show Term where
-  show = showTerm 0
-
-instance Show Type where
-  show = showType 0
-
-instance Show Kind where
-  show = showKind 0
+--instance Show Term where
+--  show = showTerm 0
+--
+--instance Show Type where
+--  show = showType 0
+--
+--instance Show Kind where
+--  show = showKind 0
 
 ---------------------------------------------------------------------------
 
@@ -242,34 +244,34 @@ parseParen inner =
      char ')'
      return e
 
-parseArrow :: Parser ()
-parseArrow  = discard (string "→" <|> string "->")
+parseArrow :: Int -> Parser ()
+parseArrow  n = trace n "parseArrow" $ discard (string "→" <|> string "->")
 
-parseForall :: Parser ()
-parseForall = discard (string "∀" <|> string "forall ")
+parseForall :: Int -> Parser ()
+parseForall n = trace n "parseForall" $ discard (string "∀" <|> string "forall ")
 
-parseLambda :: Parser ()
-parseLambda = discard (string "λ" <|> string ",\\" <|> string "lambda ")
+parseLambda :: Int -> Parser ()
+parseLambda n = trace n "parseLambda" $ discard (string "λ" <|> string ",\\" <|> string "lambda ")
 
-parseLAMBDA :: Parser ()
-parseLAMBDA = discard (string "Λ" <|> string "/\\" <|> string "LAMBDA ")
+parseLAMBDA :: Int -> Parser ()
+parseLAMBDA n = trace n "parseLAMBDA" $ discard (string "Λ" <|> string "/\\" <|> string "LAMBDA ")
 
-parseKind :: Parser Kind
-parseKind =
+parseKind :: Int -> Parser Kind
+parseKind n =
   do skipSpace
-     (    parseKOperator
-      <|> parseParen parseKind
-      <|> parseKType)
+     (    parseKOperator (n+1)
+      <|> parseParen (parseKind (n+1))
+      <|> parseKType (n+1))
   where
-    parseKType :: Parser Kind
-    parseKType = (char '★' <|> char '*') *> return KType
+    parseKType :: Int -> Parser Kind
+    parseKType n = (char '★' <|> char '*') *> return KType
 
-    parseKOperator :: Parser Kind
-    parseKOperator =
-      do k <- (parseParen parseKind) <|> parseKType
+    parseKOperator :: Int -> Parser Kind
+    parseKOperator n =
+      do k <- (parseParen (parseKind (n+1))) <|> parseKType (n+1)
          _ <- skipSpace
-         _ <- parseArrow
-         l <- parseKind
+         _ <- parseArrow (n+1)
+         l <- parseKind (n+1)
          return $ KOperator k l
 
 type TVariableScope = [Variable]
@@ -277,8 +279,8 @@ type TVariableScope = [Variable]
 extendScope :: TVariableScope -> Variable -> TVariableScope
 extendScope vs v = v:vs
 
-parseTBinding :: TVariableScope -> Parser Id
-parseTBinding s =
+parseTBinding :: Int -> TVariableScope -> Parser Id
+parseTBinding n s =
   do a <- satisfy (inClass alphabet)
      n <- T.length `fmap` takeWhile (== '\'')
      let (Just m) = elemIndex a alphabet
@@ -286,19 +288,19 @@ parseTBinding s =
   where
     alphabet = "αβγδεζηθικλμνξοπρςστυφχψω"
 
-parseType :: TVariableScope -> Parser Type
-parseType s =
+parseType :: Int -> TVariableScope -> Parser Type
+parseType n s =
   do skipSpace
-     (    parseParen (parseType s)
-      <|> parseTAbstraction s
-      <|> parseTQuantification s
-      <|> parseTVariable s
-      <|> parseTApplication s
-      <|> parseTOperator s)
+     (    (trace n "parseType.parseParen" $ parseParen (parseType (n+1) s))
+      <|> (trace n "parseType.parseTQuantification" $ parseTQuantification (n+1) s)
+      <|> (trace n "parseType.parseTApplication" $ parseTApplication (n+1) s)
+      <|> (trace n "parseType.parseTAbstraction" $ parseTAbstraction (n+1) s)
+      <|> (trace n "parseType.parseTOperator" $ parseTOperator (n+1) s)
+      <|> (trace n "parseType.parseTVariable" $ parseTVariable (n+1) s))
   where
     -- α,β
-    parseTVariable :: TVariableScope -> Parser Type
-    parseTVariable s =
+    parseTVariable :: Int -> TVariableScope -> Parser Type
+    parseTVariable n s =
       do a <- satisfy (inClass alphabet)
          n <- T.length `fmap` takeWhile (== '\'')
          let (Just m) = elemIndex a alphabet
@@ -314,37 +316,48 @@ parseType s =
         searchScope [] a = error "type variable is not bound"
 
     -- τ υ
-    parseTApplication :: TVariableScope -> Parser Type
-    parseTApplication s =
-      do t <- parseType s -- TODO: left factor
-         u <- parseType s
-         return $ TApplication t u
+    parseTApplication :: Int -> TVariableScope -> Parser Type
+    parseTApplication n s =
+      do t <- (    (trace n "parseTApplication.parseParen" $ parseParen (parseType (n+1) s))
+               <|> (trace n "parseTApplication.parseTAbstraction" $ parseTAbstraction (n+1) s)
+               <|> (trace n "parseTApplication.parseTQuantification" $ parseTQuantification (n+1) s)
+            -- TODO: factor out indirect left recursion
+            -- <|> (trace n "parseTApplication.parseTOperator" $ parseTOperator (n+1) s)
+               <|> (trace n "parseTApplication.parseTVariable" $ parseTVariable (n+1) s))
+         u <- trace n ("parseTApplication.parseType " ++ show t) $ parseType (n+1) s
+         trace n "parseTApplication.success" $ return $ TApplication t u
 
     -- λα:κ. τ
-    parseTAbstraction :: TVariableScope -> Parser Type
-    parseTAbstraction s =
-      do parseLambda
-         a <- parseTBinding s; char ':'
-         k <- parseKind;       char '.'
-         t <- parseType $ extendScope s (a, k)
-         return $ TAbstraction a k t
+    parseTAbstraction :: Int -> TVariableScope -> Parser Type
+    parseTAbstraction n s =
+      do parseLambda (n+1)
+         a <- parseTBinding (n+1) s; char ':'
+         k <- parseKind (n+1);       char '.'
+         t <- parseType (n+1) $ extendScope s (a, k)
+         trace n "parseTAbstraction.success" $ return $ TAbstraction a k t
 
     -- ∀α:κ. τ
-    parseTQuantification :: TVariableScope -> Parser Type
-    parseTQuantification s =
-      do parseForall
-         a <- parseTBinding s; char ':'
-         k <- parseKind;       char '.'
-         t <- parseType $ extendScope s (a, k)
-         return $ TQuantification a k t
+    parseTQuantification :: Int -> TVariableScope -> Parser Type
+    parseTQuantification n s =
+      do trace n "parseTQuantification.parseForall" $ parseForall (n+1)
+         a <- trace n "parseTQuantification.parseTBinding" $ parseTBinding (n+1) s; char ':'
+         k <- trace n "parseTQuantification.parseKind" $ parseKind (n+1);       char '.'
+         t <- trace n "parseTQuantification.parseType" $ parseType (n+1) $ extendScope s (a, k)
+         trace (n+1) "parseTQuantification.success" $ return $ TQuantification a k t
 
     -- τ → υ
-    parseTOperator :: TVariableScope -> Parser Type
-    parseTOperator s =
-      do t <- parseType s -- TODO: left factor
-         _ <- parseArrow
-         u <- parseType s
-         return $ TOperator t u
+    parseTOperator :: Int -> TVariableScope -> Parser Type
+    parseTOperator n s =
+      do t <- (    (trace n "parseTOperator.parseParen" $ parseParen (parseType (n+1) s))
+               <|> (trace n "parseTOperator.parseTAbstraction" $ parseTAbstraction (n+1) s)
+               <|> (trace n "parseTOperator.parseTQuantification" $ parseTQuantification (n+1) s)
+            -- TODO: factor out indirect left recursion
+            -- <|> (trace n "parseTOperator.parseTApplication" $ parseTApplication (n+1) s)
+               <|> (trace n "parseTOperator.parseTVariable" $ parseTVariable (n+1) s))
+         _ <- skipSpace
+         _ <- parseArrow (n+1)
+         u <- parseType (n+1) s
+         trace n "parseTOperator.success" $ return $ TOperator t u
 
 parseTerm :: TVariableScope -> Parser Term
 parseTerm s =
@@ -380,18 +393,18 @@ parseTerm s =
     -- λx:τ. e
     parseTmAbstraction :: TVariableScope -> Parser Term
     parseTmAbstraction s =
-      do parseLambda
+      do parseLambda 0
          x <- parseTmBinding s; char ':'
-         t <- parseType s;      char '.'
+         t <- parseType 0 s;      char '.'
          e <- parseTerm s
          return $ TmAbstraction x t e
 
     -- Λα:κ. e
     parseTmUAbstraction :: TVariableScope -> Parser Term
     parseTmUAbstraction s =
-      do parseLAMBDA
-         a <- parseTBinding s; char ':'
-         k <- parseKind;       char '.'
+      do parseLAMBDA 0
+         a <- parseTBinding 0 s; char ':'
+         k <- parseKind 0;       char '.'
          e <- parseTerm $ extendScope s (a, k)
          return $ TmUAbstraction a k e
 
@@ -399,55 +412,55 @@ parseTerm s =
     parseTmUApplication :: TVariableScope -> Parser Term
     parseTmUApplication s =
       do f <- parseTerm s -- TODO: left factor
-         t <- parseType s
+         t <- parseType 0 s
          return $ TmUApplication f t
 
 ---------------------------------------------------------------------------
 
 -- Bool : ★
--- Bool = ∀α. α → α → α
+-- Bool = ∀α:★. α → α → α
 bool  = TQuantification 0 KType $
           TOperator (TVariable 0 KType) $
             TOperator (TVariable 0 KType) (TVariable 0 KType)
 
---tru : ∀α. α → α → α
---tru = Λα:*. λt:α. λf:α. t
+--tru : ∀α:★. α → α → α
+--tru = Λα:★. λt:α. λf:α. t
 tru = TmUAbstraction 0 KType $
          TmAbstraction 19 (TVariable 0 KType) $
            TmAbstraction 5 (TVariable 0 KType) $
              TmVariable 19
 
---fls : ∀α. α → α → α
---fls = Λα:*. λt:α. λf:α. f
+--fls : ∀α:★. α → α → α
+--fls = Λα:★. λt:α. λf:α. f
 fls = TmUAbstraction 0 KType $
         TmAbstraction 19 (TVariable 0 KType) $
           TmAbstraction 5 (TVariable 0 KType) $
             TmVariable 5
 
 -- Nat : ★
--- Nat = ∀α. α → (α → α) → α
+-- Nat = ∀α:★. α → (α → α) → α
 nat = TQuantification 0 KType $
         TOperator (TVariable 0 KType) $
           TOperator
             (TOperator (TVariable 0 KType) (TVariable 0 KType))
             (TVariable 0 KType)
 
--- zero : ∀α. α → (α → α) → α
--- zero = Λα:*. λa:α. λf:α → α. a
+-- zero : ∀α:★. α → (α → α) → α
+-- zero = Λα:★. λa:α. λf:α → α. a
 zero =  TmUAbstraction 0 KType $
           TmAbstraction 0 (TVariable 0 KType) $
             TmAbstraction 5 (TOperator (TVariable 0 KType) (TVariable 0 KType)) $
               TmVariable 0
 
--- succ : ∀α. α → (α → α) → α
--- succ = Λα:*. λa:α. λf:α → α. f a
+-- succ : ∀α:★. α → (α → α) → α
+-- succ = Λα:★. λa:α. λf:α → α. f a
 succ =  TmUAbstraction 0 KType $
           TmAbstraction 0 (TVariable 0 KType) $
             TmAbstraction 5 (TOperator (TVariable 0 KType) (TVariable 0 KType)) $
               TmApplication (TmVariable 5) (TmVariable 0)
 
 -- Product : ★ → (★ → ★)
--- Product = λα:*. λβ:*. ∀R:*. (α → β → R) → R
+-- Product = λα:★. λβ:★. ∀ρ:★. (α → β → ρ) → ρ
 pair =  TAbstraction 0 KType $
           TAbstraction 1 KType $
             TQuantification 15 KType $
@@ -456,8 +469,8 @@ pair =  TAbstraction 0 KType $
                   TOperator (TVariable 1 KType) (TVariable 15 KType))
                 (TVariable 15 KType)
 
--- fst : ∀α:*. ∀β:*. ∀R:*. (α → β → R) → α
--- fst = Λα:*. Λβ:*. λp:(∀R:*. α → β → R). p α (λa:α. λb:β. a)
+-- fst : ∀α:★. ∀β:★. ∀ρ:★. (α → β → ρ) → α
+-- fst = Λα:★. Λβ:★. λp:(∀ρ:★. α → β → ρ). p α (λa:α. λb:β. a)
 fst = TmUAbstraction 0 KType $
         TmUAbstraction 1 KType $
           TmAbstraction 15
@@ -470,8 +483,8 @@ fst = TmUAbstraction 0 KType $
                 (TmAbstraction 1 (TVariable 1 KType)
                   (TmVariable 0))))
 
--- snd : ∀α:*. ∀β:*. ∀R:*. (α → β → R) → β 
--- snd = Λα:*. Λβ:*. λp:(∀R:*. α → β → R). p β (λa:α. λb:β. b)
+-- snd : ∀α:★. ∀β:★. ∀ρ:★. (α → β → ρ) → β 
+-- snd = Λα:★. Λβ:★. λp:(∀ρ:★. α → β → ρ). p β (λa:α. λb:β. b)
 snd = TmUAbstraction 0 KType $
         TmUAbstraction 1 KType $
           TmAbstraction 15
@@ -485,7 +498,7 @@ snd = TmUAbstraction 0 KType $
                   (TmVariable 1))))
 
 -- Sum : ★ → (★ → ★)
--- Sum = λα:*. λβ:*. ∀R:*. (α → R) → (β → R) → R
+-- Sum = λα:★. λβ:★. ∀ρ:★. (α → ρ) → (β → ρ) → ρ
 sum = TAbstraction 0 KType $
         TAbstraction 1 KType $
           TQuantification 2 KType $
@@ -493,8 +506,8 @@ sum = TAbstraction 0 KType $
               TOperator (TOperator (TVariable 1 KType) (TVariable 2 KType)) $
                 TVariable 2 KType
 
--- inL : ∀α:*. ∀β:*. α → (∀R:*. (α → R) → (β → R) → R) → α
--- inL = Λα:*. Λβ:*. ∀R:*. λa:α. λleft:(α → R). λright:(β → R). left a
+-- inL : ∀α:★. ∀β:★. α → (∀ρ:★. (α → ρ) → (β → ρ) → ρ) → α
+-- inL = Λα:★. Λβ:★. ∀ρ:★. λa:α. λleft:(α → ρ). λright:(β → ρ). left a
 inl = TmUAbstraction 0 KType $
         TmUAbstraction 1 KType $
           TmUAbstraction 2 KType $
@@ -503,8 +516,8 @@ inl = TmUAbstraction 0 KType $
                 TmAbstraction 2 (TOperator (TVariable 1 KType) (TVariable 2 KType)) $
                   TmApplication (TmVariable 1) (TmVariable 0)
 
--- inL : ∀α:*. ∀β:*. α → (∀R:*. (α → R) → (β → R) → R) → β
--- inR = Λα:*. Λβ:*. ∀R:*. λv:β. λleft:(α → R). λright:(β → R). right a
+-- inL : ∀α:★. ∀β:★. α → (∀ρ:★. (α → ρ) → (β → ρ) → ρ) → β
+-- inR = Λα:★. Λβ:★. ∀ρ:★. λv:β. λleft:(α → ρ). λright:(β → ρ). right a
 inr = TmUAbstraction 0 KType $
         TmUAbstraction 1 KType $
           TmUAbstraction 2 KType $
@@ -514,7 +527,7 @@ inr = TmUAbstraction 0 KType $
                   TmApplication (TmVariable 2) (TmVariable 0)
 
 -- List : ★ → ★
--- List = λα:*. ∀R:*. (α → R → R) → R → R
+-- List = λα:★. ∀ρ:★. (α → ρ → ρ) → ρ → ρ
 list =  TAbstraction 0 KType $
           TQuantification 1 KType $
             TOperator
@@ -523,8 +536,8 @@ list =  TAbstraction 0 KType $
                 (TOperator (TVariable 1 KType) (TVariable 1 KType)))
               (TOperator (TVariable 1 KType) (TVariable 1 KType))
 
--- null : ∀α:*. ∀R:*. (α → R → R) → R → R
--- null = Λα:*. ∀R:*. λf:(α → R → R). λr:R. r
+-- null : ∀α:★. ∀ρ:★. (α → ρ → ρ) → ρ → ρ
+-- null = Λα:★. ∀ρ:★. λf:(α → ρ → ρ). λr:ρ. r
 null =  TmUAbstraction 0 KType $
           TmUAbstraction 1 KType $
             TmAbstraction 0
@@ -533,8 +546,8 @@ null =  TmUAbstraction 0 KType $
               (TmAbstraction 1 (TVariable 1 KType) $
                 TmVariable 1)
 
--- cons : ∀α:*. ∀R:*. α → ((α → R → R) → R → R) → ((α → R → R) → R → R)
--- cons = Λα:*. ∀R:*. λhead:α. λtail:(α → R → R) → R → R. λf:(α → R → R). λr:R. f head (tail f r)
+-- cons : ∀α:★. ∀ρ:★. α → ((α → ρ → ρ) → ρ → ρ) → ((α → ρ → ρ) → ρ → ρ)
+-- cons = Λα:★. ∀ρ:★. λh:α. λt:(α → ρ → ρ) → ρ → ρ. λf:(α → ρ → ρ). λr:ρ. f h (t f r)
 cons =  TmUAbstraction 0 KType $
           TmUAbstraction 1 KType $
             TmAbstraction 0 (TVariable 0 KType) $
