@@ -24,9 +24,9 @@ module Hee.SystemFw
   , cons
   , unbindvar
   , normalize
-  , parseKind
-  , parseType
-  , parseTerm
+  , readKind
+  , readType
+  , readTerm
   ) where
 
 import qualified Data.Text as T
@@ -34,10 +34,8 @@ import Data.Text (Text)
 import Data.Attoparsec.Text
 
 import Data.List (union, (\\), foldl', elemIndex)
-import Control.Applicative ((<|>), (<*), (*>), (<$>))
-import Prelude hiding (succ, fst, snd, sum, null, takeWhile)
-
-trace n msg = id
+import Control.Applicative (pure, (<|>), (<*), (*>), (<$>))
+import Prelude hiding (succ, fst, snd, sum, null, takeWhile, readParen)
 
 type Id = Int
 
@@ -47,7 +45,7 @@ data Term
   | TmAbstraction Id Type Term    -- λx:τ. e     term abstraction
   | TmUAbstraction Id Kind Term   -- Λα:κ. e     universal abstraction
   | TmUApplication Term Type      -- f τ         universal application
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data Type
   = TVariable Id Kind             -- α,β         type variable
@@ -55,12 +53,12 @@ data Type
   | TAbstraction Id Kind Type     -- λα:κ. τ     type abstraction
   | TQuantification Id Kind Type  -- ∀α:κ. τ     type quantification
   | TOperator Type Type           -- τ → υ       type of operator on terms
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data Kind
   = KType                         -- ★           kind of manifest type
   | KOperator Kind Kind           -- κ → ι       kind of operator on types
-  deriving (Eq, Show)
+  deriving (Eq)
 
 ---------------------------------------------------------------------------
 
@@ -222,198 +220,189 @@ showKind 0 (KOperator k l)  = showKind 1 k ++ " → " ++ showKind 1 l
 showKind n (KType)          = "★"
 showKind n (KOperator k l)  = "(" ++ showKind (n+1) k ++ " → " ++ showKind (n+1) l ++ ")"
 
---instance Show Term where
---  show = showTerm 0
---
---instance Show Type where
---  show = showType 0
---
---instance Show Kind where
---  show = showKind 0
+instance Show Term where
+  show = showTerm 0
+
+instance Show Type where
+  show = showType 0
+
+instance Show Kind where
+  show = showKind 0
 
 ---------------------------------------------------------------------------
 
-discard :: Parser a -> Parser ()
-discard p = do p; return ()
+readArrow  = pure () <* (string "→" <|> string "->")
+readForall = pure () <* (string "∀" <|> string "forall ")
+readLambda = pure () <* (string "λ" <|> string ",\\" <|> string "lambda ")
+readLAMBDA = pure () <* (string "Λ" <|> string "/\\" <|> string "LAMBDA ")
 
-parseParen :: Parser a -> Parser a
-parseParen inner =
-  do char '('
-     e <- inner
-     skipSpace
-     char ')'
+readParen :: Parser a -> Parser a
+readParen inside =
+  do _ <- char '('
+     e <- inside
+     _ <- skipSpace
+     _ <- char ')'
      return e
 
-parseArrow :: Int -> Parser ()
-parseArrow  n = trace n "parseArrow" $ discard (string "→" <|> string "->")
-
-parseForall :: Int -> Parser ()
-parseForall n = trace n "parseForall" $ discard (string "∀" <|> string "forall ")
-
-parseLambda :: Int -> Parser ()
-parseLambda n = trace n "parseLambda" $ discard (string "λ" <|> string ",\\" <|> string "lambda ")
-
-parseLAMBDA :: Int -> Parser ()
-parseLAMBDA n = trace n "parseLAMBDA" $ discard (string "Λ" <|> string "/\\" <|> string "LAMBDA ")
-
-parseKind :: Int -> Parser Kind
-parseKind n =
-  do skipSpace
-     (    parseKOperator (n+1)
-      <|> parseParen (parseKind (n+1))
-      <|> parseKType (n+1))
-  where
-    parseKType :: Int -> Parser Kind
-    parseKType n = (char '★' <|> char '*') *> return KType
-
-    parseKOperator :: Int -> Parser Kind
-    parseKOperator n =
-      do k <- (parseParen (parseKind (n+1))) <|> parseKType (n+1)
-         _ <- skipSpace
-         _ <- parseArrow (n+1)
-         l <- parseKind (n+1)
-         return $ KOperator k l
-
+-- TODO: Describe
 type TVariableScope = [Variable]
 
-extendScope :: TVariableScope -> Variable -> TVariableScope
-extendScope vs v = v:vs
-
-parseTBinding :: Int -> TVariableScope -> Parser Id
-parseTBinding n s =
+readTId :: TVariableScope -> Parser Id
+readTId s =
   do a <- satisfy (inClass alphabet)
-     n <- T.length `fmap` takeWhile (== '\'')
+     n <- countiks
      let (Just m) = elemIndex a alphabet
      return $ m + n * length alphabet
   where
     alphabet = "αβγδεζηθικλμνξοπρςστυφχψω"
+    countiks = T.length `fmap` takeWhile (== '\'')
 
-parseType :: Int -> TVariableScope -> Parser Type
-parseType n s =
-  do skipSpace
-     (    (trace n "parseType.parseParen" $ parseParen (parseType (n+1) s))
-      <|> (trace n "parseType.parseTQuantification" $ parseTQuantification (n+1) s)
-      <|> (trace n "parseType.parseTApplication" $ parseTApplication (n+1) s)
-      <|> (trace n "parseType.parseTAbstraction" $ parseTAbstraction (n+1) s)
-      <|> (trace n "parseType.parseTOperator" $ parseTOperator (n+1) s)
-      <|> (trace n "parseType.parseTVariable" $ parseTVariable (n+1) s))
+readKind :: Parser Kind
+readKind = skipSpace *> (readParen readKind <|> readKType) >>= readKind'
   where
+    readKType :: Parser Kind
+    readKType = (char '★' <|> char '*') *> pure KType
+
+    readKind' :: Kind -> Parser Kind
+    readKind' k = readKOperator k <|> pure k
+
+    readKOperator :: Kind -> Parser Kind
+    readKOperator k =
+      do _ <- skipSpace
+         _ <- string "→" <|> string "->"
+         _ <- skipSpace
+         l <- readKind
+         return $ KOperator k l
+
+readType :: TVariableScope -> Parser Type
+readType s =
+  do _ <- skipSpace
+     t <- readParen (readType s)
+      <|> readTQuantification s
+      <|> readTAbstraction s
+      <|> readTVariable s
+     readType' s t
+  where
+    readType' :: TVariableScope -> Type -> Parser Type
+    readType' s t = readTOperator s t
+                <|> readTApplication s t
+                <|> pure t
+
     -- α,β
-    parseTVariable :: Int -> TVariableScope -> Parser Type
-    parseTVariable n s =
+    readTVariable :: TVariableScope -> Parser Type
+    readTVariable s =
       do a <- satisfy (inClass alphabet)
-         n <- T.length `fmap` takeWhile (== '\'')
+         n <- countiks
          let (Just m) = elemIndex a alphabet
          let id       = m + n * length alphabet
-         return $ TVariable id (searchScope s id)
+         return $ TVariable id (lookupKind s id)
       where
         alphabet = "αβγδεζηθικλμνξοπρςστυφχψω"
+        countiks = T.length `fmap` takeWhile (== '\'')
 
-        searchScope :: TVariableScope -> Id -> Kind
-        searchScope ((b, k):vs) a
-          | b == a       = k
-          | otherwise    = searchScope vs a
-        searchScope [] a = error "type variable is not bound"
+        -- TODO: strict, error evaluation
+        lookupKind :: TVariableScope -> Id -> Kind
+        lookupKind ((b, k):vs) a
+          | b == a      = k
+          | otherwise   = lookupKind vs a
+        lookupKind [] a = error $ "type variable " ++ showTId a ++ " is not bound"
 
     -- τ υ
-    parseTApplication :: Int -> TVariableScope -> Parser Type
-    parseTApplication n s =
-      do t <- (    (trace n "parseTApplication.parseParen" $ parseParen (parseType (n+1) s))
-               <|> (trace n "parseTApplication.parseTAbstraction" $ parseTAbstraction (n+1) s)
-               <|> (trace n "parseTApplication.parseTQuantification" $ parseTQuantification (n+1) s)
-            -- TODO: factor out indirect left recursion
-            -- <|> (trace n "parseTApplication.parseTOperator" $ parseTOperator (n+1) s)
-               <|> (trace n "parseTApplication.parseTVariable" $ parseTVariable (n+1) s))
-         u <- trace n ("parseTApplication.parseType " ++ show t) $ parseType (n+1) s
-         trace n "parseTApplication.success" $ return $ TApplication t u
+    readTApplication :: TVariableScope -> Type -> Parser Type
+    readTApplication s t = TApplication t <$> readType s
 
     -- λα:κ. τ
-    parseTAbstraction :: Int -> TVariableScope -> Parser Type
-    parseTAbstraction n s =
-      do parseLambda (n+1)
-         a <- parseTBinding (n+1) s; char ':'
-         k <- parseKind (n+1);       char '.'
-         t <- parseType (n+1) $ extendScope s (a, k)
-         trace n "parseTAbstraction.success" $ return $ TAbstraction a k t
+    readTAbstraction :: TVariableScope -> Parser Type
+    readTAbstraction s =
+      do readLambda
+         a <- readTId s <* char ':'
+         k <- readKind  <* char '.'
+         t <- readType ((a, k):s)
+         return $ TAbstraction a k t
 
     -- ∀α:κ. τ
-    parseTQuantification :: Int -> TVariableScope -> Parser Type
-    parseTQuantification n s =
-      do trace n "parseTQuantification.parseForall" $ parseForall (n+1)
-         a <- trace n "parseTQuantification.parseTBinding" $ parseTBinding (n+1) s; char ':'
-         k <- trace n "parseTQuantification.parseKind" $ parseKind (n+1);       char '.'
-         t <- trace n "parseTQuantification.parseType" $ parseType (n+1) $ extendScope s (a, k)
-         trace (n+1) "parseTQuantification.success" $ return $ TQuantification a k t
+    readTQuantification :: TVariableScope -> Parser Type
+    readTQuantification s =
+      do readForall
+         a <- readTId s <* char ':'
+         k <- readKind  <* char '.'
+         t <- readType ((a, k):s)
+         return $ TQuantification a k t
 
     -- τ → υ
-    parseTOperator :: Int -> TVariableScope -> Parser Type
-    parseTOperator n s =
-      do t <- (    (trace n "parseTOperator.parseParen" $ parseParen (parseType (n+1) s))
-               <|> (trace n "parseTOperator.parseTAbstraction" $ parseTAbstraction (n+1) s)
-               <|> (trace n "parseTOperator.parseTQuantification" $ parseTQuantification (n+1) s)
-            -- TODO: factor out indirect left recursion
-            -- <|> (trace n "parseTOperator.parseTApplication" $ parseTApplication (n+1) s)
-               <|> (trace n "parseTOperator.parseTVariable" $ parseTVariable (n+1) s))
-         _ <- skipSpace
-         _ <- parseArrow (n+1)
-         u <- parseType (n+1) s
-         trace n "parseTOperator.success" $ return $ TOperator t u
+    readTOperator :: TVariableScope -> Type -> Parser Type
+    readTOperator s t =
+      do _ <- skipSpace
+         _ <- readArrow
+         u <- readType s
+         return $ TOperator t u
 
-parseTerm :: TVariableScope -> Parser Term
-parseTerm s =
-  do skipSpace
-     (    parseParen (parseTerm s)
-      <|> parseTmAbstraction s
-      <|> parseTmUAbstraction s
-      <|> parseTmVariable s
-      <|> parseTmApplication s
-      <|> parseTmUApplication s)
+readTerm :: TVariableScope -> Parser Term
+readTerm s =
+  do _ <- skipSpace
+     e <- readParen (readTerm s)
+      <|> readTmAbstraction s
+      <|> readTmUAbstraction s
+      <|> readTmVariable
+     readTerm' s e
   where
-    -- x,y
-    parseTmBinding :: TVariableScope -> Parser Id
-    parseTmBinding s =
-      do x <- satisfy (inClass alphabet)
-         n <- takeWhile (== '\'')
-         let (Just m) = elemIndex x alphabet
-         let       id = m + (length alphabet) * (T.length n)
-         return $ id
-      where alphabet = "abcdefghijklmnopqrstuvwxyz"
+    readTerm' :: TVariableScope -> Term -> Parser Term
+    readTerm' s e = readTmApplication s e
+                <|> readTmUApplication s e
+                <|> pure e
 
     -- x,y
-    parseTmVariable :: TVariableScope -> Parser Term
-    parseTmVariable s = parseTmBinding s >>= return . TmVariable
+    readTmId :: Parser Id
+    readTmId =
+      do x <- satisfy (inClass alphabet)
+         n <- countiks
+         let (Just m) = elemIndex x alphabet
+         return $ m + n * (length alphabet)
+      where
+        alphabet = "abcdefghijklmnopqrstuvwxyz"
+        countiks = T.length `fmap` takeWhile (== '\'')
+
+    -- x,y
+    readTmVariable :: Parser Term
+    readTmVariable = TmVariable <$> readTmId
 
     -- f e
-    parseTmApplication :: TVariableScope -> Parser Term
-    parseTmApplication s =
-      do f <- parseTerm s -- TODO: left factor
-         e <- parseTerm s
-         return $ TmApplication f e
+    readTmApplication :: TVariableScope -> Term -> Parser Term
+    readTmApplication s f = TmApplication f <$> readTerm s
 
     -- λx:τ. e
-    parseTmAbstraction :: TVariableScope -> Parser Term
-    parseTmAbstraction s =
-      do parseLambda 0
-         x <- parseTmBinding s; char ':'
-         t <- parseType 0 s;      char '.'
-         e <- parseTerm s
+    readTmAbstraction :: TVariableScope -> Parser Term
+    readTmAbstraction s =
+      do readLambda
+         x <- readTmId   <* char ':'
+         t <- readType s <* char '.'
+         e <- readTerm s
          return $ TmAbstraction x t e
 
     -- Λα:κ. e
-    parseTmUAbstraction :: TVariableScope -> Parser Term
-    parseTmUAbstraction s =
-      do parseLAMBDA 0
-         a <- parseTBinding 0 s; char ':'
-         k <- parseKind 0;       char '.'
-         e <- parseTerm $ extendScope s (a, k)
+    readTmUAbstraction :: TVariableScope -> Parser Term
+    readTmUAbstraction s =
+      do readLAMBDA
+         a <- readTId s <* char ':'
+         k <- readKind  <* char '.'
+         e <- readTerm ((a, k):s)
          return $ TmUAbstraction a k e
 
     -- f τ
-    parseTmUApplication :: TVariableScope -> Parser Term
-    parseTmUApplication s =
-      do f <- parseTerm s -- TODO: left factor
-         t <- parseType 0 s
-         return $ TmUApplication f t
+    readTmUApplication :: TVariableScope -> Term -> Parser Term
+    readTmUApplication s f = TmUApplication f <$> readType s
+
+--instance Read Term where
+--  readsPrec _ s = (either error id) . eitherResult . parser
+--    where parser = readTerm [] <* skipSpace <* endOfInput
+--
+--instance Read Type where
+--  readsPrec _ s = (either error id) . eitherResult . parser
+--    where parser = readType [] <* skipSpace <* endOfInput
+--
+--instance Read Kind where
+--  readsPrec _ s = (either error id) . eitherResult . parser
+--    where parser = readKind <* skipSpace <* endOfInput
 
 ---------------------------------------------------------------------------
 
