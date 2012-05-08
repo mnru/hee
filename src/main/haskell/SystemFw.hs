@@ -37,6 +37,9 @@ import Data.List (union, (\\), foldl', elemIndex)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<$>))
 import Prelude hiding (succ, fst, snd, sum, null, takeWhile, readParen)
 
+-- Data Types
+---------------------------------------------------------------------------
+
 type Id = Int
 
 data Term
@@ -60,6 +63,7 @@ data Kind
   | KOperator Kind Kind           -- κ → ι       kind of operator on types
   deriving (Eq)
 
+-- Kindable
 ---------------------------------------------------------------------------
 
 class HasKind a where
@@ -75,19 +79,20 @@ instance HasKind Type where
 instance HasKind Kind where
   kind = id
 
+-- Normalization
 ---------------------------------------------------------------------------
 
--- * Can re-order directly nested quantifiers
---     (∀α:★. (∀β:★. τ)) ≡ (∀β:★. (∀α:★. τ))
+-- Can re-order directly nested quantifiers
+--   (∀α:★. (∀β:★. τ)) ≡ (∀β:★. (∀α:★. τ))
 --
--- * Can't re-order indirectly nested quantifiers
---     (∀α:★. υ (∀β:★. τ)) ≢  (∀β:★. υ (∀α:★. τ))
+-- Can't re-order indirectly nested quantifiers
+--   (∀α:★. υ (∀β:★. τ)) ≢  (∀β:★. υ (∀α:★. τ))
 --
--- * Can lift quantifiers on the right of an arrow
---     (∀α:★. τ → (∀β:★. υ)) ≡ (∀α:★. (∀β:★. τ → υ))
+-- Can lift quantifiers on the right of an arrow
+--   (∀α:★. τ → (∀β:★. υ)) ≡ (∀α:★. (∀β:★. τ → υ))
 --
--- * Can't lift quantifiers on the left of an arrow
---     (∀α:★. (∀β:★. τ) → τ) ≢ (∀α:★. (∀β:★. τ → τ))
+-- Can't lift quantifiers on the left of an arrow
+--   (∀α:★. (∀β:★. τ) → τ) ≢ (∀α:★. (∀β:★. τ → τ))
 
 normalize (TVariable a k)         = TVariable a k
 normalize (TApplication t u)      = TApplication (normalize t) (normalize u)
@@ -104,6 +109,7 @@ normalize (TQuantification a k t) =
       else TQuantification a k  (TQuantification b k' t')
     t' -> TQuantification a k t'
 
+-- Substitution
 ---------------------------------------------------------------------------
 
 type Variable       = (Id, Kind)
@@ -131,12 +137,8 @@ instance CanSubstitute Type where
   freevars (TAbstraction a k t)    = freevars t \\ [(a, k)]
   freevars (TApplication t u)      = freevars t `union` freevars u
 
+-- Unification
 ---------------------------------------------------------------------------
-
---instance Monad (Either a) where
---  return x        = Right x
---  (Left x) >>= f  = Left x
---  (Right x) >>= f = f x
 
 data EUnify t
   = EOccursCheck t t
@@ -181,42 +183,41 @@ instance CanUnify Type where
     | t == TVariable a k  = return []
     | otherwise           = return [(v, t)]
 
+-- Pretty Printing
 ---------------------------------------------------------------------------
 
 showTmId x = showId x "abcdefghijklmnopqrstuvwxyz"
 showTId a  = showId a "αβγδεζηθικλμνξοπρςστυφχψω"
 
 showId id alphabet = (alphabet !! n) : (replicate k '\'')
-  where k = id `div` length alphabet
-        n = id `mod` length alphabet
+  where
+    k = id `div` length alphabet
+    n = id `mod` length alphabet
 
-showTerm 0 (TmVariable x)         = showTmId x
+showTerm 0 (TmVariable x)          = showTmId x
 showTerm 0 (TmUApplication e t)   = showTerm 1 e ++ " " ++ showType 1 t
 showTerm 0 (TmApplication e f)    = showTerm 1 e ++ " " ++ showTerm 1 f
 showTerm 0 (TmUAbstraction a k e) = "Λ" ++ showTId a  ++ ":" ++ showKind 0 k ++ ". " ++ showTerm 0 e
 showTerm 0 (TmAbstraction x t e)  = "λ" ++ showTmId x ++ ":" ++ showType 1 t ++ ". " ++ showTerm 0 e
-
 showTerm n (TmVariable x)         = showTmId x
 showTerm n (TmUApplication e t)   = "(" ++ showTerm (n+1) e ++ " " ++ showType (n+1) t ++ ")"
 showTerm n (TmApplication e f)    = "(" ++ showTerm (n+1) e ++ " " ++ showTerm (n+1) f ++ ")"
 showTerm n (TmUAbstraction a k e) = "(Λ" ++ showTId a  ++ ":" ++ showKind (n+1) k ++ ". " ++ showTerm 0 e ++ ")"
 showTerm n (TmAbstraction x t e)  = "(λ" ++ showTmId x ++ ":" ++ showType (n+1) t ++ ". " ++ showTerm 0 e ++ ")"
 
-showType 0 (TVariable a _)          = showTId a
-showType 0 (TOperator t u)          = showType 1 t ++ " → " ++ showType 1 u
-showType 0 (TApplication a b)       = showType 1 a ++ " "   ++ showType 1 b
-showType 0 (TAbstraction a k t)     = "λ" ++ showTId a ++ ":" ++ showKind 0 k ++ ". " ++ showType 0 t
-showType 0 (TQuantification a k t)  = "∀" ++ showTId a ++ ":" ++ showKind 0 k ++ ". " ++ showType 0 t
-
-showType n (TVariable a _)          = showTId a
-showType n (TOperator t u)          = "(" ++ showType (n+1) t ++ " → " ++ showType (n+1) u ++ ")"
-showType n (TApplication a b)       = "(" ++ showType (n+1) a ++ " "   ++ showType (n+1) b ++ ")"
-showType n (TAbstraction a k t)     = "(λ" ++ showTId a ++ ":" ++ showKind (n+1) k ++ ". " ++ showType 0 t ++ ")"
-showType n (TQuantification a k t)  = "(∀" ++ showTId a ++ ":" ++ showKind (n+1) k ++ ". " ++ showType 0 t ++ ")"
+showType 0 (TVariable a _)         = showTId a
+showType 0 (TOperator t u)         = showType 1 t ++ " → " ++ showType 1 u
+showType 0 (TApplication a b)      = showType 1 a ++ " "   ++ showType 1 b
+showType 0 (TAbstraction a k t)    = "λ" ++ showTId a ++ ":" ++ showKind 0 k ++ ". " ++ showType 0 t
+showType 0 (TQuantification a k t) = "∀" ++ showTId a ++ ":" ++ showKind 0 k ++ ". " ++ showType 0 t
+showType n (TVariable a _)         = showTId a
+showType n (TOperator t u)         = "(" ++ showType (n+1) t ++ " → " ++ showType (n+1) u ++ ")"
+showType n (TApplication a b)      = "(" ++ showType (n+1) a ++ " "   ++ showType (n+1) b ++ ")"
+showType n (TAbstraction a k t)    = "(λ" ++ showTId a ++ ":" ++ showKind (n+1) k ++ ". " ++ showType 0 t ++ ")"
+showType n (TQuantification a k t) = "(∀" ++ showTId a ++ ":" ++ showKind (n+1) k ++ ". " ++ showType 0 t ++ ")"
 
 showKind 0 (KType)          = "★"
 showKind 0 (KOperator k l)  = showKind 1 k ++ " → " ++ showKind 1 l
-
 showKind n (KType)          = "★"
 showKind n (KOperator k l)  = "(" ++ showKind (n+1) k ++ " → " ++ showKind (n+1) l ++ ")"
 
@@ -229,6 +230,7 @@ instance Show Type where
 instance Show Kind where
   show = showKind 0
 
+-- Parser
 ---------------------------------------------------------------------------
 
 readArrow  = pure () <* (string "→" <|> string "->")
@@ -392,18 +394,34 @@ readTerm s =
     readTmUApplication :: TVariableScope -> Term -> Parser Term
     readTmUApplication s f = TmUApplication f <$> readType s
 
---instance Read Term where
---  readsPrec _ s = (either error id) . eitherResult . parser
---    where parser = readTerm [] <* skipSpace <* endOfInput
---
---instance Read Type where
---  readsPrec _ s = (either error id) . eitherResult . parser
---    where parser = readType [] <* skipSpace <* endOfInput
---
---instance Read Kind where
---  readsPrec _ s = (either error id) . eitherResult . parser
---    where parser = readKind <* skipSpace <* endOfInput
+instance Read Term where
+  readsPrec _ s =
+    case result of
+      Done xs x -> [(x, T.unpack xs)]
+      _         -> []
+    where
+      parser = readTerm []
+      result = feed (parse parser $ T.pack s) T.empty
 
+instance Read Type where
+  readsPrec _ s =
+    case result of
+      Done xs x -> [(x, T.unpack xs)]
+      _         -> []
+    where
+      parser = readType []
+      result = feed (parse parser $ T.pack s) T.empty
+
+instance Read Kind where
+  readsPrec _ s =
+    case result of
+      Done xs x -> [(x, T.unpack xs)]
+      _         -> []
+    where
+      parser = readKind
+      result = feed (parse parser $ T.pack s) T.empty
+
+-- Examples
 ---------------------------------------------------------------------------
 
 -- Bool : ★
