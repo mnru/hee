@@ -7,6 +7,7 @@ module Hee.SystemFw
   , EUnify(..)
   , CanSubstitute
   , CanUnify
+  , id
   , bool
   , tru
   , fls
@@ -27,6 +28,8 @@ module Hee.SystemFw
   , readKind
   , readType
   , readTerm
+  , emptyEnv
+  , valueOf
   ) where
 
 import qualified Data.Text as T
@@ -35,7 +38,7 @@ import Data.Attoparsec.Text
 
 import Data.List (union, (\\), foldl', elemIndex)
 import Control.Applicative (pure, (<|>), (<*), (*>), (<$>))
-import Prelude hiding (succ, fst, snd, sum, null, takeWhile, readParen)
+import Prelude hiding (id, succ, fst, snd, sum, null, takeWhile, readParen)
 
 -- Data Types
 ---------------------------------------------------------------------------
@@ -77,7 +80,7 @@ instance HasKind Type where
   kind (TApplication t _)      = let (KOperator k l) = kind t in l
 
 instance HasKind Kind where
-  kind = id
+  kind k = k
 
 -- Normalization
 ---------------------------------------------------------------------------
@@ -119,7 +122,7 @@ unbindvar :: Variable -> Substitution a -> Substitution a
 unbindvar v s = filter (\(w, _) -> w /= v) s
 
 class CanSubstitute t where
-  substitute :: Substitution t -> t -> t
+  substitute :: Substitution Type -> t -> t
   freevars   :: t -> [Variable]
 
 instance CanSubstitute Type where
@@ -136,6 +139,19 @@ instance CanSubstitute Type where
   freevars (TQuantification a k t) = freevars t \\ [(a, k)]
   freevars (TAbstraction a k t)    = freevars t \\ [(a, k)]
   freevars (TApplication t u)      = freevars t `union` freevars u
+
+instance CanSubstitute Term where
+  substitute s (TmVariable x)         = TmVariable x
+  substitute s (TmApplication f e)    = TmApplication (substitute s f) (substitute s e)
+  substitute s (TmAbstraction x t e)  = TmAbstraction x (substitute s t) (substitute s e)
+  substitute s (TmUAbstraction a k e) = TmUAbstraction a k (substitute (unbindvar (a, k) s) e)
+  substitute s (TmUApplication f t)   = TmUApplication (substitute s f) (substitute s t)
+  
+  freevars (TmVariable x)             = []
+  freevars (TmApplication f e)        = freevars f `union` freevars e
+  freevars (TmAbstraction x t e)      = freevars t `union` freevars e
+  freevars (TmUAbstraction a k e)     = freevars e \\ [(a, k)]
+  freevars (TmUApplication f t)       = freevars f `union` freevars t
 
 -- Unification
 ---------------------------------------------------------------------------
@@ -246,9 +262,11 @@ readParen inside =
      _ <- char ')'
      return e
 
--- TODO: Describe
+-- Tracks closed type variables [(Id, Kind)] so we can resolve each
+-- occurance of a variable with its kind. 
 type TVariableScope = [Variable]
 
+-- Reads the Id of a type variable
 readTId :: TVariableScope -> Parser Id
 readTId s =
   do a <- satisfy (inClass alphabet)
@@ -262,11 +280,12 @@ readTId s =
 readKind :: Parser Kind
 readKind = skipSpace *> (readParen readKind <|> readKType) >>= readKind'
   where
-    readKType :: Parser Kind
-    readKType = (char '★' <|> char '*') *> pure KType
-
+    -- Read the "rest" of an expression
     readKind' :: Kind -> Parser Kind
     readKind' k = readKOperator k <|> pure k
+
+    readKType :: Parser Kind
+    readKType = (char '★' <|> char '*') *> pure KType
 
     readKOperator :: Kind -> Parser Kind
     readKOperator k =
@@ -285,6 +304,7 @@ readType s =
       <|> readTVariable s
      readType' s t
   where
+    -- Read the "rest" of an expression
     readType' :: TVariableScope -> Type -> Parser Type
     readType' s t = readTOperator s t
                 <|> readTApplication s t
@@ -348,12 +368,12 @@ readTerm s =
       <|> readTmVariable
      readTerm' s e
   where
+    -- Read the "rest" of an expression
     readTerm' :: TVariableScope -> Term -> Parser Term
     readTerm' s e = readTmApplication s e
                 <|> readTmUApplication s e
                 <|> pure e
 
-    -- x,y
     readTmId :: Parser Id
     readTmId =
       do x <- satisfy (inClass alphabet)
@@ -421,8 +441,60 @@ instance Read Kind where
       parser = readKind
       result = feed (parse parser $ T.pack s) T.empty
 
+-- Evaluation
+---------------------------------------------------------------------------
+
+type Environment = [(Id, Term)]
+
+data EValueOf
+  = EUnbound Id
+  | EStuck Term
+  deriving (Eq, Show)
+
+emptyEnv :: Environment
+emptyEnv = []
+
+extendEnv :: Environment -> (Id, Term) -> Environment
+extendEnv env v = v:env
+
+searchEnv :: Environment -> Id -> Either EValueOf Term
+searchEnv [] x            = Left (EUnbound x)
+searchEnv ((x', t):env) x = if x /= x'
+                            then searchEnv env x
+                            else Right t
+
+valueOf :: Environment -> Term -> Either EValueOf Term
+valueOf env (TmApplication f e)
+  = case valueOf env f of
+      (Right (TmAbstraction x t f')) ->
+        case valueOf env e of
+          (Right e') -> valueOf (extendEnv env (x, e')) f'
+          x          -> x
+      (Right f') -> Left $ EStuck $ TmApplication f' e
+      x          -> x
+valueOf env e@(TmUApplication f t)
+  = case valueOf env f of
+      (Right (TmUAbstraction a k e)) ->
+        case bindvar (a, k) t of
+          (Right s) -> valueOf env $ substitute s e
+          _         -> Left $ EStuck $ TmUAbstraction a k e
+      (Right f') -> Left $ EStuck $ TmUApplication f' t
+      x          -> x
+valueOf env (TmVariable x)
+  = searchEnv env x
+valueOf env e@(TmAbstraction _ _ _)
+  = Right e
+valueOf env e@(TmUAbstraction _ _ _)
+  = Right e
+
 -- Examples
 ---------------------------------------------------------------------------
+
+-- id : ∀α:★. α → α
+-- id = Λα:★. λa:α. a
+id  = TmUAbstraction 0 KType $
+        TmAbstraction 0 (TVariable 0 KType) $
+          TmVariable 0
 
 -- Bool : ★
 -- Bool = ∀α:★. α → α → α
@@ -430,15 +502,15 @@ bool  = TQuantification 0 KType $
           TOperator (TVariable 0 KType) $
             TOperator (TVariable 0 KType) (TVariable 0 KType)
 
---tru : ∀α:★. α → α → α
---tru = Λα:★. λt:α. λf:α. t
+-- tru : ∀α:★. α → α → α
+-- tru = Λα:★. λt:α. λf:α. t
 tru = TmUAbstraction 0 KType $
          TmAbstraction 19 (TVariable 0 KType) $
            TmAbstraction 5 (TVariable 0 KType) $
              TmVariable 19
 
---fls : ∀α:★. α → α → α
---fls = Λα:★. λt:α. λf:α. f
+-- fls : ∀α:★. α → α → α
+-- fls = Λα:★. λt:α. λf:α. f
 fls = TmUAbstraction 0 KType $
         TmAbstraction 19 (TVariable 0 KType) $
           TmAbstraction 5 (TVariable 0 KType) $
