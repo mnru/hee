@@ -210,7 +210,8 @@ showId id alphabet = (alphabet !! n) : (replicate k '\'')
     k = id `div` length alphabet
     n = id `mod` length alphabet
 
-showTerm 0 (TmVariable x)          = showTmId x
+showTerm :: Int -> Term -> String
+showTerm 0 (TmVariable x)         = showTmId x
 showTerm 0 (TmUApplication e t)   = showTerm 1 e ++ " " ++ showType 1 t
 showTerm 0 (TmApplication e f)    = showTerm 1 e ++ " " ++ showTerm 1 f
 showTerm 0 (TmUAbstraction a k e) = "Λ" ++ showTId a  ++ ":" ++ showKind 0 k ++ ". " ++ showTerm 0 e
@@ -221,6 +222,7 @@ showTerm n (TmApplication e f)    = "(" ++ showTerm (n+1) e ++ " " ++ showTerm (
 showTerm n (TmUAbstraction a k e) = "(Λ" ++ showTId a  ++ ":" ++ showKind (n+1) k ++ ". " ++ showTerm 0 e ++ ")"
 showTerm n (TmAbstraction x t e)  = "(λ" ++ showTmId x ++ ":" ++ showType (n+1) t ++ ". " ++ showTerm 0 e ++ ")"
 
+showType :: Int -> Type -> String
 showType 0 (TVariable a _)         = showTId a
 showType 0 (TOperator t u)         = showType 1 t ++ " → " ++ showType 1 u
 showType 0 (TApplication a b)      = showType 1 a ++ " "   ++ showType 1 b
@@ -232,6 +234,7 @@ showType n (TApplication a b)      = "(" ++ showType (n+1) a ++ " "   ++ showTyp
 showType n (TAbstraction a k t)    = "(λ" ++ showTId a ++ ":" ++ showKind (n+1) k ++ ". " ++ showType 0 t ++ ")"
 showType n (TQuantification a k t) = "(∀" ++ showTId a ++ ":" ++ showKind (n+1) k ++ ". " ++ showType 0 t ++ ")"
 
+showKind :: Int -> Kind -> String
 showKind 0 (KType)          = "★"
 showKind 0 (KOperator k l)  = showKind 1 k ++ " → " ++ showKind 1 l
 showKind n (KType)          = "★"
@@ -249,6 +252,7 @@ instance Show Kind where
 -- Parser
 ---------------------------------------------------------------------------
 
+readArrow, readForall, readLambda, readLambda :: Parser ()
 readArrow  = pure () <* (string "→" <|> string "->")
 readForall = pure () <* (string "∀" <|> string "forall ")
 readLambda = pure () <* (string "λ" <|> string ",\\" <|> string "lambda ")
@@ -444,26 +448,26 @@ instance Read Kind where
 -- Evaluation
 ---------------------------------------------------------------------------
 
-type Environment = [(Id, Term)]
+type Environment a = [(Id, a)]
 
 data EValueOf
   = EUnbound Id
   | EStuck Term
   deriving (Eq, Show)
 
-emptyEnv :: Environment
+emptyEnv :: Environment a
 emptyEnv = []
 
-extendEnv :: Environment -> (Id, Term) -> Environment
+extendEnv :: Environment a -> (Id, a) -> Environment a
 extendEnv env v = v:env
 
-searchEnv :: Environment -> Id -> Either EValueOf Term
+searchEnv :: Environment a -> Id -> Either EValueOf a
 searchEnv [] x            = Left (EUnbound x)
 searchEnv ((x', t):env) x = if x /= x'
                             then searchEnv env x
                             else Right t
 
-valueOf :: Environment -> Term -> Either EValueOf Term
+valueOf :: Environment Term -> Term -> Either EValueOf Term
 valueOf env (TmApplication f e)
   = case valueOf env f of
       (Right (TmAbstraction x t f')) ->
