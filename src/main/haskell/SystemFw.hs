@@ -455,12 +455,22 @@ data EValueOf
   | EStuck Term
   deriving (Eq, Show)
 
+-- Create an empty environment
 emptyEnv :: Environment a
 emptyEnv = []
 
+-- Add a binding to the environment
 extendEnv :: Environment a -> (Id, a) -> Environment a
 extendEnv env v = v:env
 
+-- Remove a binding from the environment
+reduceEnv :: Environment a -> Id -> Environment a
+reduceEnv [] x = []
+reduceEnv ((x', t):env) x
+  | x' == x    = reduceEnv env x
+  | otherwise  = (x', t):reduceEnv env x
+
+-- Resolve an identifier in the environment
 searchEnv :: Environment a -> Id -> Either EValueOf a
 searchEnv [] x            = Left (EUnbound x)
 searchEnv ((x', t):env) x = if x /= x'
@@ -468,28 +478,55 @@ searchEnv ((x', t):env) x = if x /= x'
                             else Right t
 
 valueOf :: Environment Term -> Term -> Either EValueOf Term
-valueOf env (TmApplication f e)
-  = case valueOf env f of
-      (Right (TmAbstraction x t f')) ->
-        case valueOf env e of
-          (Right e') -> valueOf (extendEnv env (x, e')) f'
+valueOf env t = valueOf' env searchEnv t
+  where 
+    safeResolver env x
+      = case searchEnv env x of
+          Left _  -> Right $ TmVariable x
+          Right t -> Right t
+
+    valueOf' env resolver (TmApplication f e)
+      = case valueOf' env resolver f of
+          (Right (TmAbstraction x _ f')) ->
+            case valueOf' env resolver e of
+              (Right e') -> valueOf' (extendEnv env (x, e')) resolver f'
+              x          -> x
+          (Right f') -> Right f'
           x          -> x
-      (Right f') -> Left $ EStuck $ TmApplication f' e
-      x          -> x
-valueOf env e@(TmUApplication f t)
-  = case valueOf env f of
-      (Right (TmUAbstraction a k e)) ->
-        case bindvar (a, k) t of
-          (Right s) -> valueOf env $ substitute s e
-          _         -> Left $ EStuck $ TmUAbstraction a k e
-      (Right f') -> Left $ EStuck $ TmUApplication f' t
-      x          -> x
-valueOf env (TmVariable x)
-  = searchEnv env x
-valueOf env e@(TmAbstraction _ _ _)
-  = Right e
-valueOf env e@(TmUAbstraction _ _ _)
-  = Right e
+    valueOf' env resolver e@(TmUApplication f t)
+      = case valueOf' env resolver f of
+          (Right (TmUAbstraction a k e)) ->
+            case bindvar (a, k) t of
+              (Right s) -> valueOf' env resolver $ substitute s e
+              _         -> Left $ EStuck $ TmUAbstraction a k e
+          (Right f') -> Right f'
+          x          -> x
+    valueOf' env resolver (TmVariable x)
+      = resolver env x
+    -- Performing reduction under lambdas
+    --
+    -- valueOf [] ((λt. (λf. t)) 100)
+    -- valueOf [t/100] (λf. t)
+    --
+    -- While (λf. t) is in normal form, it's not a closed term. Applying it
+    -- to an argument would evaluate to the free variable t, though we would
+    -- expect the result to be 100.
+    --
+    -- Either we need to allow evaluation under lambda terms, or we extend
+    -- the definition of TmAbstraction to include the environment which
+    -- closes over its free variables.
+    --
+    -- Since our language is strongly normalizing, we can safely do reduction
+    -- under lambdas without being concerned about non-termination
+    --
+    valueOf' env _ (TmAbstraction x t e)
+      = case (valueOf' (reduceEnv env x) safeResolver e) of
+          (Right e') -> Right (TmAbstraction x t e')
+          x          -> x
+    valueOf' env _ (TmUAbstraction a k e)
+      = case (valueOf' env safeResolver e) of
+          (Right e') -> Right (TmUAbstraction a k e')
+          x          -> x
 
 -- Examples
 ---------------------------------------------------------------------------
