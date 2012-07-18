@@ -55,10 +55,10 @@ data Term
 
 data Type
   = TVariable Id Kind             -- α,β         type variable
-  | TApplication Type Type        -- τ υ         type application
-  | TAbstraction Id Kind Type     -- λα:κ. τ     type abstraction
   | TQuantification Id Kind Type  -- ∀α:κ. τ     type quantification
   | TOperator Type Type           -- τ → υ       type of operator on terms
+  | TAbstraction Id Kind Type     -- λα:κ. τ     type abstraction
+  | TApplication Type Type        -- τ υ         type application
   deriving (Eq)
 
 data Kind
@@ -97,20 +97,23 @@ instance HasKind Kind where
 -- Can't lift quantifiers on the left of an arrow
 --   (∀α:★. (∀β:★. τ) → τ) ≢ (∀α:★. (∀β:★. τ → τ))
 
-normalize (TVariable a k)         = TVariable a k
-normalize (TApplication t u)      = TApplication (normalize t) (normalize u)
-normalize (TAbstraction a k t)    = TAbstraction a k (normalize t)
-normalize (TOperator t u)         =
-  case normalize u of
-    (TQuantification b k u') -> normalize (TQuantification b k (TOperator (normalize t) u'))
-    u'                       -> TOperator (normalize t) u'
-normalize (TQuantification a k t) =
-  case normalize t of
-    (TQuantification b k' t') ->
-      if b < a
-      then normalize (TQuantification b k' (TQuantification a k  t'))
-      else TQuantification a k  (TQuantification b k' t')
-    t' -> TQuantification a k t'
+normalize (TVariable a k)
+  = TVariable a k
+normalize (TApplication t u)
+  = TApplication (normalize t) (normalize u)
+normalize (TAbstraction a k t)
+  = TAbstraction a k (normalize t)
+normalize (TOperator t u)
+  = case normalize u of
+      (TQuantification b k u') -> normalize (TQuantification b k (TOperator (normalize t) u'))
+      u'                       -> TOperator (normalize t) u'
+normalize (TQuantification a k t)
+  = case normalize t of
+      (TQuantification b k' t') ->
+        if b < a
+        then normalize (TQuantification b k' (TQuantification a k  t'))
+        else TQuantification a k  (TQuantification b k' t')
+      t' -> TQuantification a k t'
 
 -- Substitution
 ---------------------------------------------------------------------------
