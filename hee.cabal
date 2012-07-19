@@ -1,0 +1,31 @@
+name:           hee
+version:        0.0.0
+cabal-version:  >= 1.8
+license:        BSD3
+license-file:   LICENSE.md
+author:         Kyle Putnam <putnam.kyle@gmail.com>
+maintainer:     Kyle Putnam <putnam.kyle@gmail.com>
+homepage:       https://github.com/kputnam/hee
+category:       Language
+build-type:     Simple
+synopsis:       Functional and concatenative programming language
+description:
+  Functional and concatenative programming language
+
+library
+  hs-source-dirs:
+    src
+
+  build-depends:
+    base >= 3 && <5,
+    text >= 0.11.2.0,
+    attoparsec >= 0.10.1.0
+
+  exposed-modules:
+    Language.Hee.Parser
+    Language.Hee.Types
+    Language.Hee.Terms
+
+source-repository head
+  type:     git
+  location: https://github.com/kputnam/hee
