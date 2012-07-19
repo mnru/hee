@@ -1,5 +1,6 @@
 module Language.Hee.Terms
   ( Term(..)
+  , Literal(..)
   ) where
 
 import Language.Hee.Types (Type)
@@ -15,8 +16,8 @@ data Term
   deriving (Eq, Show)
 
 data Literal
-  = LiChar
-  | LiString
-  | LiNumber
+  = LiChar Char
+  | LiString Text
+  | LiNumber Int
   deriving (Eq, Show)
 
