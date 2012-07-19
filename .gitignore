@@ -1,7 +1,7 @@
 *.swp
 *.swo
-target/
-project/boot/
-project/target/
+dist/
+attic/project/target
+attic/target
 *.hi
 *.o
