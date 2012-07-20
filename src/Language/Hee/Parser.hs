@@ -3,10 +3,16 @@
 module Language.Hee.Parser
   ( heeExpr
   , heeTerm
+  , heeQuote
+  , heeChar
+  , heeString
+  , heeNumber
+  , heeName
   ) where
 
 import Control.Applicative
 import Prelude hiding (takeWhile)
+import Data.Char (isSpace)
 import Data.Text (cons, pack)
 import Data.Attoparsec.Text
 import Language.Hee.Terms
@@ -14,15 +20,16 @@ import Language.Hee.Terms
 heeExpr
   = composeWith TmEmpty
   where
-    composeWith t = skipSpace *> (if' <$> atEnd <*> pure t <*> composeNext t)
-    composeNext t = heeTerm >>= composeWith . (TmCompose t)
+    whiteSpace    = takeWhile1 isSpace <?> "whiteSpace"
+    composeWith t = if' <$> atEnd <*> pure t <*> composeNext t
+    composeNext t = composeWith . (TmCompose t) =<< whiteSpace *> heeTerm
 
 heeTerm
-  =   heeQuote    -- [
-  <|> heeChar     -- '
-  <|> heeString   -- "
-  <|> heeNumber   -- 0
-  <|> heeName     -- a
+  =   (heeQuote  <?>  "quote") -- [
+  <|> (heeChar   <?>   "char") -- '
+  <|> (heeString <?> "string") -- "
+  <|> (heeNumber <?> "number") -- 0
+  <|> (heeName   <?>   "name") -- a
 
 heeQuote 
   = parenthesized open inside close
@@ -32,7 +39,7 @@ heeQuote
     inside = TmQuote <$> heeExpr
 
 heeChar
-  = TmLiteral . LiChar <$> (char '\'' *> escapedChar <|> anyChar)
+  = TmLiteral . LiChar <$> (char '\'' *> (escapedChar <|> anyChar))
 
 heeString
   = parenthesized delim inside delim
