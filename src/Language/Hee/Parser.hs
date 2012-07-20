@@ -18,34 +18,34 @@ import Data.Attoparsec.Text
 import Language.Hee.Terms
 
 heeExpr
-  = composeWith TmEmpty
+  = skipSpace *> scan
   where
-    whiteSpace    = takeWhile1 isSpace <?> "whiteSpace"
-    composeWith t = if' <$> atEnd <*> pure t <*> composeNext t
-    composeNext t = composeWith . (TmCompose t) =<< whiteSpace *> heeTerm
+    scan  = TmCompose <$> heeTerm <*> ((space *> scan) <|> heeEmpty)
+    space = takeWhile1 isSpace
 
 heeTerm
-  =   (heeQuote  <?>  "quote") -- [
-  <|> (heeChar   <?>   "char") -- '
-  <|> (heeString <?> "string") -- "
-  <|> (heeNumber <?> "number") -- 0
-  <|> (heeName   <?>   "name") -- a
+  =   heeQuote   -- [
+  <|> heeChar    -- '
+  <|> heeString  -- "
+  <|> heeNumber  -- 0
+  <|> heeName    -- a
+  <|> heeEmpty
 
 heeQuote 
   = parenthesized open inside close
   where
-    open   = (char '[' <* skipSpace)
-    close  = (skipSpace *> char ']')
+    open   = (char '[' *> skipSpace)
+    close  = (skipSpace <* char ']')
     inside = TmQuote <$> heeExpr
 
 heeChar
   = TmLiteral . LiChar <$> (char '\'' *> (escapedChar <|> anyChar))
 
 heeString
-  = parenthesized delim inside delim
+  = TmLiteral . LiString . pack <$> (delim *> inside)
   where
     delim  = char '"'
-    inside = TmLiteral . LiString . pack <$> manyTill (escapedChar <|> anyChar) delim
+    inside = manyTill (escapedChar <|> notChar '"') delim
 
 heeNumber
   = TmLiteral . LiNumber <$> signed number
@@ -58,10 +58,11 @@ heeName
     startChar = notInClass " \t\r\n\f\v[]\"'"
     otherChar = notInClass " \t\r\n\f\v[]"
 
+heeEmpty
+  = pure TmEmpty
+
 -- Private helpers
 ------------------
-
-if' cond a b  = if cond then a else b
 
 parenthesized open inside close
   = open *> inside <* close

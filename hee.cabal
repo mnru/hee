@@ -12,6 +12,15 @@ synopsis:       Functional and concatenative programming language
 description:
   Functional and concatenative programming language
 
+executable hee
+  main-is: parse.hs
+  hs-source-dirs: bin
+  build-depends:
+    base >= 3 && <5,
+    text >= 0.11.2.0,
+    hee  >= 0.0.0,
+    attoparsec >= 0.10.1.0
+
 library
   hs-source-dirs:
     src
@@ -23,8 +32,8 @@ library
 
   exposed-modules:
     Language.Hee.Parser
-    Language.Hee.Types
     Language.Hee.Terms
+    Language.Hee.Types
 
 source-repository head
   type:     git

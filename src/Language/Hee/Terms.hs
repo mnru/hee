@@ -20,4 +20,3 @@ data Literal
   | LiString Text
   | LiNumber Int
   deriving (Eq, Show)
-
