@@ -34,6 +34,7 @@ library
     Language.Hee.Parser
     Language.Hee.Terms
     Language.Hee.Types
+    Language.Hee.Simplify
 
 source-repository head
   type:     git

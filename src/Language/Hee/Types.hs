@@ -1,6 +1,6 @@
 module Language.Hee.Types
-  ( Type
-  , Kind
+  ( Type(..)
+  , Kind(..)
   ) where
 
 data Type
