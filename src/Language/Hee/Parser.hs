@@ -18,7 +18,7 @@ import Data.Attoparsec.Text
 import Language.Hee.Terms
 
 heeExpr
-  = skipSpace *> scan
+  = simplify <$> (skipSpace *> scan)
   where
     scan  = TmCompose <$> heeTerm <*> ((space *> scan) <|> heeEmpty)
     space = takeWhile1 isSpace
@@ -61,13 +61,11 @@ heeName
 heeEmpty
   = pure TmEmpty
 
--- Private helpers
-------------------
-
 parenthesized open inside close
   = open *> inside <* close
 
-escapedChar = tx <$> char '\\' *> anyChar
+escapedChar
+  = tx <$> char '\\' *> anyChar
   where
     tx 'n'  = '\n'
     tx 't'  = '\t'
