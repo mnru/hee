@@ -307,29 +307,50 @@ interesting problems are:
 * The Y-combinator, because `A ((B → C) → (B → C)) → A (B → C)` is not correct,
   though I need to verify that.
 
-Currently there's a REPL written in Ruby, in [`bin/bee.rb`](bee/blob/master/bin/bee.rb).
+### Current
+
+I'm starting from a clean slate in Haskell. Prerequisites include ghc 7.4 and
+haskell-platform 2012.
+
+    $ git clone git://github.com/kputnam/bee.git
+    $ cabal install
+
+Printing parse the tree
+
+    $ hee [1 +]
+    TmQuote (TmCompose (TmLiteral (LiNumber 1)) (TmName "+"))
+
+Running tests
+
+    $ cabal configure --enable-tests
+    $ cabal build
+    $ cabal test
+
+### Attic
+
+There's a REPL written in Ruby, in [`attic/bin/bee.rb`](bee/blob/master/attic/bin/bee.rb).
 This includes a few features like tab-completion, execution traces, and the
 ability to save definitions created in the REPL to an external file. The
 interpreter achieves tail-call optimization easily because it effectively
 implements [subroutine threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading).
 
-There is a small runtime library in the [`runtime`](bee/blob/master/runtime)
+There is a small runtime library in [`attic/runtime`](bee/blob/master/attic/runtime)
 directory that is loaded when the REPL starts. Mostly this includes some type
 definitions, like lists and booleans with a number of functions to operate on
 these types. These files include what *appears* to be module declarations and
 comments, however these are parsed as top-level expressions which are discarded
 by the parser. The parser only reads *definitions* from files.
 
-One type checker, [`scrap/Checker.scala`](bee/blob/master/scrap/Checker.scala)
+One type checker, [`scrap/Checker.scala`](bee/blob/master/attic/scrap/Checker.scala)
 is written in Scala but will be soon abandoned. The replacement type checker,
-[`src/main/haskell/Hee/Test.hs`](bee/blob/master/src/main/haskell/Hee/Test.hs)
+[`src/main/haskell/Hee/Test.hs`](bee/blob/master/attic/src/main/haskell/Hee/Test.hs)
 is under active development and will subsume the Scala version.
 
 ## Goals
 
 Since my primary motivation for developing **bee** is to develop a deeper
 theoretical and practical understanding of programming languages and type
-systems, I am less concerned with developing a practically *usable* language.
+systems. I am less concerned with developing a practically *usable* language.
 
 For example, one motivation behind using postfix syntax is it is simple to
 parse, though may be harder for humans to read and write. Using point-free
