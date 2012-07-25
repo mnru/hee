@@ -2,24 +2,23 @@ module Language.Hee.Simplify
   ( Simplify(..)
   ) where
 
-import Language.Hee.Types
-import Language.Hee.Terms
+import Language.Hee.Syntax
 
 class Simplify a where
   simplify :: a -> a
 
-instance Simplify Term where
-  simplify (TmCompose (TmCompose a b) c)
-    = simplify $ TmCompose a (TmCompose b c)
-  simplify (TmCompose a b)
+instance Simplify Expr where
+  simplify (ExCompose (ExCompose a b) c)
+    = simplify $ ExCompose a (ExCompose b c)
+  simplify (ExCompose a b)
     = case (simplify a, simplify b) of
-        (TmEmpty, b') -> b'
-        (a', TmEmpty) -> a'
-        (a', b')      -> TmCompose a' b'
-  simplify (TmQuote a)
-    = TmQuote $ simplify a
-  simplify (TmAnnotation e t)
-    = TmAnnotation (simplify e) t
+        (ExEmpty, b') -> b'
+        (a', ExEmpty) -> a'
+        (a', b')      -> ExCompose a' b'
+  simplify (ExQuote a)
+    = ExQuote $ simplify a
+  simplify (ExAnnotate e t)
+    = ExAnnotate (simplify e) (simplify t)
   simplify e
     = e
 

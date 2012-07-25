@@ -28,12 +28,13 @@ library
   build-depends:
     base >= 3 && <5,
     text >= 0.11.2.0,
+    pretty >= 1.1.1.0,
     attoparsec >= 0.10.1.0
 
   exposed-modules:
-    Language.Hee.Types
-    Language.Hee.Terms
     Language.Hee.Syntax
+    Language.Hee.Parser
+    Language.Hee.Pretty
     Language.Hee.Simplify
 
 test-suite main

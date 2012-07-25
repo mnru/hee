@@ -1,95 +1,93 @@
 module Language.Hee.Tests.Arbitrary
-  ( TmName(..)
-  , TmQuote(..)
-  , TmLiteral(..)
-  , TmCompose(..)
-  , TmAnnotation(..)
-  , TmComment(..)
+  ( ExName(..)
+  , ExQuote(..)
+  , ExLiteral(..)
+  , ExCompose(..)
+  , ExAnnotate(..)
+  , ExComment(..)
   , LiChar(..)
   , LiString(..)
   , LiNumber(..)
   ) where
 
 import Data.Char (isSpace, isPrint, isAlphaNum, isAscii)
-import Data.Text (Text, pack, null)
+import Data.Text (pack, unpack)
 import Control.Applicative
 import Test.QuickCheck
 
-import Language.Hee.Terms
-import Language.Hee.Types
 import Language.Hee.Syntax
 import Language.Hee.Simplify
 
-newtype TmName       = RnName       { tmName       :: Term } deriving (Show)
-newtype TmQuote      = RnQuote      { tmQuote      :: Term } deriving (Show)
-newtype TmLiteral    = RnLiteral    { tmLiteral    :: Term } deriving (Show)
-newtype TmCompose    = RnCompose    { tmCompose    :: Term } deriving (Show)
-newtype TmAnnotation = RnAnnotation { tmAnnotation :: Term } deriving (Show)
-newtype TmComment    = RnComment    { tmComment    :: Term } deriving (Show)
+newtype ExName     = RnName     { exName       :: Expr } deriving (Show)
+newtype ExQuote    = RnQuote    { exQuote      :: Expr } deriving (Show)
+newtype ExLiteral  = RnLiteral  { exLiteral    :: Expr } deriving (Show)
+newtype ExCompose  = RnCompose  { exCompose    :: Expr } deriving (Show)
+newtype ExAnnotate = RnAnnotate { exAnnotation :: Expr } deriving (Show)
+newtype ExComment  = RnComment  { exComment    :: Expr } deriving (Show)
 
-newtype LiChar       = RnChar   { liChar       :: Literal } deriving (Show)
-newtype LiString     = RnString { liString     :: Literal } deriving (Show)
-newtype LiNumber     = RnNumber { liNumber     :: Literal } deriving (Show)
+newtype LiChar     = RnChar   { liChar   :: Literal } deriving (Show)
+newtype LiString   = RnString { liString :: Literal } deriving (Show)
+newtype LiNumber   = RnNumber { liNumber :: Literal } deriving (Show)
 
 -----------------------------------------------------------------------------
 
-instance Arbitrary TmName where
+instance Arbitrary ExName where
   arbitrary
-    = RnName . TmName . pack <$> arbitrary `suchThat` valid
+    = RnName . ExName . pack <$> arbitrary `suchThat` valid
     where
-      valid ""     = False
+      valid ""                  = False
       valid s@(x:xs)
         | x `elem` start        = False
         | any (`elem` other) xs = False
         | any isSpace s         = False
-        | otherwise             = all (\x -> isPrint x && isAscii x) s
+        | otherwise             = all (\x -> isPrint x) s
       start = " \t\r\n\f\v[]\"'0123456789+-"
       other = " \t\r\n\f\v[]"
 
-instance Arbitrary TmQuote where
-  arbitrary = RnQuote . TmQuote <$> arbitrary `suchThat` valid
+instance Arbitrary ExQuote where
+  arbitrary = RnQuote . ExQuote <$> arbitrary `suchThat` valid
     where
-      valid (TmCompose _ _) = False
+      valid (ExCompose _ _) = False
       valid _               = True
 
-instance Arbitrary TmLiteral where
-  arbitrary = RnLiteral . TmLiteral <$> arbitrary
+instance Arbitrary ExLiteral where
+  arbitrary = RnLiteral . ExLiteral <$> arbitrary
 
-instance Arbitrary TmCompose where
-  arbitrary = RnCompose . simplify <$> (TmCompose <$> term <*> term)
-    where term = arbitrary `suchThat` (/= TmEmpty)
+instance Arbitrary ExCompose where
+  arbitrary = RnCompose . simplify <$> (ExCompose <$> expr <*> expr)
+    where expr = arbitrary `suchThat` (/= ExEmpty)
 
-instance Arbitrary TmAnnotation where
-  arbitrary = RnAnnotation <$> (TmAnnotation <$> arbitrary <*> arbitrary)
+instance Arbitrary ExAnnotate where
+  arbitrary = RnAnnotate <$> (ExAnnotate <$> arbitrary <*> arbitrary)
 
-instance Arbitrary TmComment where
-  arbitrary = RnComment . TmComment <$> arbitrary
+instance Arbitrary ExComment where
+  arbitrary = RnComment . ExComment . pack <$> arbitrary
+
+instance Arbitrary Radix where
+  arbitrary = elements [Binary, Octal, Decimal, Hexadecimal]
 
 instance Arbitrary LiChar where
   arbitrary = RnChar . LiChar <$> arbitrary
 
 instance Arbitrary LiString where
   arbitrary = RnString . LiString . pack <$> arbitrary `suchThat` valid
-    where valid = all (\x -> isAlphaNum x && isAscii x)
+    where valid = all isPrint --(\x -> isAlphaNum x && isAscii x)
 
 instance Arbitrary LiNumber where
-  arbitrary = RnNumber . LiNumber <$> arbitrary
+  arbitrary = RnNumber <$> (LiNumber <$> arbitrary <*> arbitrary)
 
 instance Arbitrary Type where
   arbitrary = pure Null
 
-instance Arbitrary Text where
-  arbitrary = pack <$> arbitrary
-
-instance Arbitrary Term where
+instance Arbitrary Expr where
   arbitrary
-    = frequency [(1, pure TmEmpty)
-                ,(4, tmName       <$> arbitrary)
-                ,(3, tmQuote      <$> arbitrary)
-                ,(2, tmLiteral    <$> arbitrary)
-                ,(5, tmCompose    <$> arbitrary)
-                ,(0, tmAnnotation <$> arbitrary)
-                ,(0, tmComment    <$> arbitrary)]
+    = frequency [(1, pure ExEmpty)
+                ,(4, exName       <$> arbitrary)
+                ,(3, exQuote      <$> arbitrary)
+                ,(2, exLiteral    <$> arbitrary)
+                ,(5, exCompose    <$> arbitrary)
+                ,(0, exAnnotation <$> arbitrary)
+                ,(0, exComment    <$> arbitrary)]
 
 instance Arbitrary Literal where
   arbitrary
