@@ -291,6 +291,8 @@ type of the input merely by composing with another term.
 
 ## Development Status
 
+[![Build Status](https://secure.travis-ci.org/kputnam/bee.png)](http://travis-ci.org/kputnam/bee)
+
 **Bee** is in the very early stages of development. Some aspects of the syntax
 haven't settled enough to allow providing examples. This includes the type
 syntax, comments, function declarations, and type declarations. The general
