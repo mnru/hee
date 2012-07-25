@@ -5,10 +5,10 @@ module Language.Hee.Types
 
 data Type
   = Null
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data Kind
   = KStack                  -- kind of a stack
   | KType                   -- kind of a base type
   | KConstructor Kind Kind  -- kind of a type constructor
-  deriving (Eq, Show)
+  deriving (Eq)

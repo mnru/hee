@@ -31,9 +31,9 @@ library
     attoparsec >= 0.10.1.0
 
   exposed-modules:
-    Language.Hee.Parser
-    Language.Hee.Terms
     Language.Hee.Types
+    Language.Hee.Terms
+    Language.Hee.Syntax
     Language.Hee.Simplify
 
 test-suite properties

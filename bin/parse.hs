@@ -5,7 +5,7 @@ import Data.Either (either)
 import Data.List (intercalate)
 import Data.Text (pack)
 
-import Language.Hee.Parser
+import Language.Hee.Syntax
 
 main
   = putStrLn =<< toStr . parse <$> input

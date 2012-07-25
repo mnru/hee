@@ -4,7 +4,7 @@ import Control.Applicative
 import Data.Text (Text, pack)
 import Language.Hee.Terms
 import Language.Hee.Types
-import Language.Hee.Parser
+import Language.Hee.Syntax
 
 import Test.QuickCheck
 import Test.Framework (Test, testGroup, defaultMain)

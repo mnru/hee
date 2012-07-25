@@ -14,10 +14,10 @@ data Term
   | TmCompose Term Term     --
   | TmAnnotation Term Type  --
   | TmComment Text          --
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data Literal
   = LiChar Char
   | LiString Text
   | LiNumber Int
-  deriving (Eq, Show)
+  deriving (Eq)
