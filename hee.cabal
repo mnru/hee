@@ -36,9 +36,9 @@ library
     Language.Hee.Syntax
     Language.Hee.Simplify
 
-test-suite properties
+test-suite main
   type: exitcode-stdio-1.0
-  main-is: Properties.hs
+  main-is: Main.hs
   hs-source-dirs: tests
 
   build-depends:
