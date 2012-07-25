@@ -6,6 +6,79 @@ combinators and composition (Wikipedia). **Bee** is a concatenative, functional
 programming language built for no practical purpose in mind -- my goal is to
 use it as a vehicle for understanding PL topics. 
 
+## Development Status [![Build Status](https://secure.travis-ci.org/kputnam/bee.png)](http://travis-ci.org/kputnam/bee)
+
+**Bee** is in the very early stages of development. Some aspects of the syntax
+haven't settled enough to allow providing examples. This includes the type
+syntax, comments, function declarations, and type declarations. The general
+goal is to keep the concrete syntax as minimal as possible, so I'm still
+looking for ways to implement these features without adding "extra" syntax.
+
+The preliminary type system is not usable. Several issues must be addressed
+before certain simple terms can be correctly typed. Some terms that pose
+interesting problems are:
+
+* `dup` which seems to break concatenativity without impredicative polymorphism
+* `dup apply`, the U-combinator, will probably require recursive types
+* `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general
+* The Y-combinator, because `A ((B → C) → (B → C)) → A (B → C)` is not correct,
+  though I need to verify that.
+
+### Current
+
+I'm starting from a clean slate in Haskell. Prerequisites include ghc 7.4 and
+haskell-platform 2012.
+
+    $ git clone git://github.com/kputnam/bee.git
+    $ cabal install
+
+Printing parse the tree
+
+    $ hee [1 +]
+    TmQuote (TmCompose (TmLiteral (LiNumber 1)) (TmName "+"))
+
+Running tests
+
+    $ cabal configure --enable-tests
+    $ cabal build
+    $ cabal test
+
+### Attic
+
+There's a REPL written in Ruby, in [`attic/bin/bee.rb`](bee/blob/master/attic/bin/bee.rb).
+This includes a few features like tab-completion, execution traces, and the
+ability to save definitions created in the REPL to an external file. The
+interpreter achieves tail-call optimization easily because it effectively
+implements [subroutine threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading).
+
+There is a small runtime library in [`attic/runtime`](bee/blob/master/attic/runtime)
+directory that is loaded when the REPL starts. Mostly this includes some type
+definitions, like lists and booleans with a number of functions to operate on
+these types. These files include what *appears* to be module declarations and
+comments, however these are parsed as top-level expressions which are discarded
+by the parser. The parser only reads *definitions* from files.
+
+## Goals
+
+Since my primary motivation for developing **bee** is to develop a deeper
+theoretical and practical understanding of programming languages and type
+systems. I am less concerned with developing a practically *usable* language.
+
+For example, one motivation behind using postfix syntax is it is simple to
+parse, though may be harder for humans to read and write. Using point-free
+notation means the symbol table doesn't need to maintain information about
+the current scope: there are no "local variables". These kinds of choices
+simplify the language implementation, and may (or may not) yield benefits
+for programmers using the language.
+
+Some features I'd like to explore include:
+
+* Module systems
+* Type inference
+* Quasiquotation
+* Interactive development
+* Comprehensible type errors
+
 ## Syntax
 
 Like many stack-based languages, **bee** uses an postfix syntax for expression.
@@ -288,86 +361,6 @@ Like before, we unify `G` with `K int int`, resulting in the substitution:
 Then we apply this substitution to `S → U`, which is `A (F → G) (A → F) → K int`
 in this case. Notice again that constraints propogated so we've restricted the
 type of the input merely by composing with another term.
-
-## Development Status
-
-[![Build Status](https://secure.travis-ci.org/kputnam/bee.png)](http://travis-ci.org/kputnam/bee)
-
-**Bee** is in the very early stages of development. Some aspects of the syntax
-haven't settled enough to allow providing examples. This includes the type
-syntax, comments, function declarations, and type declarations. The general
-goal is to keep the concrete syntax as minimal as possible, so I'm still
-looking for ways to implement these features without adding "extra" syntax.
-
-The preliminary type system is not usable. Several issues must be addressed
-before certain simple terms can be correctly typed. Some terms that pose
-interesting problems are:
-
-* `dup` which seems to break concatenativity without impredicative polymorphism
-* `dup apply`, the U-combinator, will probably require recursive types
-* `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general
-* The Y-combinator, because `A ((B → C) → (B → C)) → A (B → C)` is not correct,
-  though I need to verify that.
-
-### Current
-
-I'm starting from a clean slate in Haskell. Prerequisites include ghc 7.4 and
-haskell-platform 2012.
-
-    $ git clone git://github.com/kputnam/bee.git
-    $ cabal install
-
-Printing parse the tree
-
-    $ hee [1 +]
-    TmQuote (TmCompose (TmLiteral (LiNumber 1)) (TmName "+"))
-
-Running tests
-
-    $ cabal configure --enable-tests
-    $ cabal build
-    $ cabal test
-
-### Attic
-
-There's a REPL written in Ruby, in [`attic/bin/bee.rb`](bee/blob/master/attic/bin/bee.rb).
-This includes a few features like tab-completion, execution traces, and the
-ability to save definitions created in the REPL to an external file. The
-interpreter achieves tail-call optimization easily because it effectively
-implements [subroutine threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading).
-
-There is a small runtime library in [`attic/runtime`](bee/blob/master/attic/runtime)
-directory that is loaded when the REPL starts. Mostly this includes some type
-definitions, like lists and booleans with a number of functions to operate on
-these types. These files include what *appears* to be module declarations and
-comments, however these are parsed as top-level expressions which are discarded
-by the parser. The parser only reads *definitions* from files.
-
-One type checker, [`scrap/Checker.scala`](bee/blob/master/attic/scrap/Checker.scala)
-is written in Scala but will be soon abandoned. The replacement type checker,
-[`src/main/haskell/Hee/Test.hs`](bee/blob/master/attic/src/main/haskell/Hee/Test.hs)
-is under active development and will subsume the Scala version.
-
-## Goals
-
-Since my primary motivation for developing **bee** is to develop a deeper
-theoretical and practical understanding of programming languages and type
-systems. I am less concerned with developing a practically *usable* language.
-
-For example, one motivation behind using postfix syntax is it is simple to
-parse, though may be harder for humans to read and write. Using point-free
-notation means the symbol table doesn't need to maintain information about
-the current scope: there are no "local variables". These kinds of choices
-simplify the language implementation, and may (or may not) yield benefits
-for programmers using the language.
-
-Some features I'd like to explore include:
-
-* Module systems
-* Type inference
-* Quasiquotation
-* Interactive development
-* Comprehensible type errors
 
 ## Related Links
 
