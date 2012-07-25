@@ -5,15 +5,21 @@ module Language.Hee.Syntax
   , parseTerm     -- Parser Term
   , parseQuote    -- Parser Term
   , parseName     -- Parser Term
+
   , parseLiteral  -- Parser Literal
   , parseChar     -- Parser Literal
   , parseString   -- Parser Literal
   , parseNumber   -- Parser Literal
+
+  , showKind      -- Kind    -> String
+  , showType      -- Type    -> String
+  , showTerm      -- Term    -> String
+  , showLiteral   -- Literal -> String
   ) where
 
 import Prelude hiding (takeWhile)
 import Control.Applicative hiding (empty)
-import Data.Char (isSpace)
+import Data.Char (showLitChar, isSpace, isPrint, chr, ord)
 import Data.Text (cons, pack, unpack, empty)
 import Data.Attoparsec.Text
 
@@ -48,24 +54,43 @@ instance Read Literal where
 ------------------------------------------------------------------------------
 
 instance Show Kind where
-  show _ = undefined
+  show = showKind
 
 instance Show Type where
-  show _ = undefined
+  show  = showType
 
 instance Show Term where
-  show TmEmpty            = ""
-  show (TmName x)         = unpack x
-  show (TmQuote x)        = "[" ++ show x ++ "]"
-  show (TmLiteral x)      = show x
-  show (TmCompose x y)    = show x ++ " " ++ show y
-  show (TmAnnotation _ _) = undefined
-  show (TmComment _)      = undefined
+  show = showTerm
 
 instance Show Literal where
-  show (LiChar x)   = "'"  ++ show x
-  show (LiString x) = "\"" ++ unpack x ++ "\""
-  show (LiNumber x) = show x
+  show = showLiteral
+
+showKind :: Kind -> String
+showKind _ = undefined
+
+showType :: Type -> String
+showType _ = undefined
+
+showTerm :: Term -> String
+showTerm TmEmpty            = ""
+showTerm (TmName x)         = unpack x
+showTerm (TmQuote x)        = "[" ++ showTerm x ++ "]"
+showTerm (TmLiteral x)      = showLiteral x
+showTerm (TmCompose x y)    = showTerm x ++ " " ++ showTerm y
+showTerm (TmAnnotation _ _) = undefined
+showTerm (TmComment _)      = undefined
+
+showLiteral :: Literal -> String
+showLiteral (LiString x) = show $ unpack x
+showLiteral (LiNumber x) = show x
+showLiteral (LiChar x)   = escape x
+  where
+    escape '\n' = "'\\n"
+    escape '\r' = "'\\r"
+    escape '\t' = "'\\t"
+    escape '\\' = "'\\\\"
+    escape x | isPrint x = '\'' : [x]
+    escape x | otherwise = '\'' : '\\' : show (ord x)
 
 ------------------------------------------------------------------------------
 
@@ -133,8 +158,10 @@ parenthesized open inside close
 
 escapedChar :: Parser Char
 escapedChar
-  = tx <$> char '\\' *> anyChar
+  =   nn <$> (char '\\' *> decimal)
+  <|> tx <$> (char '\\' *> anyChar)
   where
+    nn num  = chr num
     tx 'n'  = '\n'
     tx 't'  = '\t'
     tx 'r'  = '\r'

@@ -9,6 +9,8 @@ class Simplify a where
   simplify :: a -> a
 
 instance Simplify Term where
+  simplify (TmCompose (TmCompose a b) c)
+    = simplify $ TmCompose a (TmCompose b c)
   simplify (TmCompose a b)
     = case (simplify a, simplify b) of
         (TmEmpty, b') -> b'
