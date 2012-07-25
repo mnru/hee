@@ -58,7 +58,7 @@ these types. These files include what *appears* to be module declarations and
 comments, however these are parsed as top-level expressions which are discarded
 by the parser. The parser only reads *definitions* from files.
 
-## Goals
+### Goals
 
 Since my primary motivation for developing **bee** is to develop a deeper
 theoretical and practical understanding of programming languages and type
