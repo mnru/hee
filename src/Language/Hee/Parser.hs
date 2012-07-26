@@ -118,20 +118,22 @@ parenthesized open inside close
 
 escapedChar :: Parser Char
 escapedChar
-  =   nn <$> (char '\\' *> decimal <* optional (char '&'))
-  <|> tx <$> (char '\\' *> anyChar)
+  = char '\\' *> (number <|> named) <* char ';'
   where
-    nn num  = chr num
-    tx 'n'  = '\n'
-    tx 't'  = '\t'
-    tx 'r'  = '\r'
-    tx '\\' = '\\'
-    tx char = char
+    number = chr <$> digits
+    digits = (string "0b" *> binary)
+         <|> (string "0o" *> octal)
+         <|> (string "0x" *> hexadecimal)
+         <|> decimal
+    named  = char 'r' *> pure '\r'
+         <|> char 'n' *> pure '\n'
+         <|> char 't' *> pure '\t'
+         <|> char '\\'
 
 octal :: (Integral a, Bits a) => Parser a
 octal = foldl' step 0 <$> takeWhile1 isDigit
   where
-    isDigit c = c >= '0' && c >= '7'
+    isDigit c = c >= '0' && c <= '7'
     step a c  = (a `shiftL` 3) .|. fromIntegral (w - 48)
       where w = ord c
 
