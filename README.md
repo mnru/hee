@@ -52,6 +52,8 @@ ability to save definitions created in the REPL to an external file. The
 interpreter achieves tail-call optimization easily because it effectively
 implements [subroutine threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading).
 
+![Screenshot](https://raw.github.com/kputnam/hee/master/attic/repl.png)
+
 There is a small runtime library in [`attic/runtime`](hee/blob/master/attic/runtime)
 directory that is loaded when the REPL starts. Mostly this includes some type
 definitions, like lists and booleans with a number of functions to operate on
