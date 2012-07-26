@@ -2,13 +2,13 @@
 
 Point-free style is a paradigm in which function definitions do not include
 information about its arguments. Instead, functions are defined in terms of
-combinators and composition (Wikipedia). **Bee** is a concatenative, functional
+combinators and composition (Wikipedia). **Hee** is a concatenative, functional
 programming language built for no practical purpose in mind -- my goal is to
 use it as a vehicle for understanding PL topics. 
 
-## Development Status [![Build Status](https://secure.travis-ci.org/kputnam/bee.png)](http://travis-ci.org/kputnam/bee)
+## Development Status [![Build Status](https://secure.travis-ci.org/kputnam/hee.png)](http://travis-ci.org/kputnam/hee)
 
-**Bee** is in the very early stages of development. Some aspects of the syntax
+**Hee** is in the very early stages of development. Some aspects of the syntax
 haven't settled enough to allow providing examples. This includes the type
 syntax, comments, function declarations, and type declarations. The general
 goal is to keep the concrete syntax as minimal as possible, so I'm still
@@ -29,7 +29,8 @@ interesting problems are:
 I'm starting from a clean slate in Haskell. Prerequisites include ghc 7.4 and
 haskell-platform 2012.
 
-    $ git clone git://github.com/kputnam/bee.git
+    $ git clone git://github.com/kputnam/hee.git
+    $ cd hee
     $ cabal install
 
 Printing parse the tree
@@ -45,13 +46,13 @@ Running tests
 
 ### Attic
 
-There's a REPL written in Ruby, in [`attic/bin/bee.rb`](bee/blob/master/attic/bin/bee.rb).
+There's a REPL written in Ruby, in [`attic/bin/bee.rb`](hee/blob/master/attic/bin/bee.rb).
 This includes a few features like tab-completion, execution traces, and the
 ability to save definitions created in the REPL to an external file. The
 interpreter achieves tail-call optimization easily because it effectively
 implements [subroutine threading](http://en.wikipedia.org/wiki/Threaded_code#Subroutine_threading).
 
-There is a small runtime library in [`attic/runtime`](bee/blob/master/attic/runtime)
+There is a small runtime library in [`attic/runtime`](hee/blob/master/attic/runtime)
 directory that is loaded when the REPL starts. Mostly this includes some type
 definitions, like lists and booleans with a number of functions to operate on
 these types. These files include what *appears* to be module declarations and
@@ -60,7 +61,7 @@ by the parser. The parser only reads *definitions* from files.
 
 ### Goals
 
-Since my primary motivation for developing **bee** is to develop a deeper
+Since my primary motivation for developing **hee** is to develop a deeper
 theoretical and practical understanding of programming languages and type
 systems. I am less concerned with developing a practically *usable* language.
 
@@ -81,7 +82,7 @@ Some features I'd like to explore include:
 
 ## Syntax
 
-Like many stack-based languages, **bee** uses an postfix syntax for expression.
+Like many stack-based languages, **hee** uses an postfix syntax for expression.
 Operands are written before operators, e.g. `1 3 +`.
 
 ### Kinds
@@ -90,7 +91,7 @@ Operands are written before operators, e.g. `1 3 +`.
           | *       -- manifest
           | κ → ι   -- function
 
-Kinds classify types. **Bee** distinguishes stack-types, value-types, and type
+Kinds classify types. **Hee** distinguishes stack-types, value-types, and type
 constructors from one another.
 
 ### Types
@@ -214,7 +215,7 @@ This lets us call `next-free` like so:
 
 ## Life Without (Implicit) Closures
 
-**Bee** doesn't have nested scopes, mutable bindings, or parameter names so
+**Hee** doesn't have nested scopes, mutable bindings, or parameter names so
 closures as we know them aren't meaningful. However, we can exploit other
 features of the language to achieve similar results.
 
@@ -364,7 +365,7 @@ type of the input merely by composing with another term.
 
 ## Related Links
 
-* [BEES!](http://www.youtube.com/watch?v=5J2kc4oZTVU)
+* [The Joy Programming Language](http://www.latrobe.edu.au/phimvt/joy.html)
 * [Stack machine](http://en.wikipedia.org/wiki/Stack_machine)
 * [Stack-oriented programming language](http://en.wikipedia.org/Stack-oriented_programming_language)
 * [My History with Forth Stack Machines](http://www.yosefk.com/blog/my-history-with-forth-stack-machines.html)
