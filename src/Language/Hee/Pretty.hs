@@ -1,14 +1,23 @@
 module Language.Hee.Pretty
   ( Pretty(..)
+  , renderText
+  , renderString
   ) where
 
 import Language.Hee.Syntax
 
 import Prelude hiding (foldr)
+import Control.Applicative hiding (empty)
 import Data.Char (ord, isPrint, isAscii, isSpace, intToDigit)
-import Data.Text (foldr)
+import Data.Text (Text, foldr, pack, unpack)
 import Numeric (showSigned, showIntAtBase)
 import Text.PrettyPrint
+
+renderText :: Doc -> Text
+renderText = pack . render
+
+renderString :: Doc -> String
+renderString = render
 
 class Pretty a where
   pretty :: a -> Doc
@@ -22,27 +31,30 @@ instance Pretty Literal where
   pretty (LiString s)
     = doubleQuotes . text $ foldr ((++) . formatChar) "" s
 
-  pretty (LiNumber Binary n)
-    = text "0b" <> text (bin n "")
-    where bin = showSigned (showIntAtBase  2 intToDigit) 0
+  pretty (LiNumber radix n)
+    = text (format radix n "")
+    where
+      format :: Radix -> Int -> ShowS
+      format Binary      = (.) <$> prefix "0b" <*> digits 2
+      format Octal       = (.) <$> prefix "0o" <*> digits 8
+      format Decimal     = (.) <$> prefix ""   <*> digits 10
+      format Hexadecimal = (.) <$> prefix "0x" <*> digits 16
 
-  pretty (LiNumber Octal n)
-    = text "0o" <> text (oct n "")
-    where oct = showSigned (showIntAtBase  8 intToDigit) 0
+      digits :: Int -> Int -> ShowS
+      digits rad = showIntAtBase rad intToDigit . abs
 
-  pretty (LiNumber Decimal n)
-    = text (dec n "")
-    where dec = showSigned (showIntAtBase 10 intToDigit) 0
-
-  pretty (LiNumber Hexadecimal n)
-    = text "0x" <> text (hex n "")
-    where hex = showSigned (showIntAtBase 16 intToDigit) 0
+      prefix :: String -> Int -> ShowS
+      prefix pre n
+        | n < 0     = showString "-" . showString pre
+        | otherwise = showString pre
 
 formatChar :: Char -> String
-formatChar '\n' = "\\n"
-formatChar '\t' = "\\t"
-formatChar '\r' = "\\r"
-formatChar '\\' = "\\\\"
+formatChar '\n' = "\\n;"
+formatChar '\t' = "\\t;"
+formatChar '\r' = "\\r;"
+formatChar '\\' = "\\\\;"
+formatChar '\'' = "\\';"
+formatChar '"'  = "\\\";"
 formatChar c
   | not $ isPrint c = '\\' : (show $ ord c) ++ ";"
   | not $ isAscii c = '\\' : (show $ ord c) ++ ";"
@@ -56,7 +68,7 @@ instance Pretty Expr where
     = empty
 
   pretty (ExName s)
-    = undefined
+    = text $ unpack s
 
   pretty (ExQuote t)
     = brackets (pretty t)

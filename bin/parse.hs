@@ -11,4 +11,4 @@ main
   where
     input = pack . intercalate " " <$> getArgs
     toStr = either show show
-    parse = parseOnly parseCompose
+    parse = parseOnly parseExpr

@@ -1,21 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.Hee.Parser
-  ( ParseError(..)
+  ( Parsable(..)
+  , ParseError(..)
   , parseOnly
   , parseSome
   , parseMore
   , parseDone
-
-  , parseCompose  -- Parser Expr
   , parseExpr     -- Parser Expr
-  , parseQuote    -- Parser Expr
-  , parseName     -- Parser Expr
-
   , parseLiteral  -- Parser Literal
-  , parseChar     -- Parser Literal
-  , parseString   -- Parser Literal
-  , parseNumber   -- Parser Literal
   ) where
 
 import Language.Hee.Syntax
@@ -32,6 +25,17 @@ data ParseError a
   = Partial a Text
   | Invalid String Text
   deriving (Show)
+
+class Parsable a where
+  parser :: Parser a
+
+instance Parsable Literal where
+  parser = parseLiteral
+
+instance Parsable Expr where
+  parser = parseExpr
+
+---------------------------------------------------------------------------
 
 parseOnly :: Parser a -> Text -> Either (ParseError a) a
 parseOnly p s
@@ -51,19 +55,18 @@ parseDone r
       (Done tx e)   -> Left (Partial e tx)
       (Fail tx _ e) -> Left (Invalid e tx)
 
-parseCompose :: Parser Expr
-parseCompose
-  = simplify <$> (skipSpace *> scan)
-  where
-    scan  = ExCompose <$> parseExpr <*> ((space *> scan) <|> parseEmpty)
-    space = takeWhile1 isSpace
+---------------------------------------------------------------------------
 
 parseExpr :: Parser Expr
 parseExpr
-  =   parseQuote
-  <|> ExLiteral <$> parseLiteral
-  <|> parseName
-  <|> parseEmpty
+  = simplify <$> (skipSpace *> scan)
+  where
+    scan  = ExCompose <$> expr <*> ((space *> scan) <|> parseEmpty)
+    space = takeWhile1 isSpace
+    expr  = parseQuote
+        <|> ExLiteral <$> parseLiteral
+        <|> parseName
+        <|> parseEmpty
 
 parseLiteral :: Parser Literal
 parseLiteral
@@ -81,10 +84,10 @@ parseNumber :: Parser Literal
 parseNumber
   = bin <|> oct <|> hex <|> dec
   where
-    bin = LiNumber Binary      <$> (string "0b" *> binary)
-    oct = LiNumber Octal       <$> (string "0o" *> octal)
-    hex = LiNumber Hexadecimal <$> (string "0x" *> hexadecimal)
-    dec = LiNumber Decimal     <$> decimal
+    bin = LiNumber Binary      <$> signed (string "0b" *> binary)
+    oct = LiNumber Octal       <$> signed (string "0o" *> octal)
+    hex = LiNumber Hexadecimal <$> signed (string "0x" *> hexadecimal)
+    dec = LiNumber Decimal     <$> signed decimal
 
 parseString :: Parser Literal
 parseString
@@ -106,7 +109,7 @@ parseQuote
   where
     open   = (char '[' *> skipSpace)
     close  = (skipSpace <* char ']')
-    inside = ExQuote <$> parseCompose
+    inside = ExQuote <$> parseExpr
 
 parseEmpty :: Parser Expr
 parseEmpty
@@ -129,6 +132,10 @@ escapedChar
          <|> char 'n' *> pure '\n'
          <|> char 't' *> pure '\t'
          <|> char '\\'
+         <|> char '\''
+         <|> char '"'
+
+---------------------------------------------------------------------------
 
 octal :: (Integral a, Bits a) => Parser a
 octal = foldl' step 0 <$> takeWhile1 isDigit
