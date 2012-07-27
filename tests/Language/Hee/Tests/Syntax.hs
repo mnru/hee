@@ -19,29 +19,29 @@ import Language.Hee.Parser
 
 tests =
   [ testGroup "syntax"
-    [ testProperty "char"     $ readShow . liChar
-    , testProperty "string"   $ readShow . liString
-    , testProperty "number"   $ readShow . liNumber
-    , testProperty "empty"    $ readShow ExEmpty
-    , testProperty "name"     $ readShow . exName
-    , testProperty "quote"    $ readShow . exQuote
-    , testProperty "literal"  $ readShow . exLiteral
-    , testProperty "compose"  $ readShow . exCompose
+    [ testProperty "char"     $ reparse . liChar
+    , testProperty "string"   $ reparse . liString
+    , testProperty "number"   $ reparse . liNumber
+    , testProperty "empty"    $ reparse ExEmpty
+    , testProperty "name"     $ reparse . exName
+    , testProperty "quote"    $ reparse . exQuote
+    , testProperty "literal"  $ reparse . exLiteral
+    , testProperty "compose"  $ reparse . exCompose
     , testCase "plain chars"    testPlainChars
     , testCase "escaped chars"  testEscapedChars
     ]
   ]
 
 -- True when parse . pretty == id
-readShow :: (Parsable a, Pretty a, Eq a) => a -> Bool
-readShow
+reparse :: (Parsable a, Pretty a, Eq a) => a -> Bool
+reparse
   = ((==) . Right) <*> reparse
   where
     reparse = (parseOnly parser) . renderText . pretty
 
 -- True when pretty . parse == id
-showRead :: (Parsable a, Pretty a, Eq a) => Parser a -> Text -> Bool
-showRead p s
+reprint :: (Parsable a, Pretty a, Eq a) => Parser a -> Text -> Bool
+reprint p s
   = case parseOnly p s of
       Left _  -> False
       Right e -> s == renderText (pretty e)
@@ -55,11 +55,11 @@ escape c = pack $ "'\\" ++ show (ord c) ++ ";"
 encode c = pack $ '\'' : c : ""
 
 testPlainChars =
-  filter (showRead (parser :: Parser Literal)) letters @?= letters
+  filter (reprint (parser :: Parser Literal)) letters @?= letters
   where
     letters = map encode plain
 
 testEscapedChars =
-  filter (showRead (parser :: Parser Literal)) letters @?= []
+  filter (reprint (parser :: Parser Literal)) letters @?= []
   where
     letters = map escape plain
