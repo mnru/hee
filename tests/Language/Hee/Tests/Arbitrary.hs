@@ -98,6 +98,7 @@ instance Arbitrary SrcNamed where
       format '\r' = "'\\r"
       format '\n' = "'\\n"
       format '\t' = "'\\t"
+      format '"'  = "'\""
 
 -- Ordinary characters like 'a, 'b, etc
 instance Arbitrary SrcPlain where
@@ -105,7 +106,7 @@ instance Arbitrary SrcPlain where
     where
       format  = snoc "'"
       valid c = not (named c || numbered c)
-      named c = c `elem` "\r\n\t'\\"
+      named c = c `elem` "\r\n\t'\"\\"
       numbered c = c < '!' || c > '~'
 
 -- Characters encoded as '\nnn;
@@ -114,7 +115,7 @@ instance Arbitrary SrcEscaped where
     where
       format  = append "'\\" . flip (snoc . pack . show . ord) ';'
       valid c = not (named c) && numbered c
-      named c = c `elem` "\r\n\t'\\"
+      named c = c `elem` "\r\n\t'\"\\"
       numbered c = c < '!' || c > '~'
 
 -- Characters encoded as '\nnn; that don't need to be
@@ -123,7 +124,7 @@ instance Arbitrary SrcExcaped where
     where
       format  = append "'\\" . flip (snoc . pack . show . ord) ';'
       valid c = named c || not (numbered c)
-      named c = c `elem` "\r\n\t'\\"
+      named c = c `elem` "\r\n\t'\"\\"
       numbered c = c < '!' || c > '~'
 
 instance Arbitrary Expr where
