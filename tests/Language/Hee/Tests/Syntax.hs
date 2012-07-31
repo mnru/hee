@@ -27,8 +27,10 @@ tests =
     , testProperty "quote"    $ reparse . exQuote
     , testProperty "literal"  $ reparse . exLiteral
     , testProperty "compose"  $ reparse . exCompose
-    , testCase "plain chars"    testPlainChars
-    , testCase "escaped chars"  testEscapedChars
+    , testProperty "named"    $ reprint (parser :: Parser Literal) . srcNamed
+    , testProperty "plain"    $ reprint (parser :: Parser Literal) . srcPlain
+    , testProperty "escaped"  $ reprint (parser :: Parser Literal) . srcEscaped
+    , testProperty "escaped"  $ not . reprint (parser :: Parser Literal) . srcExcaped
     ]
   ]
 
@@ -45,21 +47,3 @@ reprint p s
   = case parseOnly p s of
       Left _  -> False
       Right e -> s == renderText (pretty e)
-
--- Characters that don't need to be escaped
-plain :: String
-plain = "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz"
-
-escape, encode :: Char -> Text
-escape c = pack $ "'\\" ++ show (ord c) ++ ";"
-encode c = pack $ '\'' : c : ""
-
-testPlainChars =
-  filter (reprint (parser :: Parser Literal)) letters @?= letters
-  where
-    letters = map encode plain
-
-testEscapedChars =
-  filter (reprint (parser :: Parser Literal)) letters @?= []
-  where
-    letters = map escape plain

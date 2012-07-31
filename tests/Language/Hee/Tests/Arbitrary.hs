@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Language.Hee.Tests.Arbitrary
   ( ExName(..)
   , ExQuote(..)
@@ -8,10 +10,14 @@ module Language.Hee.Tests.Arbitrary
   , LiChar(..)
   , LiString(..)
   , LiNumber(..)
+  , SrcNamed(..)
+  , SrcEscaped(..)
+  , SrcExcaped(..)
+  , SrcPlain(..)
   ) where
 
-import Data.Char (isSpace, isPrint, isAlphaNum, isAscii)
-import Data.Text (pack, unpack)
+import Data.Char (ord, isSpace, isPrint, isAlphaNum, isAscii)
+import Data.Text (Text, pack, unpack, append, snoc)
 import Control.Applicative
 import Test.QuickCheck
 
@@ -28,6 +34,11 @@ newtype ExComment  = RnComment  { exComment    :: Expr } deriving (Show)
 newtype LiChar     = RnChar   { liChar   :: Literal } deriving (Show)
 newtype LiString   = RnString { liString :: Literal } deriving (Show)
 newtype LiNumber   = RnNumber { liNumber :: Literal } deriving (Show)
+
+newtype SrcNamed   = SrcNamed   { srcNamed   :: Text } deriving (Show)
+newtype SrcPlain   = SrcPlain   { srcPlain   :: Text } deriving (Show)
+newtype SrcEscaped = SrcEscaped { srcEscaped :: Text } deriving (Show)
+newtype SrcExcaped = SrcExcaped { srcExcaped :: Text } deriving (Show)
 
 -----------------------------------------------------------------------------
 
@@ -70,14 +81,50 @@ instance Arbitrary LiChar where
   arbitrary = RnChar . LiChar <$> arbitrary
 
 instance Arbitrary LiString where
-  arbitrary = RnString . LiString . pack <$> arbitrary `suchThat` valid
-    where valid = all isPrint --(\x -> isAlphaNum x && isAscii x)
+  arbitrary = RnString . LiString . pack <$> arbitrary
 
 instance Arbitrary LiNumber where
   arbitrary = RnNumber <$> (LiNumber <$> arbitrary <*> arbitrary)
 
 instance Arbitrary Type where
   arbitrary = pure Null
+
+-- Characters with special escape sequences
+instance Arbitrary SrcNamed where
+  arbitrary = SrcNamed . format <$> elements ['\'', '\r', '\n', '\t']
+    where
+      format '\'' = "'\\'"
+      format '\\' = "'\\\\"
+      format '\r' = "'\\r"
+      format '\n' = "'\\n"
+      format '\t' = "'\\t"
+
+-- Ordinary characters like 'a, 'b, etc
+instance Arbitrary SrcPlain where
+  arbitrary = SrcPlain . format <$> arbitrary `suchThat` valid
+    where
+      format  = snoc "'"
+      valid c = not (named c || numbered c)
+      named c = c `elem` "\r\n\t'\\"
+      numbered c = c < '!' || c > '~'
+
+-- Characters encoded as '\nnn;
+instance Arbitrary SrcEscaped where
+  arbitrary = SrcEscaped . format <$> arbitrary `suchThat` valid
+    where
+      format  = append "'\\" . flip (snoc . pack . show . ord) ';'
+      valid c = not (named c) && numbered c
+      named c = c `elem` "\r\n\t'\\"
+      numbered c = c < '!' || c > '~'
+
+-- Characters encoded as '\nnn; that don't need to be
+instance Arbitrary SrcExcaped where
+  arbitrary = SrcExcaped . format <$> arbitrary `suchThat` valid
+    where
+      format  = append "'\\" . flip (snoc . pack . show . ord) ';'
+      valid c = named c || not (numbered c)
+      named c = c `elem` "\r\n\t'\\"
+      numbered c = c < '!' || c > '~'
 
 instance Arbitrary Expr where
   arbitrary

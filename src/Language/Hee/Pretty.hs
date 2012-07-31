@@ -49,12 +49,12 @@ instance Pretty Literal where
         | otherwise = showString pre
 
 formatChar :: Char -> String
-formatChar '\n' = "\\n;"
-formatChar '\t' = "\\t;"
-formatChar '\r' = "\\r;"
-formatChar '\\' = "\\\\;"
-formatChar '\'' = "\\';"
-formatChar '"'  = "\\\";"
+formatChar '\n' = "\\n"
+formatChar '\t' = "\\t"
+formatChar '\r' = "\\r"
+formatChar '\\' = "\\\\"
+formatChar '\'' = "\\'"
+formatChar '"'  = "\\\""
 formatChar c
   | not $ isPrint c = '\\' : (show $ ord c) ++ ";"
   | not $ isAscii c = '\\' : (show $ ord c) ++ ";"

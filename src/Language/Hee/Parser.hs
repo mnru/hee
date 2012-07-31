@@ -125,7 +125,7 @@ parenthesized open inside close
 
 escapedChar :: Parser Char
 escapedChar
-  = char '\\' *> (number <|> named) <* char ';'
+  = char '\\' *> ((number <* char ';') <|> named)
   where
     number = chr <$> digits
     digits = (string "0b" *> binary)
