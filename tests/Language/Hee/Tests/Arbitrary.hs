@@ -13,11 +13,12 @@ module Language.Hee.Tests.Arbitrary
   , SrcNamed(..)
   , SrcEscaped(..)
   , SrcExcaped(..)
+  , SrcString(..)
   , SrcPlain(..)
   ) where
 
 import Data.Char (ord, isSpace, isPrint, isAlphaNum, isAscii)
-import Data.Text (Text, pack, unpack, append, snoc)
+import Data.Text (Text, pack, unpack, append, snoc, cons)
 import Control.Applicative
 import Test.QuickCheck
 
@@ -39,6 +40,7 @@ newtype SrcNamed   = SrcNamed   { srcNamed   :: Text } deriving (Show)
 newtype SrcPlain   = SrcPlain   { srcPlain   :: Text } deriving (Show)
 newtype SrcEscaped = SrcEscaped { srcEscaped :: Text } deriving (Show)
 newtype SrcExcaped = SrcExcaped { srcExcaped :: Text } deriving (Show)
+newtype SrcString  = SrcString  { srcString  :: Text } deriving (Show)
 
 -----------------------------------------------------------------------------
 
@@ -91,14 +93,12 @@ instance Arbitrary Type where
 
 -- Characters with special escape sequences
 instance Arbitrary SrcNamed where
-  arbitrary = SrcNamed . format <$> elements ['\'', '\r', '\n', '\t']
+  arbitrary = SrcNamed . format <$> elements ['\\', '\r', '\n', '\t']
     where
-      format '\'' = "'\\'"
       format '\\' = "'\\\\"
       format '\r' = "'\\r"
       format '\n' = "'\\n"
       format '\t' = "'\\t"
-      format '"'  = "'\""
 
 -- Ordinary characters like 'a, 'b, etc
 instance Arbitrary SrcPlain where
@@ -126,6 +126,22 @@ instance Arbitrary SrcExcaped where
       valid c = named c || not (numbered c)
       named c = c `elem` "\r\n\t'\"\\"
       numbered c = c < '!' || c > '~'
+
+instance Arbitrary SrcString where
+  arbitrary = SrcString . format <$> arbitrary
+    where
+      format = cons '"' . flip snoc '"' . foldr (append . encode) ""
+      escape = cons '\\' . flip append ";" . pack . show . ord
+      encode '"'  = "\\\""
+      encode '\n' = "\\n"
+      encode '\r' = "\\r"
+      encode '\t' = "\\t"
+      encode '\\' = "\\\\"
+      encode c
+        | not $ isPrint c = escape c
+        | not $ isAscii c = escape c
+        | isSpace c       = escape c
+        | otherwise       = cons c ""
 
 instance Arbitrary Expr where
   arbitrary

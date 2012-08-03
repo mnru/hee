@@ -27,9 +27,30 @@ class Pretty a where
 instance Pretty Literal where
   pretty (LiChar c)
     = text ("'" ++ formatChar c)
+    where
+      formatChar '\n' = "\\n"
+      formatChar '\t' = "\\t"
+      formatChar '\r' = "\\r"
+      formatChar '\\' = "\\\\"
+      formatChar c
+        | not $ isPrint c = '\\' : (show $ ord c) ++ ";"
+        | not $ isAscii c = '\\' : (show $ ord c) ++ ";"
+        | isSpace c       = '\\' : (show $ ord c) ++ ";"
+        | otherwise       = c : ""
 
   pretty (LiString s)
     = doubleQuotes . text $ foldr ((++) . formatChar) "" s
+    where
+      formatChar '\n' = "\\n"
+      formatChar '\t' = "\\t"
+      formatChar '\r' = "\\r"
+      formatChar '\\' = "\\\\"
+      formatChar '"'  = "\\\""
+      formatChar c
+        | not $ isPrint c = '\\' : (show $ ord c) ++ ";"
+        | not $ isAscii c = '\\' : (show $ ord c) ++ ";"
+        | isSpace c       = '\\' : (show $ ord c) ++ ";"
+        | otherwise       = c : ""
 
   pretty (LiNumber radix n)
     = text (format radix n "")
@@ -47,19 +68,6 @@ instance Pretty Literal where
       prefix pre n
         | n < 0     = showString "-" . showString pre
         | otherwise = showString pre
-
-formatChar :: Char -> String
-formatChar '\n' = "\\n"
-formatChar '\t' = "\\t"
-formatChar '\r' = "\\r"
-formatChar '\\' = "\\\\"
-formatChar '\'' = "\\'"
-formatChar '"'  = "\\\""
-formatChar c
-  | not $ isPrint c = '\\' : (show $ ord c) ++ ";"
-  | not $ isAscii c = '\\' : (show $ ord c) ++ ";"
-  | isSpace c       = '\\' : (show $ ord c) ++ ";"
-  | otherwise       = c : ""
 
 ---------------------------------------------------------------------------
 

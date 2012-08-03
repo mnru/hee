@@ -18,7 +18,7 @@ import Language.Hee.Pretty
 import Language.Hee.Parser
 
 tests =
-  [ testGroup "syntax"
+  [ testGroup "ast -> string -> ast"
     [ testProperty "char"     $ reparse . liChar
     , testProperty "string"   $ reparse . liString
     , testProperty "number"   $ reparse . liNumber
@@ -27,10 +27,13 @@ tests =
     , testProperty "quote"    $ reparse . exQuote
     , testProperty "literal"  $ reparse . exLiteral
     , testProperty "compose"  $ reparse . exCompose
-    , testProperty "named"    $ reprint (parser :: Parser Literal) . srcNamed
-    , testProperty "plain"    $ reprint (parser :: Parser Literal) . srcPlain
-    , testProperty "escaped"  $ reprint (parser :: Parser Literal) . srcEscaped
-    , testProperty "escaped"  $ not . reprint (parser :: Parser Literal) . srcExcaped
+  ],
+  testGroup "string -> ast -> string"
+    [ testProperty "char named"   $ reprint (parser :: Parser Literal) . srcNamed
+    , testProperty "char plain"   $ reprint (parser :: Parser Literal) . srcPlain
+    , testProperty "char escaped" $ reprint (parser :: Parser Literal) . srcEscaped
+    , testProperty "char escaped" $ not . reprint (parser :: Parser Literal) . srcExcaped
+    , testProperty "string"       $ reprint (parser :: Parser Literal) . srcString
     ]
   ]
 
