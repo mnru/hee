@@ -13,11 +13,11 @@ import Data.Text (Text, foldr, pack, unpack)
 import Numeric (showSigned, showIntAtBase)
 import Text.PrettyPrint
 
-renderText :: Doc -> Text
-renderText = pack . render
+renderText :: Pretty a => a -> Text
+renderText = pack . render . pretty
 
-renderString :: Doc -> String
-renderString = render
+renderString :: Pretty a => a -> String
+renderString = render . pretty
 
 class Pretty a where
   pretty :: a -> Doc
@@ -25,7 +25,7 @@ class Pretty a where
 ---------------------------------------------------------------------------
 
 instance Pretty Literal where
-  pretty (LiChar c)
+  pretty (LChar c)
     = text ("'" ++ formatChar c)
     where
       formatChar '\n' = "\\n"
@@ -38,7 +38,7 @@ instance Pretty Literal where
         | isSpace c       = '\\' : (show $ ord c) ++ ";"
         | otherwise       = c : ""
 
-  pretty (LiString s)
+  pretty (LString s)
     = doubleQuotes . text $ foldr ((++) . formatChar) "" s
     where
       formatChar '\n' = "\\n"
@@ -52,7 +52,7 @@ instance Pretty Literal where
         | isSpace c       = '\\' : (show $ ord c) ++ ";"
         | otherwise       = c : ""
 
-  pretty (LiNumber radix n)
+  pretty (LNumber radix n)
     = text (format radix n "")
     where
       format :: Radix -> Int -> ShowS
@@ -71,26 +71,26 @@ instance Pretty Literal where
 
 ---------------------------------------------------------------------------
 
-instance Pretty Expr where
-  pretty ExEmpty
+instance Pretty Expression where
+  pretty EEmpty
     = empty
 
-  pretty (ExName s)
+  pretty (EName s)
     = text $ unpack s
 
-  pretty (ExQuote t)
+  pretty (EQuote t)
     = brackets (pretty t)
 
-  pretty (ExLiteral l)
+  pretty (ELiteral l)
     = pretty l
 
-  pretty (ExCompose e f)
+  pretty (ECompose e f)
     = pretty e <+> pretty f
 
-  pretty (ExAnnotate e t)
+  pretty (EAnnotate e t)
     = undefined
 
-  pretty (ExComment s)
+  pretty (EComment s)
     = undefined
 
 ---------------------------------------------------------------------------

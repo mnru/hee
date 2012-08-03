@@ -7,7 +7,7 @@ module Language.Hee.Parser
   , parseSome
   , parseMore
   , parseDone
-  , parseExpr     -- Parser Expr
+  , parseExpr     -- Parser Expression
   , parseLiteral  -- Parser Literal
   ) where
 
@@ -36,7 +36,7 @@ class Parsable a where
 instance Parsable Literal where
   parser = parseLiteral
 
-instance Parsable Expr where
+instance Parsable Expression where
   parser = parseExpr
 
 ---------------------------------------------------------------------------
@@ -61,14 +61,14 @@ parseDone r
 
 ---------------------------------------------------------------------------
 
-parseExpr :: Parser Expr
+parseExpr :: Parser Expression
 parseExpr
   = simplify <$> (skipSpace *> scan)
   where
-    scan  = ExCompose <$> expr <*> ((space *> scan) <|> parseEmpty)
+    scan  = ECompose <$> expr <*> ((space *> scan) <|> parseEmpty)
     space = takeWhile1 isSpace
     expr  = parseQuote
-        <|> ExLiteral <$> parseLiteral
+        <|> ELiteral <$> parseLiteral
         <|> parseName
         <|> parseEmpty
 
@@ -80,7 +80,7 @@ parseLiteral
 
 parseChar :: Parser Literal
 parseChar
-  = LiChar <$> (delim *> (escapedChar <|> anyChar))
+  = LChar <$> (delim *> (escapedChar <|> anyChar))
   where
     delim = char '\''
 
@@ -88,40 +88,36 @@ parseNumber :: Parser Literal
 parseNumber
   = bin <|> oct <|> hex <|> dec
   where
-    bin = LiNumber Binary      <$> signed (string "0b" *> binary)
-    oct = LiNumber Octal       <$> signed (string "0o" *> octal)
-    hex = LiNumber Hexadecimal <$> signed (string "0x" *> hexadecimal)
-    dec = LiNumber Decimal     <$> signed decimal
+    bin = LNumber Binary      <$> signed (string "0b" *> binary)
+    oct = LNumber Octal       <$> signed (string "0o" *> octal)
+    hex = LNumber Hexadecimal <$> signed (string "0x" *> hexadecimal)
+    dec = LNumber Decimal     <$> signed decimal
 
 parseString :: Parser Literal
 parseString
-  = LiString . pack <$> (delim *> inside)
+  = LString . pack <$> (delim *> inside)
   where
     delim  = char '"'
     inside = manyTill (escapedChar <|> anyChar) delim
 
-parseName :: Parser Expr
+parseName :: Parser Expression
 parseName
-  = ExName <$> (cons <$> satisfy startChar <*> takeWhile otherChar)
+  = EName <$> (cons <$> satisfy startChar <*> takeWhile otherChar)
   where
     startChar = notInClass " \t\r\n\f\v[]\"'"
     otherChar = notInClass " \t\r\n\f\v[]"
 
-parseQuote :: Parser Expr
+parseQuote :: Parser Expression
 parseQuote
   = parenthesized open inside close
   where
     open   = (char '[' *> skipSpace)
     close  = (skipSpace <* char ']')
-    inside = ExQuote <$> parseExpr
+    inside = EQuote <$> parseExpr
 
-parseEmpty :: Parser Expr
+parseEmpty :: Parser Expression
 parseEmpty
-  = pure ExEmpty
-
-parenthesized :: Applicative f => f a -> f b -> f c -> f b
-parenthesized open inside close
-  = open *> inside <* close
+  = pure EEmpty
 
 escapedChar :: Parser Char
 escapedChar
@@ -140,6 +136,10 @@ escapedChar
          <|> char '"'
 
 ---------------------------------------------------------------------------
+
+parenthesized :: Applicative f => f a -> f b -> f c -> f b
+parenthesized open inside close
+  = open *> inside <* close
 
 octal :: (Integral a, Bits a) => Parser a
 octal = foldl' step 0 <$> takeWhile1 isDigit

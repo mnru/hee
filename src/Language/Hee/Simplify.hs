@@ -7,18 +7,18 @@ import Language.Hee.Syntax
 class Simplify a where
   simplify :: a -> a
 
-instance Simplify Expr where
-  simplify (ExCompose (ExCompose a b) c)
-    = simplify $ ExCompose a (ExCompose b c)
-  simplify (ExCompose a b)
+instance Simplify Expression where
+  simplify (ECompose (ECompose a b) c)
+    = simplify $ ECompose a (ECompose b c)
+  simplify (ECompose a b)
     = case (simplify a, simplify b) of
-        (ExEmpty, b') -> b'
-        (a', ExEmpty) -> a'
-        (a', b')      -> ExCompose a' b'
-  simplify (ExQuote a)
-    = ExQuote $ simplify a
-  simplify (ExAnnotate e t)
-    = ExAnnotate (simplify e) (simplify t)
+        (EEmpty, b') -> b'
+        (a', EEmpty) -> a'
+        (a', b')      -> ECompose a' b'
+  simplify (EQuote a)
+    = EQuote $ simplify a
+  simplify (EAnnotate e t)
+    = EAnnotate (simplify e) (simplify t)
   simplify e
     = e
 

@@ -1,15 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Language.Hee.Tests.Arbitrary
-  ( ExName(..)
-  , ExQuote(..)
-  , ExLiteral(..)
-  , ExCompose(..)
-  , ExAnnotate(..)
-  , ExComment(..)
-  , LiChar(..)
-  , LiString(..)
-  , LiNumber(..)
+  ( EName(..)
+  , EQuote(..)
+  , ELiteral(..)
+  , ECompose(..)
+  , EAnnotate(..)
+  , EComment(..)
+  , LChar(..)
+  , LString(..)
+  , LNumber(..)
   , SrcNamed(..)
   , SrcEscaped(..)
   , SrcExcaped(..)
@@ -25,16 +25,16 @@ import Test.QuickCheck
 import Language.Hee.Syntax
 import Language.Hee.Simplify
 
-newtype ExName     = RnName     { exName       :: Expr } deriving (Show)
-newtype ExQuote    = RnQuote    { exQuote      :: Expr } deriving (Show)
-newtype ExLiteral  = RnLiteral  { exLiteral    :: Expr } deriving (Show)
-newtype ExCompose  = RnCompose  { exCompose    :: Expr } deriving (Show)
-newtype ExAnnotate = RnAnnotate { exAnnotation :: Expr } deriving (Show)
-newtype ExComment  = RnComment  { exComment    :: Expr } deriving (Show)
+newtype EName     = RnName     { eName       :: Expression } deriving (Show)
+newtype EQuote    = RnQuote    { eQuote      :: Expression } deriving (Show)
+newtype ELiteral  = RnLiteral  { eLiteral    :: Expression } deriving (Show)
+newtype ECompose  = RnCompose  { eCompose    :: Expression } deriving (Show)
+newtype EAnnotate = RnAnnotate { eAnnotation :: Expression } deriving (Show)
+newtype EComment  = RnComment  { eComment    :: Expression } deriving (Show)
 
-newtype LiChar     = RnChar   { liChar   :: Literal } deriving (Show)
-newtype LiString   = RnString { liString :: Literal } deriving (Show)
-newtype LiNumber   = RnNumber { liNumber :: Literal } deriving (Show)
+newtype LChar     = RnChar   { lChar   :: Literal } deriving (Show)
+newtype LString   = RnString { lString :: Literal } deriving (Show)
+newtype LNumber   = RnNumber { lNumber :: Literal } deriving (Show)
 
 newtype SrcNamed   = SrcNamed   { srcNamed   :: Text } deriving (Show)
 newtype SrcPlain   = SrcPlain   { srcPlain   :: Text } deriving (Show)
@@ -44,9 +44,9 @@ newtype SrcString  = SrcString  { srcString  :: Text } deriving (Show)
 
 -----------------------------------------------------------------------------
 
-instance Arbitrary ExName where
+instance Arbitrary EName where
   arbitrary
-    = RnName . ExName . pack <$> arbitrary `suchThat` valid
+    = RnName . EName . pack <$> arbitrary `suchThat` valid
     where
       valid ""                  = False
       valid s@(x:xs)
@@ -57,39 +57,39 @@ instance Arbitrary ExName where
       start = " \t\r\n\f\v[]\"'0123456789+-"
       other = " \t\r\n\f\v[]"
 
-instance Arbitrary ExQuote where
-  arbitrary = RnQuote . ExQuote <$> arbitrary `suchThat` valid
+instance Arbitrary EQuote where
+  arbitrary = RnQuote . EQuote <$> arbitrary `suchThat` valid
     where
-      valid (ExCompose _ _) = False
-      valid _               = True
+      valid (ECompose _ _) = False
+      valid _              = True
 
-instance Arbitrary ExLiteral where
-  arbitrary = RnLiteral . ExLiteral <$> arbitrary
+instance Arbitrary ELiteral where
+  arbitrary = RnLiteral . ELiteral <$> arbitrary
 
-instance Arbitrary ExCompose where
-  arbitrary = RnCompose . simplify <$> (ExCompose <$> expr <*> expr)
-    where expr = arbitrary `suchThat` (/= ExEmpty)
+instance Arbitrary ECompose where
+  arbitrary = RnCompose . simplify <$> (ECompose <$> expr <*> expr)
+    where expr = arbitrary `suchThat` (/= EEmpty)
 
-instance Arbitrary ExAnnotate where
-  arbitrary = RnAnnotate <$> (ExAnnotate <$> arbitrary <*> arbitrary)
+instance Arbitrary EAnnotate where
+  arbitrary = RnAnnotate <$> (EAnnotate <$> arbitrary <*> arbitrary)
 
-instance Arbitrary ExComment where
-  arbitrary = RnComment . ExComment . pack <$> arbitrary
+instance Arbitrary EComment where
+  arbitrary = RnComment . EComment . pack <$> arbitrary
 
 instance Arbitrary Radix where
   arbitrary = elements [Binary, Octal, Decimal, Hexadecimal]
 
-instance Arbitrary LiChar where
-  arbitrary = RnChar . LiChar <$> arbitrary
+instance Arbitrary LChar where
+  arbitrary = RnChar . LChar <$> arbitrary
 
-instance Arbitrary LiString where
-  arbitrary = RnString . LiString . pack <$> arbitrary
+instance Arbitrary LString where
+  arbitrary = RnString . LString . pack <$> arbitrary
 
-instance Arbitrary LiNumber where
-  arbitrary = RnNumber <$> (LiNumber <$> arbitrary <*> arbitrary)
+instance Arbitrary LNumber where
+  arbitrary = RnNumber <$> (LNumber <$> arbitrary <*> arbitrary)
 
 instance Arbitrary Type where
-  arbitrary = pure Null
+  arbitrary = pure $ TStack SEmpty
 
 -- Characters with special escape sequences
 instance Arbitrary SrcNamed where
@@ -143,18 +143,18 @@ instance Arbitrary SrcString where
         | isSpace c       = escape c
         | otherwise       = cons c ""
 
-instance Arbitrary Expr where
+instance Arbitrary Expression where
   arbitrary
-    = frequency [(1, pure ExEmpty)
-                ,(4, exName       <$> arbitrary)
-                ,(3, exQuote      <$> arbitrary)
-                ,(2, exLiteral    <$> arbitrary)
-                ,(5, exCompose    <$> arbitrary)
-                ,(0, exAnnotation <$> arbitrary)
-                ,(0, exComment    <$> arbitrary)]
+    = frequency [(1, pure EEmpty)
+                ,(4, eName       <$> arbitrary)
+                ,(3, eQuote      <$> arbitrary)
+                ,(2, eLiteral    <$> arbitrary)
+                ,(5, eCompose    <$> arbitrary)
+                ,(0, eAnnotation <$> arbitrary)
+                ,(0, eComment    <$> arbitrary)]
 
 instance Arbitrary Literal where
   arbitrary
-    = frequency [(1, liChar   <$> arbitrary)
-                ,(3, liString <$> arbitrary)
-                ,(4, liNumber <$> arbitrary)]
+    = frequency [(1, lChar   <$> arbitrary)
+                ,(3, lString <$> arbitrary)
+                ,(4, lNumber <$> arbitrary)]

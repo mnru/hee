@@ -19,14 +19,14 @@ import Language.Hee.Parser
 
 tests =
   [ testGroup "ast -> string -> ast"
-    [ testProperty "char"     $ reparse . liChar
-    , testProperty "string"   $ reparse . liString
-    , testProperty "number"   $ reparse . liNumber
-    , testProperty "empty"    $ reparse ExEmpty
-    , testProperty "name"     $ reparse . exName
-    , testProperty "quote"    $ reparse . exQuote
-    , testProperty "literal"  $ reparse . exLiteral
-    , testProperty "compose"  $ reparse . exCompose
+    [ testProperty "char"     $ reparse . lChar
+    , testProperty "string"   $ reparse . lString
+    , testProperty "number"   $ reparse . lNumber
+    , testProperty "empty"    $ reparse EEmpty
+    , testProperty "name"     $ reparse . eName
+    , testProperty "quote"    $ reparse . eQuote
+    , testProperty "literal"  $ reparse . eLiteral
+    , testProperty "compose"  $ reparse . eCompose
   ],
   testGroup "string -> ast -> string"
     [ testProperty "char named"   $ reprint (parser :: Parser Literal) . srcNamed
@@ -42,11 +42,11 @@ reparse :: (Parsable a, Pretty a, Eq a) => a -> Bool
 reparse
   = ((==) . Right) <*> reparse
   where
-    reparse = (parseOnly parser) . renderText . pretty
+    reparse = (parseOnly parser) . renderText
 
 -- True when pretty . parse == id
 reprint :: (Parsable a, Pretty a, Eq a) => Parser a -> Text -> Bool
 reprint p s
   = case parseOnly p s of
       Left _  -> False
-      Right e -> s == renderText (pretty e)
+      Right e -> s == renderText e
