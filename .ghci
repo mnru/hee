@@ -1,0 +1,4 @@
+:set -XOverloadedStrings
+:m + Language.Hee.Syntax
+:m + Language.Hee.Parser
+:m + Language.Hee.Pretty
