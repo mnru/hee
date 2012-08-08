@@ -6,7 +6,7 @@ module Language.Hee.Syntax
   , Stack(..)
   , Id
   , Type(..)
-  , Declaration(..)
+  , Variable(..)
   ) where
 
 import Data.Text
@@ -43,12 +43,13 @@ data Kind
 type Id
   = Int
 
-type Variable
-  = (Id, Kind)
+data Variable
+  = Variable Id Kind
+  deriving (Eq, Show)
 
 data Stack
   = SEmpty
-  | STail Int
+  | STail Id
   | SPush Type Stack
   deriving (Eq, Show)
 
@@ -56,11 +57,26 @@ data Type
   = TStack Stack
   | TConstructor Text Kind
   | TApplication Type Type
-  | TForall Id Kind Type
+  | TForall Variable Bound Type
+  | TQualified [Predicate] Type
+  | TVariable Variable
   deriving (Eq, Show)
 
-data Declaration
-  = DWord
-  | DType
-  | DModule
+-- List of identity functions:
+--   ∀(β≽∀α.α→α).[β] ⊑ [∀α.α→α]
+--   ∀(β≽∀α.α→α).[β] ⊑ ∀α.[α→α]
+--
+-- (⊑) ⊆ (⊧) ⊆ (≡)
+--   ≡, equivalence relation
+--   ⊧, abstraction relation
+--   ⊑, instance relation
+
+data Bound
+  = Rigid     -- ∀(α=υ).τ means τ where α is as polymorphic as υ
+  | Flexible  -- ∀(α≽υ).τ means τ where α is equal to or is an instance of υ
+  | Bottom    -- ∀α.τ     means τ where α is equal to or is an instance of ⊥
+  deriving (Eq, Show)
+
+data Predicate
+  = MemberOf Type
   deriving (Eq, Show)
