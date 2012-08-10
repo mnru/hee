@@ -1,0 +1,32 @@
+both   : S a a (a → b) → S b b
+***    : Arrow a => S (a b c) (a x y) → S (a (Pair b x) (Pair c y))
+pair   : S a b → S (Pair a b)
+unpair : S (Pair a b) → S a b
+
+square
+  " 21 square
+  " 441
+  "
+  " 2 5 + square
+  " 49
+  "
+  " 3 square square
+  " 81
+  "
+  : S num → S num
+  = dup *
+
+sum-of-squares
+  " 3 4 sum-of-squares
+  " 35
+  "
+  : S num num → num
+  = [square] both +
+
+f : S num → num
+  " 5 f
+  " 136
+  "
+  = dup         pair
+    [1 +] [2 *] ***
+    [sum-of-squares] unpair
