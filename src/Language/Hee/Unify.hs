@@ -5,70 +5,13 @@ module Language.Hee.Unify
 import Data.List ((\\))
 
 import Language.Hee.Syntax
-
-class Kinded a where
-  kind :: a -> Kind
-
-instance Kinded Kind where
-  kind = id
-
-instance Kinded Type where
-  kind (TConstructor _ k) = k
-  kind (TVariable x)      = kind x
-  kind (TForall x _ t)    = kind t
-  kind (TQualified _ t)   = kind t
-  kind (TStack _)         = KStack
-  kind (TApplication t u) = let (KConstructor _ k) = kind t in k
-
-instance Kinded Stack where
-  kind = const KStack
-
-instance Kinded Variable where
-  kind (Variable _ k) = k
+import Language.Hee.Substitute
 
 data UnifyError
   = OccursCheck
   | KindMismatch
   | TypeMismatch
   deriving (Eq, Show)
-
-type Substitution
-  = [(Variable, Type)]
-
-class Substitute a where
-  freevars   :: a -> [Variable]
-  substitute :: Substitution -> a -> a
-
-instance Substitute Stack where
-  freevars SEmpty       = []
-  freevars (STail id)   = [Variable id KStack]
-  freevars (SPush h t)  = freevars h ++ freevars t
-
-  substitute s SEmpty      = SEmpty
-  substitute s (SPush h t) = SPush (substitute s h) (substitute s t)
-  substitute s (STail id)  = case lookup (Variable id KStack) s of
-                               Just (TStack t) -> t
-                               _               -> STail id
-
-instance Substitute Type where
-  freevars (TConstructor t _)   = [] 
-  freevars (TStack s)           = freevars s
-  freevars (TApplication t t')  = freevars t ++ freevars t'
-  freevars (TForall x _ t)      = freevars t \\ [x]
-  freevars (TQualified _ t)     = freevars t
-  freevars (TVariable v)        = [v]
-
-  substitute s (TStack t)           = TStack $ substitute s t
-  substitute s (TApplication t t')  = TApplication (substitute s t) (substitute s t')
-  substitute s (TForall x b t)      = undefined
-  substitute s (TQualified ps t)    = undefined
-  substitute s (TVariable v)        = maybe (TVariable v) id $ lookup v s
-  substitute s t                    = t
-
-class Unify a where
-  unify   :: a -> a -> Either UnifyError Substitution
-  match   :: a -> a -> Either UnifyError Substitution
-  bindvar :: Variable -> a -> Either UnifyError Substitution
 
 instance Unify Stack where
   unify SEmpty SEmpty             = return []
@@ -90,9 +33,8 @@ instance Unify Stack where
   bindvar v@(Variable id k) t
     | v `elem` freevars t = Left OccursCheck
     | k /= kind t         = Left KindMismatch
-    | t == (STail id)     = return []
-    | otherwise           = return [(v, TStack t)]
-
+    | t == (STail id)     = return ∅
+    | otherwise           = return (v ↦ TStack t)
 
 instance Unify Type where
   unify (TVariable v) t                       = bindvar v t

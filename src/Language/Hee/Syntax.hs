@@ -7,6 +7,7 @@ module Language.Hee.Syntax
   , Id
   , Type(..)
   , Variable(..)
+  , Kinded(..)
   ) where
 
 import Data.Text
@@ -80,3 +81,23 @@ data Bound
 data Predicate
   = MemberOf Type
   deriving (Eq, Show)
+
+class Kinded a where
+  kind :: a -> Kind
+
+instance Kinded Kind where
+  kind = id
+
+instance Kinded Type where
+  kind (TConstructor _ k) = k
+  kind (TVariable x)      = kind x
+  kind (TForall x _ t)    = kind t
+  kind (TQualified _ t)   = kind t
+  kind (TStack _)         = KStack
+  kind (TApplication t u) = let (KConstructor _ k) = kind t in k
+
+instance Kinded Stack where
+  kind = const KStack
+
+instance Kinded Variable where
+  kind (Variable _ k) = k
