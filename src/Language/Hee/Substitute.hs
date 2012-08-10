@@ -47,6 +47,10 @@ instance Monoid Substitution where
   mempty      = empty
   mappend a b = fromJust (a <+> b)
 
+-- TODO we must rename 'a' to avoid accidental variable capture of 'a'!
+--   substitute [b ↦ a] (λa. c b a)
+--   = (λa. c a a)        wrong
+--   = (λx. c a x)        right
 class Substitute a where
   freevars   :: a -> [Variable]
   substitute :: Substitution -> a -> a
