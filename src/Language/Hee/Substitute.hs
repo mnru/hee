@@ -1,5 +1,6 @@
 module Language.Hee.Substitute
-  ( Substitute(..)
+  ( Substitution(..)
+  , Substitute(..)
   , empty
   , (↦) 
   , (<+)
@@ -54,7 +55,6 @@ instance Substitute a => Substitute [a] where
   freevars     = nub . concatMap freevars
   substitute s = map (substitute s)
 
--- ghc: panic! (the 'impossible' happened)
 instance (Substitute a, Substitute b) => Substitute (a, b) where
   freevars (a, b)     = freevars a ++ freevars b
   substitute s (a, b) = (substitute s a, substitute s b)
@@ -64,11 +64,11 @@ instance Substitute Stack where
   freevars (STail id)   = [Variable id KStack]
   freevars (SPush h t)  = freevars h ++ freevars t
 
-  substitute s SEmpty      = SEmpty
-  substitute s (SPush h t) = SPush (substitute s h) (substitute s t)
-  substitute (Γ s) (STail id)  = case lookup (Variable id KStack) s of
-                                   Just (TStack t) -> t
-                                   _               -> STail id
+  substitute s SEmpty         = SEmpty
+  substitute s (SPush h t)    = SPush (substitute s h) (substitute s t)
+  substitute (Γ s) (STail id) = case lookup (Variable id KStack) s of
+                                  Just (TStack t) -> t
+                                  _               -> STail id
 
 instance Substitute Type where
   freevars (TConstructor t _)   = [] 

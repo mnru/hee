@@ -37,6 +37,7 @@ library
     Language.Hee.Pretty
     Language.Hee.Simplify
     Language.Hee.Substitute
+    Language.Hee.Unify
 
 test-suite main
   type: exitcode-stdio-1.0
