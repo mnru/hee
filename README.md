@@ -18,11 +18,16 @@ The preliminary type system is not usable. Several issues must be addressed
 before certain simple terms can be correctly typed. Some terms that pose
 interesting problems are:
 
-* `dup` which seems to break concatenativity without impredicative polymorphism
-* `dup apply`, the U-combinator, will probably require recursive types
-* `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general
-* The Y-combinator, because `A ((B → C) → (B → C)) → A (B → C)` is not correct,
-  though I need to verify that.
+* `dup apply`, the U-combinator, requires recursive types and perhaps should be
+  ill-typed to guarantee termination.
+
+* `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general. We
+  should be able to derive a principle type for it that admits `[+] dup compose`
+
+* `dup` itself which seems to break concatenativity without impredicative
+  polymorphism. That is, `[id] [id]` has the type `(∀ T . T → T) (∀ U . U → U)`,
+  so we should assign `[id] dup` the same type. Without impredicative
+  polymorphism we will derive `∀ T . (T → T) (T → T)` instead.
 
 ### Current
 
@@ -98,43 +103,53 @@ constructors from one another.
 
 ### Types
 
-    σ,φ ::= ∅       -- empty
-          | S,T     -- variable
-          | σ τ     -- non-empty
+Stacks (rows), with kind `@`
 
-    τ,υ ::= a,b     -- variable
-          | σ → φ   -- function
+    σ,φ ::= ∅       -- empty
+          | S,T     -- type variable
+          | σ τ     -- non-empty stack
+
+Values, with kind `*`
+
+    τ,υ ::= a,b     -- type variable
+          | σ → φ   -- function on stacks
           | int
           | str
           | ...
 
 Currently the type system is too under-powered to be useful. Several features
-like quantified types, qualified types, type constructors, and recursive types
-are intended, once I understand them better.
+like quantified types, qualified types, type constructors, type classes, and
+higher-rank polymorphism are intended, once I understand them better.
 
 ### Terms
 
-    e,f ::= ∅         -- empty
+    e,f ::= ∅         -- empty (identity)
           | e f       -- composition
           | [e]       -- abstraction
           | name      -- top-level definition
           | literal   -- char, num, str, etc
 
-Unlike an applicative language, terms are built almost entirely by function
-composition. For instance, `+ *` composes an addition with a multiplication.
-Similarly, `1 +` composes a function `1` that pushes the numeric value one on
-the stack with a function `+` that pops the top two stack elements and pushes
-their sum.
+Unlike an applicative language, terms are built entirely by function composition.
+For instance, `+ *` composes an addition with a multiplication. Similarly, `1 +`
+composes a function `1` that pushes the numeric value one on the stack with a
+function `+` that pops the top two stack elements and pushes their sum.
 
 ## Minimal Combinators
 
-These combinators are used to manipulate function values. Here are the type
-signatures of some of these combinators:
+These combinators are used to manipulate abstractions (function values). Here
+are some of the type signatures:
 
+    quote   " convert a value to an abstraction that yields that value
     quote   : S a → S (T → T a)
-    apply   : S (S → T) → T
+
+    compose " composes two abstractions, eg [3] [4] compose ==> [3 4]
     compose : S (T → U) (U → V) → S (T → V)
-    dip     : S (S → T) a → T a
+
+    apply   " applies an abstraction, eg [3] apply ==> 3
+    apply   : S (S → T) → T
+
+    dip     " applies an abstraction, eg 4 [3] dip ==> 3 4
+    dip     : S a (S → T) → T a
 
 Because arguments aren't explicitly named, they must be accessed according to
 their position on the stack. Several stack-shuffling combinators are provided
@@ -151,13 +166,14 @@ to move values around. Below are type signatures of some of these:
 Declaring an algebraic data type implicitly creates a deconstructor. This is a
 function which takes function arguments corresponding to each constructor, in
 the same order as the constructor definitions. For instance, `true ["T"] ["F"]
-unboolean`. Note `if` is nothing more than `unboolean`.
+unboolean` yields `"T"`. Note `if` is nothing more than `unboolean`.
 
     :: boolean
      | true
      | false
      ;
 
+    -- unboolean is created implicitly
     -- unboolean : S boolean (S → T) (S → T) → T
 
 Boolean operators can be implemented like so:
@@ -175,13 +191,14 @@ and the field names are ignored -- this will change.
      | cons tail head
      ;
 
+    -- unlist is created implicitly
     -- unlist : S a-list (S → T) (S a-list a → T) → T
 
 ## Exploiting Multiple Return Values
 
 In most non stack-based languages, functions can return at most one value.
-Multiple values can be simulated by packing them into one, and then unpacking
-them in the callee.
+Multiple values can be simulated by packing them into a single value, and
+then unpacking them in the caller.
 
     nextFree :: Int → [Int] → (Int, [Int])
     nextFree current []     = (current+1, [])
@@ -206,18 +223,19 @@ returns the next free id.
 
 This lets us call `next-free` like so:
 
+    -- define a list of integers: 2, 4, 5
     : bound-vars null 5 cons 4 cons 2 cons ;
 
-    bound-vars -1     -- [2,4,5] -1
-      next-free       -- [2,4,5] 0
-      next-free       -- [2,4,5] 1
-      next-free       --   [4,5] 3
-      next-free       --      [] 6
-      next-free       --      [] 7
+    bound-vars -1     -- (2,4,5) -1
+      next-free       -- (2,4,5) 0
+      next-free       -- (2,4,5) 1
+      next-free       --   (4,5) 3
+      next-free       --      () 6
+      next-free       --      () 7
 
 ## Life Without (Implicit) Closures
 
-**Hee** doesn't have nested scopes, mutable bindings, or parameter names so
+**Hee** doesn't have lexical scopes, mutable bindings, or parameter names so
 closures as we know them aren't meaningful. However, we can exploit other
 features of the language to achieve similar results.
 
@@ -229,7 +247,7 @@ features of the language to achieve similar results.
       compose compose ; -- x' [xs' x' generate-free']
 
 Values can be lifted to functions using `quote`, and functions can be composed
-with `compose`. This enables state encapsulation (immutable) within a function.
+with `compose`. This enables immutable state to be encapsulated inside a function.
 
     : generate-free
       quote [-1 generate-free'] compose ;
