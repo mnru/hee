@@ -6,6 +6,7 @@ module Language.Hee.Syntax
   , Stack(..)
   , Id
   , Type(..)
+  , Bound(..)
   , Variable(..)
   , Kinded(..)
   ) where
@@ -94,7 +95,7 @@ instance Kinded Type where
   kind (TForall x _ t)    = kind t
   kind (TQualified _ t)   = kind t
   kind (TStack _)         = KStack
-  kind (TApplication t u) = let (KConstructor _ k) = kind t in k
+  kind (TApplication f x) = let (KConstructor _ k) = kind f in k
 
 instance Kinded Stack where
   kind = const KStack

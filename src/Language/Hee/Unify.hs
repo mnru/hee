@@ -34,9 +34,9 @@ instance Unify Stack where
   match _ _                       = Left TypeMismatch
 
   bindvar v@(Variable id k) t
+    | t == (STail id)     = return empty
     | v `elem` freevars t = Left OccursCheck
     | k /= kind t         = Left KindMismatch
-    | t == (STail id)     = return empty
     | otherwise           = return (v ↦ TStack t)
 
 instance Unify Type where
@@ -70,7 +70,7 @@ instance Unify Type where
   match _ _                                   = Left TypeMismatch
 
   bindvar v@(Variable id k) t
+    | t == (TVariable v)  = return empty
     | v `elem` freevars t = Left OccursCheck
     | k /= kind t         = Left KindMismatch
-    | t == (TVariable v)  = return empty
     | otherwise           = return (v ↦ t)

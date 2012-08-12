@@ -15,6 +15,7 @@ import Language.Hee.Syntax
 
 newtype Substitution
   = Γ { unΓ :: [(Variable, Type)] }
+  deriving (Show, Eq)
 
 -- Empty substitution
 empty :: Substitution

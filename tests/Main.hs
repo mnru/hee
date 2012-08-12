@@ -4,11 +4,13 @@ module Main
   ( main
   ) where
 
-import Language.Hee.Tests.Syntax as A (tests)
+import Language.Hee.Tests.Syntax  as Syntax (tests)
+import Language.Hee.Tests.Unify   as Unify (tests)
 
 import Test.Framework (defaultMain)
 
 main :: IO ()
 main = defaultMain . concat $
-  [ A.tests
+  [ Syntax.tests
+  , Unify.tests
   ]

@@ -2,3 +2,5 @@
 :m + Language.Hee.Syntax
 :m + Language.Hee.Parser
 :m + Language.Hee.Pretty
+:m + Language.Hee.Unify
+:m + Language.Hee.Substitute
