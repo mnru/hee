@@ -9,10 +9,10 @@ module Language.Hee.Parser
   , parseDone
   , parseExpr     -- Parser Expression
   , parseLiteral  -- Parser Literal
+  , pruneExpr
   ) where
 
 import Language.Hee.Syntax
-import Language.Hee.Simplify
 
 import Prelude hiding (takeWhile)
 import Control.Applicative hiding (empty)
@@ -41,6 +41,16 @@ instance Parsable Expression where
 
 ---------------------------------------------------------------------------
 
+pruneExpr :: Expression -> Expression
+pruneExpr (ECompose (ECompose a b) c) = pruneExpr $ ECompose a (ECompose b c)
+pruneExpr (EQuote a)                  = EQuote $ pruneExpr a
+pruneExpr (EAnnotate e t)             = EAnnotate (pruneExpr e) t
+pruneExpr (ECompose a b)              = case (pruneExpr a, pruneExpr b) of
+                                         (EEmpty, b') -> b'
+                                         (a', EEmpty) -> a'
+                                         (a', b')      -> ECompose a' b'
+pruneExpr e                           = e
+
 parseOnly :: Parser a -> Text -> Either (ParseError a) a
 parseOnly p s
   = parseDone (parse p s)
@@ -63,7 +73,7 @@ parseDone r
 
 parseExpr :: Parser Expression
 parseExpr
-  = simplify <$> (skipSpace *> scan)
+  = pruneExpr <$> (skipSpace *> scan)
   where
     scan  = ECompose <$> expr <*> ((space *> scan) <|> parseEmpty)
     space = takeWhile1 isSpace

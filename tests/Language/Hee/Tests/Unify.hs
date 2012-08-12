@@ -26,5 +26,17 @@ tests =
     ]
   ]
 
-reflexive :: Unify a => (a -> a -> Either UnifyError Substitution) -> a -> Bool
+type Unifier a
+  = a -> a -> Either UnifyError Substitution
+
+reflexive :: Unify a => Unifier a -> a -> Bool
 reflexive op x = x `op` x == Right empty
+
+-- symmetric :: Unify a => Unifier a -> a -> a -> Bool
+-- symmetric op a b = a `op` b == b `op` a
+--
+-- assoc :: Unify a => Unifier a -> a -> a -> a -> Bool
+-- assoc op a b c  = a `op` (b `op` c) == (a `op` b) `op` c
+--
+-- apply :: Unify a => Unifier a -> a -> a -> Bool
+-- apply op a b = either (const False) (a ==) $ a `op` b

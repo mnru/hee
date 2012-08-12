@@ -23,7 +23,7 @@ import Control.Applicative
 import Test.QuickCheck
 
 import Language.Hee.Syntax
-import Language.Hee.Simplify
+import Language.Hee.Parser (pruneExpr)
 
 -- Expressions
 ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ instance Arbitrary ELiteral where
   arbitrary = RnLiteral . ELiteral <$> arbitrary
 
 instance Arbitrary ECompose where
-  arbitrary = RnCompose . simplify <$> (ECompose <$> expr <*> expr)
+  arbitrary = RnCompose . pruneExpr <$> (ECompose <$> expr <*> expr)
     where expr = arbitrary `suchThat` (/= EEmpty)
 
 instance Arbitrary EAnnotate where
