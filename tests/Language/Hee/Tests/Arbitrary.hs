@@ -133,6 +133,7 @@ instance Arbitrary Stack where
 ---------------------------------------------------------------------------
 
 newtype TStack        = RnStack       { tStack       :: Type } deriving (Show)
+newtype TConstant     = RnConstant    { tConstant    :: Type } deriving (Show)
 newtype TConstructor  = RnConstructor { tConstructor :: Type } deriving (Show)
 newtype TApplication  = RnApplication { tApplication :: Type } deriving (Show)
 newtype TForall       = RnForall      { tForall      :: Type } deriving (Show)
@@ -142,19 +143,26 @@ newtype TVariable     = RnVariable    { tVariable    :: Type } deriving (Show)
 instance Arbitrary TStack where
   arbitrary = RnStack . TStack <$> arbitrary
 
+instance Arbitrary TConstant where
+  arbitrary = RnConstant <$> (TConstructor . pack <$> name <*> kind)
+    where
+      name = arbitrary `suchThat` all isAlphaNum
+      kind = elements [KType, KStack]
+
 instance Arbitrary TConstructor where
-  arbitrary = RnConstructor <$> (TConstructor . pack <$> arbitrary `suchThat` valid <*> arbitrary)
-    where valid = all isAlphaNum
+  arbitrary = RnConstructor <$> (TConstructor . pack <$> name <*> kind)
+    where
+      name = arbitrary `suchThat` all isAlphaNum
+      kind = KConstructor <$> arbitrary <*> arbitrary
 
 instance Arbitrary TApplication where
   arbitrary
-    = do f <- arbitrary `suchThat` (constructor . kind)
-         x <- arbitrary `suchThat` ((==) (kind $ domain f) . kind)
+    = do f <- tConstructor <$> arbitrary
+         x <- arbitrary `suchThat` applies f
          return . RnApplication $ TApplication f x
     where
-      constructor (KConstructor _ _) = True
-      constructor _                  = False
-      domain x = let (KConstructor k _) = kind k in k
+      domain x    = let (KConstructor k _) = kind x in k
+      applies f x = kind x == (kind $ domain f)
 
 --instance Arbitrary TForall where
 --  arbitrary = RnForall <$> (TForall <$> arbitrary <*> arbitrary <*> arbitrary)
@@ -168,11 +176,12 @@ instance Arbitrary TVariable where
 instance Arbitrary Type where
   arbitrary
     = frequency [(1, tStack       <$> arbitrary)
-                --,(1, tConstructor <$> arbitrary)
-                --,(1, tApplication <$> arbitrary)
+                ,(5, tConstant    <$> arbitrary)
+                ,(1, tConstructor <$> arbitrary)
+                ,(1, tApplication <$> arbitrary)
                 --,(0, tForall      <$> arbitrary)
                 --,(0, tQualified   <$> arbitrary)
-                ,(1, tVariable   <$> arbitrary)]
+                ,(2, tVariable   <$> arbitrary)]
 
 instance Arbitrary Variable where
   arbitrary = Variable <$> arbitrary <*> arbitrary
