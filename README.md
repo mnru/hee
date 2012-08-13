@@ -40,8 +40,13 @@ haskell-platform 2012.
 
 Printing parse the tree
 
-    $ hee [1 +]
+    $ hee-parse [1 +]
     TmQuote (TmCompose (TmLiteral (LiNumber 1)) (TmName "+"))
+
+Evaluating a program (factorial)
+
+    $ hee-eval '5 [swap dup 1 <= [pop pop 1] [dup 1 - dig dup apply *] if] dup apply'
+    120
 
 Running tests
 

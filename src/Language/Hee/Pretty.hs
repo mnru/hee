@@ -25,8 +25,8 @@ class Pretty a where
 ---------------------------------------------------------------------------
 
 instance Pretty Literal where
-  pretty (LChar c)
-    = text ('\'' : formatChar c)
+  pretty (LChar x)
+    = text ('\'' : formatChar x)
     where
       formatChar '\n' = "\\n"
       formatChar '\t' = "\\t"
@@ -65,9 +65,12 @@ instance Pretty Literal where
       digits rad = showIntAtBase rad intToDigit . abs
 
       prefix :: String -> Int -> ShowS
-      prefix pre n
-        | n < 0     = showString "-" . showString pre
+      prefix pre m
+        | m < 0     = showString "-" . showString pre
         | otherwise = showString pre
+
+  pretty (LBool True)  = text "true"
+  pretty (LBool False) = text "false"
 
 ---------------------------------------------------------------------------
 

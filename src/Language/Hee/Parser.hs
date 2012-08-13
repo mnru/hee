@@ -88,6 +88,14 @@ parseLiteral
   =   parseChar
   <|> parseString
   <|> parseNumber
+  <|> parseBool
+
+parseBool :: Parser Literal
+parseBool
+  = LBool <$> (true <|> false)
+  where
+    true  = string "true"  *> pure True
+    false = string "false" *> pure False
 
 parseChar :: Parser Literal
 parseChar

@@ -17,4 +17,4 @@ main
 
     printResult (Success _ s) = printStack s
     printResult (Failure e s) = "(" ++ show e ++ ", " ++ printStack s ++ ")"
-    printStack s              = intercalate " " $ map show (reverse s)
+    printStack s              = intercalate " " $ map show s

@@ -34,6 +34,7 @@ data Literal
   = LChar Char
   | LString Text
   | LNumber Radix Int
+  | LBool Bool
   deriving (Eq, Show)
 
 data Kind
