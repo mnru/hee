@@ -40,6 +40,7 @@ eval (EName "dup")            s = heeDup s
 eval (EName "dig")            s = heeDig s
 eval (EName "swap")           s = heeSwap s
 eval (EName "quote")          s = heeQuote s
+eval (EName "compose")        s = heeCompose s
 eval (EName "apply")          s = heeApply s
 eval (EName "dip")            s = heeDip s
 eval (EName "+")              s = heeAdd s
@@ -71,6 +72,9 @@ heeQuote (x:xs) = Success EEmpty (VQuote (quote x):xs)
     quote (VNumber x) = ELiteral (LNumber Decimal x)
     quote (VQuote  x) = EQuote x
 heeQuote s      = Failure (EName "quote") s
+
+heeCompose ((VQuote g):(VQuote f):xs) = Success EEmpty ((VQuote (ECompose f g)):xs)
+heeCompose s                          = Failure (EName "compose") s
 
 heeApply ((VQuote e):xs) = eval e xs
 heeApply s               = Failure (EName "apply") s
