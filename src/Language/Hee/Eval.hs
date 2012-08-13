@@ -7,6 +7,7 @@ module Language.Hee.Eval
   ) where
 
 import Data.Text (Text)
+import Language.Hee.Pretty (renderString)
 import Language.Hee.Syntax hiding (Stack)
 
 data Result
@@ -19,7 +20,13 @@ data Value
   | VString Text
   | VNumber Int
   | VQuote Expression
-  deriving (Eq, Show)
+  deriving (Eq)
+
+instance Show Value where
+  show (VChar v)    = show v
+  show (VString v)  = show v
+  show (VNumber v)  = show v
+  show (VQuote v)   = renderString (EQuote v)
 
 type Stack
   = [Value]
