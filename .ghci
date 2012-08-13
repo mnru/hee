@@ -4,3 +4,4 @@
 :m + Language.Hee.Pretty
 :m + Language.Hee.Unify
 :m + Language.Hee.Substitute
+:m + Language.Hee.Eval

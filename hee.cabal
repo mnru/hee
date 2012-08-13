@@ -32,10 +32,10 @@ library
     attoparsec >= 0.10.1.0
 
   exposed-modules:
+    Language.Hee.Eval
     Language.Hee.Syntax
     Language.Hee.Parser
     Language.Hee.Pretty
-    Language.Hee.Simplify
     Language.Hee.Substitute
     Language.Hee.Unify
 
