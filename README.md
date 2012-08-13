@@ -45,7 +45,7 @@ Printing parse the tree
 
 Evaluating a program (factorial)
 
-    $ hee-eval '5 [swap dup 1 <= [pop pop 1] [dup 1 - dig dup apply *] if] dup apply'
+    $ hee-eval '5 [swap dup 1 <= [pop pop 1] [dup 1 - dig u *] if] u'
     120
 
 Running tests

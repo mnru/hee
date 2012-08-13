@@ -53,6 +53,7 @@ eval (EName "quote")          s = heeQuote s
 eval (EName "compose")        s = heeCompose s
 eval (EName "apply")          s = heeApply s
 eval (EName "dip")            s = heeDip s
+eval (EName "u")              s = heeU s
 eval (EName "+")              s = heeAdd s
 eval (EName "-")              s = heeSub s
 eval (EName "*")              s = heeMul s
@@ -113,6 +114,9 @@ heeDip (VQuote e:x:ys) = case eval e ys of
                            Success e' ys' -> Success e' (x:ys')
                            failure        -> failure
 heeDip s               = Failure (EName "dip") s
+
+heeU :: Stack -> Result
+heeU = eval (ECompose (EName "dup") (EName "apply"))
 
 heeAdd :: Stack -> Result
 heeAdd (VNumber x:VNumber y:zs) = Success EEmpty ((VNumber $ y + x):zs)
