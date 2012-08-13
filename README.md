@@ -41,7 +41,7 @@ haskell-platform 2012.
 Printing parse the tree
 
     $ hee-parse [1 +]
-    TmQuote (TmCompose (TmLiteral (LiNumber 1)) (TmName "+"))
+    EQuote (ECompose (ELiteral (LNumber Decimal 1)) (EName "+"))
 
 Evaluating a program (factorial)
 
