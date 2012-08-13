@@ -3,6 +3,7 @@
 module Language.Hee.Eval
   ( eval
   , Value(..)
+  , Result(..)
   ) where
 
 import Data.Text (Text)
@@ -26,8 +27,8 @@ type Stack
 eval :: Expression -> Stack -> Result
 eval EEmpty                   s = Success EEmpty s
 eval (ECompose x y)           s = case eval x s of
-                                    Success EEmpty s' -> Success y s'
-                                    Success x      s' -> Success (ECompose x y) s'
+                                    Success EEmpty s' -> eval y s'
+                                    Success x'     s' -> eval (ECompose x' y) s'
                                     failure           -> failure
 eval (EQuote x)               s = Success EEmpty  ((VQuote x):s)
 eval (ELiteral (LChar x))     s = Success EEmpty   ((VChar x):s)
@@ -71,7 +72,7 @@ heeQuote (x:xs) = Success EEmpty (VQuote (quote x):xs)
     quote (VQuote  x) = EQuote x
 heeQuote s      = Failure (EName "quote") s
 
-heeApply ((VQuote e):xs) = Success e xs
+heeApply ((VQuote e):xs) = eval e xs
 heeApply s               = Failure (EName "apply") s
 
 heeDip ((VQuote e):x:ys) = case eval e ys of
@@ -82,10 +83,10 @@ heeDip s                 = Failure (EName "dip") s
 heeAdd ((VNumber x):(VNumber y):zs) = Success EEmpty ((VNumber $ x + y):zs)
 heeAdd s                            = Failure (EName "+") s
 
-heeSub ((VNumber x):(VNumber y):zs) = Success EEmpty ((VNumber $ x + y):zs)
+heeSub ((VNumber x):(VNumber y):zs) = Success EEmpty ((VNumber $ x - y):zs)
 heeSub s                            = Failure (EName "-") s
 
-heeMul ((VNumber x):(VNumber y):zs) = Success EEmpty ((VNumber $ x + y):zs)
+heeMul ((VNumber x):(VNumber y):zs) = Success EEmpty ((VNumber $ x * y):zs)
 heeMul s                            = Failure (EName "*") s
 
 heeDiv ((VNumber x):(VNumber y):zs) = Success EEmpty ((VNumber $ x `div` y):zs)
