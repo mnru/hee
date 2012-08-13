@@ -17,8 +17,8 @@ import Language.Hee.Syntax
 import Prelude hiding (takeWhile)
 import Control.Applicative hiding (empty)
 import Data.Bits (Bits, shiftL, (.|.))
-import Data.Char (showLitChar, isSpace, isPrint, chr, ord)
-import Data.Text (Text, cons, pack, unpack, empty, foldl')
+import Data.Char (isSpace, isOctDigit, chr, ord)
+import Data.Text (Text, cons, pack, empty, foldl')
 import Data.Attoparsec.Text hiding (parseOnly, Partial)
 
 data ParseError a
@@ -29,6 +29,7 @@ data ParseError a
 instance (Eq a) => Eq (ParseError a) where
   (Partial a t) == (Partial a' t') = a == a' && t == t'
   (Invalid s t) == (Invalid s' t') = s == s' && t == t'
+  _             == _               = False
 
 class Parsable a where
   parser :: Parser a
@@ -59,8 +60,8 @@ parseSome :: Parser a -> Text -> Result a
 parseSome = parse
 
 parseMore :: Result a -> Text -> Result a
-parseMore r s
-  = feed r s
+parseMore
+  = feed
 
 parseDone :: Result a -> Either (ParseError a) a
 parseDone r
@@ -121,8 +122,8 @@ parseQuote :: Parser Expression
 parseQuote
   = parenthesized open inside close
   where
-    open   = (char '[' *> skipSpace)
-    close  = (skipSpace <* char ']')
+    open   = char '[' *> skipSpace
+    close  = skipSpace <* char ']'
     inside = EQuote <$> parseExpr
 
 parseEmpty :: Parser Expression
@@ -152,9 +153,8 @@ parenthesized open inside close
   = open *> inside <* close
 
 octal :: (Integral a, Bits a) => Parser a
-octal = foldl' step 0 <$> takeWhile1 isDigit
+octal = foldl' step 0 <$> takeWhile1 isOctDigit
   where
-    isDigit c = c >= '0' && c <= '7'
     step a c  = (a `shiftL` 3) .|. fromIntegral (w - 48)
       where w = ord c
 

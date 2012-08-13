@@ -10,7 +10,7 @@ import Prelude hiding (foldr)
 import Control.Applicative hiding (empty)
 import Data.Char (ord, isPrint, isAscii, isSpace, intToDigit)
 import Data.Text (Text, foldr, pack, unpack)
-import Numeric (showSigned, showIntAtBase)
+import Numeric (showIntAtBase)
 import Text.PrettyPrint
 
 renderText :: Pretty a => a -> Text
@@ -26,16 +26,16 @@ class Pretty a where
 
 instance Pretty Literal where
   pretty (LChar c)
-    = text ("'" ++ formatChar c)
+    = text ('\'' : formatChar c)
     where
       formatChar '\n' = "\\n"
       formatChar '\t' = "\\t"
       formatChar '\r' = "\\r"
       formatChar '\\' = "\\\\"
       formatChar c
-        | not $ isPrint c = '\\' : (show $ ord c) ++ ";"
-        | not $ isAscii c = '\\' : (show $ ord c) ++ ";"
-        | isSpace c       = '\\' : (show $ ord c) ++ ";"
+        | not $ isPrint c = '\\' : show (ord c) ++ ";"
+        | not $ isAscii c = '\\' : show (ord c) ++ ";"
+        | isSpace c       = '\\' : show (ord c) ++ ";"
         | otherwise       = c : ""
 
   pretty (LString s)
@@ -47,9 +47,9 @@ instance Pretty Literal where
       formatChar '\\' = "\\\\"
       formatChar '"'  = "\\\""
       formatChar c
-        | not $ isPrint c = '\\' : (show $ ord c) ++ ";"
-        | not $ isAscii c = '\\' : (show $ ord c) ++ ";"
-        | isSpace c       = '\\' : (show $ ord c) ++ ";"
+        | not $ isPrint c = '\\' : show (ord c) ++ ";"
+        | not $ isAscii c = '\\' : show (ord c) ++ ";"
+        | isSpace c       = '\\' : show (ord c) ++ ";"
         | otherwise       = c : ""
 
   pretty (LNumber radix n)
@@ -87,10 +87,10 @@ instance Pretty Expression where
   pretty (ECompose e f)
     = pretty e <+> pretty f
 
-  pretty (EAnnotate e t)
+  pretty (EAnnotate _ _)
     = undefined
 
-  pretty (EComment s)
+  pretty (EComment _)
     = undefined
 
 ---------------------------------------------------------------------------

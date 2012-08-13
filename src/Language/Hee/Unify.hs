@@ -34,7 +34,7 @@ instance Unify Stack where
   match _ _                       = Left TypeMismatch
 
   bindvar v@(Variable id k) t
-    | t == (STail id)     = return empty
+    | t == STail id       = return empty
     | v `elem` freevars t = Left OccursCheck
     | k /= kind t         = Left KindMismatch
     | otherwise           = return (v ↦ TStack t)
@@ -43,8 +43,8 @@ instance Unify Type where
   unify (TVariable v) t                       = bindvar v t
   unify t (TVariable v)                       = bindvar v t
   unify (TStack s) (TStack s')                = unify s s'
-  unify (TQualified ps t) (TQualified ps' t') = return undefined
-  unify (TForall v b t) (TForall v' b' t')    = return undefined
+  unify (TQualified {}) (TQualified {})       = return undefined
+  unify (TForall {}) (TForall {})             = return undefined
   unify (TConstructor id k) (TConstructor id' k')
     | id == id' && k == k'                    = return empty
     | id == id'                               = Left KindMismatch
@@ -57,8 +57,8 @@ instance Unify Type where
 
   match (TVariable v) t                       = bindvar v t
   match (TStack s) (TStack s')                = match s s'
-  match (TQualified ps t) (TQualified ps' t') = undefined
-  match (TForall v b t) (TForall v' b' t')    = undefined
+  match (TQualified {}) (TQualified {})       = undefined
+  match (TForall {}) (TForall {})             = undefined
   match (TConstructor id k) (TConstructor id' k')
     | id == id' && k == k'                    = return empty
     | id == id                                = Left KindMismatch
@@ -69,8 +69,8 @@ instance Unify Type where
                                                    a <+> b
   match _ _                                   = Left TypeMismatch
 
-  bindvar v@(Variable id k) t
-    | t == (TVariable v)  = return empty
+  bindvar v@(Variable _ k) t
+    | t == TVariable v    = return empty
     | v `elem` freevars t = Left OccursCheck
     | k /= kind t         = Left KindMismatch
     | otherwise           = return (v ↦ t)

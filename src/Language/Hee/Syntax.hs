@@ -92,10 +92,10 @@ instance Kinded Kind where
 instance Kinded Type where
   kind (TConstructor _ k) = k
   kind (TVariable x)      = kind x
-  kind (TForall x _ t)    = kind t
+  kind (TForall _ _ t)    = kind t
   kind (TQualified _ t)   = kind t
   kind (TStack _)         = KStack
-  kind (TApplication f x) = let (KConstructor _ k) = kind f in k
+  kind (TApplication f _) = let (KConstructor _ k) = kind f in k
 
 instance Kinded Stack where
   kind = const KStack

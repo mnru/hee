@@ -2,7 +2,7 @@ module Language.Hee.Substitute
   ( Substitution(..)
   , Substitute(..)
   , empty
-  , (↦) 
+  , (↦)
   , (<+)
   , (<+>)
   ) where
@@ -69,14 +69,14 @@ instance Substitute Stack where
   freevars (STail id)   = [Variable id KStack]
   freevars (SPush h t)  = freevars h ++ freevars t
 
-  substitute s SEmpty         = SEmpty
+  substitute _ SEmpty         = SEmpty
   substitute s (SPush h t)    = SPush (substitute s h) (substitute s t)
   substitute (Γ s) (STail id) = case lookup (Variable id KStack) s of
                                   Just (TStack t) -> t
                                   _               -> STail id
 
 instance Substitute Type where
-  freevars (TConstructor t _)   = [] 
+  freevars (TConstructor _ _)   = []
   freevars (TStack s)           = freevars s
   freevars (TApplication t t')  = freevars t ++ freevars t'
   freevars (TForall x _ t)      = freevars t \\ [x]
@@ -85,7 +85,7 @@ instance Substitute Type where
 
   substitute s (TStack t)           = TStack $ substitute s t
   substitute s (TApplication t t')  = TApplication (substitute s t) (substitute s t')
-  substitute s (TForall x b t)      = undefined
-  substitute s (TQualified ps t)    = undefined
-  substitute (Γ s) (TVariable v)    = maybe (TVariable v) id $ lookup v s
-  substitute s t                    = t
+  substitute _ (TForall {})         = undefined
+  substitute _ (TQualified {})      = undefined
+  substitute (Γ s) (TVariable v)    = fromMaybe (TVariable v) $ lookup v s
+  substitute _ t                    = t
