@@ -1,4 +1,4 @@
-both   : S a a (a → b) → S b b
+both   = dup [swap [apply] dip] dip apply
 ***    : Arrow a => S (a b c) (a x y) → S (a (Pair b x) (Pair c y))
 pair   : S a b → S (Pair a b)
 unpair : S (Pair a b) → S a b

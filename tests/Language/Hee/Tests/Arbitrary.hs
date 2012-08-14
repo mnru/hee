@@ -18,7 +18,7 @@ module Language.Hee.Tests.Arbitrary
   ) where
 
 import Data.Char (ord, isSpace, isPrint, isAlphaNum, isAscii)
-import Data.Text (Text, pack, unpack, append, snoc, cons)
+import Data.Text (Text, pack, append, snoc, cons)
 import Control.Applicative
 import Test.QuickCheck
 
@@ -54,7 +54,7 @@ instance Arbitrary EName where
         | x `elem` start        = False
         | any (`elem` other) xs = False
         | any isSpace s         = False
-        | otherwise             = all (\x -> isPrint x) s
+        | otherwise             = all isPrint s
       start = " \t\r\n\f\v[]\"'0123456789+-"
       other = " \t\r\n\f\v[]"
 
@@ -162,7 +162,7 @@ instance Arbitrary TApplication where
          return . RnApplication $ TApplication f x
     where
       domain x    = let (KConstructor k _) = kind x in k
-      applies f x = kind x == (kind $ domain f)
+      applies f x = kind x == kind (domain f)
 
 --instance Arbitrary TForall where
 --  arbitrary = RnForall <$> (TForall <$> arbitrary <*> arbitrary <*> arbitrary)
