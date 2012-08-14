@@ -87,7 +87,8 @@ parseLiteral :: Parser Literal
 parseLiteral
   =   parseChar
   <|> parseString
-  <|> parseNumber
+  <|> parseFloat
+  <|> parseInteger
   <|> parseBool
 
 parseBool :: Parser Literal
@@ -103,14 +104,23 @@ parseChar
   where
     delim = char '\''
 
-parseNumber :: Parser Literal
-parseNumber
+parseFloat :: Parser Literal
+parseFloat
+  = LFloat <$> (combine <$> signed decimal <* char '.' <*> decimal)
+  where
+    combine x y = fromInteger x + fraction (fromInteger y)
+    fraction y
+      | y == 0    = 0
+      | otherwise = y / 10 ^ (floor (logBase 10 y) + 1)
+
+parseInteger :: Parser Literal
+parseInteger
   = bin <|> oct <|> hex <|> dec
   where
-    bin = LNumber Binary      <$> signed (string "0b" *> binary)
-    oct = LNumber Octal       <$> signed (string "0o" *> octal)
-    hex = LNumber Hexadecimal <$> signed (string "0x" *> hexadecimal)
-    dec = LNumber Decimal     <$> signed decimal
+    bin = LInteger Binary      <$> signed (string "0b" *> binary)
+    oct = LInteger Octal       <$> signed (string "0o" *> octal)
+    hex = LInteger Hexadecimal <$> signed (string "0x" *> hexadecimal)
+    dec = LInteger Decimal     <$> signed decimal
 
 parseString :: Parser Literal
 parseString

@@ -53,7 +53,7 @@ instance Pretty Literal where
         | isSpace c       = '\\' : show (ord c) ++ ";"
         | otherwise       = c : ""
 
-  pretty (LNumber radix n)
+  pretty (LInteger radix n)
     = text (format radix n "")
     where
       format :: Radix -> Int -> ShowS
@@ -69,6 +69,9 @@ instance Pretty Literal where
       prefix pre m
         | m < 0     = showString "-" . showString pre
         | otherwise = showString pre
+
+  pretty (LFloat n)
+    = text $ show n
 
   pretty (LBool True)  = text "true"
   pretty (LBool False) = text "false"

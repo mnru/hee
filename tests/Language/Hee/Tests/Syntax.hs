@@ -21,7 +21,7 @@ tests =
   [ testGroup "ast -> string -> ast"
     [ testProperty "char"     $ reparse . lChar
     , testProperty "string"   $ reparse . lString
-    , testProperty "number"   $ reparse . lNumber
+    , testProperty "number"   $ reparse . lInteger
     , testProperty "empty"    $ reparse EEmpty
     , testProperty "name"     $ reparse . eName
     , testProperty "quote"    $ reparse . eQuote

@@ -9,7 +9,7 @@ module Language.Hee.Tests.Arbitrary
   , EComment(..)
   , LChar(..)
   , LString(..)
-  , LNumber(..)
+  , LInteger(..)
   , SrcNamed(..)
   , SrcEscaped(..)
   , SrcExcaped(..)
@@ -80,15 +80,15 @@ instance Arbitrary EComment where
 -- Literals
 ---------------------------------------------------------------------------
 
-newtype LChar     = RnChar   { lChar   :: Literal } deriving (Show)
-newtype LString   = RnString { lString :: Literal } deriving (Show)
-newtype LNumber   = RnNumber { lNumber :: Literal } deriving (Show)
+newtype LChar     = RnChar    { lChar    :: Literal } deriving (Show)
+newtype LString   = RnString  { lString  :: Literal } deriving (Show)
+newtype LInteger  = RnInteger { lInteger :: Literal } deriving (Show)
 
 instance Arbitrary Literal where
   arbitrary
-    = frequency [(1, lChar   <$> arbitrary)
-                ,(3, lString <$> arbitrary)
-                ,(3, lNumber <$> arbitrary)]
+    = frequency [(1, lChar    <$> arbitrary)
+                ,(3, lString  <$> arbitrary)
+                ,(3, lInteger <$> arbitrary)]
 
 instance Arbitrary Radix where
   arbitrary = elements [Binary, Octal, Decimal, Hexadecimal]
@@ -99,8 +99,8 @@ instance Arbitrary LChar where
 instance Arbitrary LString where
   arbitrary = RnString . LString . pack <$> arbitrary
 
-instance Arbitrary LNumber where
-  arbitrary = RnNumber <$> (LNumber <$> arbitrary <*> arbitrary)
+instance Arbitrary LInteger where
+  arbitrary = RnInteger <$> (LInteger <$> arbitrary <*> arbitrary)
 
 -- Kinds
 ---------------------------------------------------------------------------

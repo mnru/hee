@@ -33,7 +33,8 @@ data Radix
 data Literal
   = LChar Char
   | LString Text
-  | LNumber Radix Int
+  | LInteger Radix Int
+  | LFloat Float
   | LBool Bool
   deriving (Eq, Show)
 
