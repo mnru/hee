@@ -46,7 +46,7 @@ heeString :: Parser Term
 heeString =
   do dquote
      chars <- A.manyTill (escape <|> single) dquote
-     return $ TmLiteral $ LString $ BS.pack chars
+     return $ TmLiteral $ LiString $ BS.pack chars
   where dquote = A.char8 '"'
         single = I.anyWord8
         escape = A.char8 '\\' >> tx `fmap` I.anyWord8
@@ -59,7 +59,7 @@ heeChar :: Parser Term
 heeChar =
   do A.char8 '\''
      char <- escape <|> single
-     return $ TmLiteral $ LChar char
+     return $ TmLiteral $ LiChar char
   where squote = A.char8 '\''
         single = I.anyWord8
         escape = A.char8 '\\' >> tx `fmap` I.anyWord8
@@ -112,14 +112,14 @@ heeHar token =
       -> [Char]
       -> Term
     whole ds b f = loop
-      where loop n []       = TmLiteral $ LInt $ f n
+      where loop n []       = TmLiteral $ LiInt $ f n
             loop n ('.':xs) = fract ds (fromIntegral b) (f . (+ (fromIntegral n))) 0 (reverse xs)
             loop n (x:xs)
               | x `elem` ds = loop (n*b + digit x) xs
               | otherwise   = TmName token
 
     fract ds b f = loop
-      where loop n []       = TmLiteral $ LRatn $ f (n/b)
+      where loop n []       = TmLiteral $ LiRatn $ f (n/b)
             loop n (x:xs)
               | x `elem` ds = loop (n/b + digit x) xs
               | otherwise   = TmName token

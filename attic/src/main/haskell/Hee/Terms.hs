@@ -9,7 +9,6 @@ module Hee.Terms
 import Data.ByteString       as B
 import Data.ByteString.Char8 as C
 import Data.Word
-import Hee.Types (Type)
 
 type Id
   = String
@@ -26,14 +25,13 @@ data Term
   | TmEmpty
   | TmName Id
   | TmLiteral Literal
-  | TmAnnotate Type Term
   deriving (Eq, Show)
 
 data Literal
-  = LInt Int
-  | LChar Word8
-  | LRatn Double
-  | LString ByteString
+  = LiInt Int
+  | LiChar Word8
+  | LiRatn Double
+  | LiString ByteString
   deriving (Eq, Show)
 
 showTerm :: Term -> String
@@ -45,10 +43,10 @@ showTerm (TmCompose TmEmpty t)  = showTerm t
 showTerm (TmCompose s t)        = showTerm s ++ " " ++ showTerm t
 
 showLiteral :: Literal -> String
-showLiteral (LInt l)    = show l
-showLiteral (LChar l)   = show l
-showLiteral (LRatn l)   = show l
-showLiteral (LString l) = show l
+showLiteral (LiInt l)    = show l
+showLiteral (LiChar l)   = show l
+showLiteral (LiRatn l)   = show l
+showLiteral (LiString l) = show l
 
 --instance Show Term where
 --  show = showTerm

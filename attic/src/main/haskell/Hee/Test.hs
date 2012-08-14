@@ -1,3 +1,11 @@
+import Hee
+import Hee.Checker
+import Hee.Unification
+import Hee.Substitution
+import Hee.Parser
+import Hee.Types
+import Hee.Kinds
+import System.Environment
 
 typeOf :: String -> Either String String
 typeOf s =
@@ -7,13 +15,11 @@ typeOf s =
      return $ showType t'
 
 main = do args <- getArgs
-          sequence $ map (\t -> do putStr $ t
-                                   putStr " : "
-                                   putStrLn $ either id id $ typeOf t
+          sequence $ map (\t -> do putStrLn . show $ t
+                                   putStrLn . show $ either id id $ typeOf t
                                    putStrLn "")
                          (tests ++ args)
   where tests = [--"swap dup"
-                --,"swap swap"
                 --,"quote dup"
                 --,"[-] [id] if"
                 ]

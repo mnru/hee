@@ -1,218 +1,119 @@
-{-# LANGUAGE FlexibleInstances #-}
-
 module Hee.Types
-  where
+  ( Type(..)
+  , Stack(..)
+  , tInt
+  , tRatn
+  , tChar
+  , tPair
+  , tList
+  , tFunc
+  , tBool
+  , tString
+  , mkFunc
+  , mkList
+  , mkVar
+  , quote
+  , showType
+  , showStack
+  ) where
 
-import Data.List (nub, intersect, union, sort, foldl', (\\))
+import Hee.Kinds
 
 type Id
   = Int
 
-type Variable
-  = (Id,Kind)
-
-type Substitution
-  = [(Variable, Type)]
-
----------------------------------------------------------------------
-
+-- Types have the kind KiType and are distinguished from Stack because
+-- they can be used to describe first-class values.
 data Type
-  = TVariable Id Kind
-  | TConstructor String Kind
-  | TApplication Type Type
-  | TForall Id Kind Bound Type
-  | TQualified [Predicate] Type
-  | TStack Stack
-  deriving (Eq)
-
--- List of identity functions:
---   ∀(β≽∀α.α→α).[β] ⊑ [∀α.α→α]
---   ∀(β≽∀α.α→α).[β] ⊑ ∀α.[α→α]
---
--- (⊑) ⊆ (⊧) ⊆ (≡)
---   ≡, equivalence relation
---   ⊧, abstraction relation
---   ⊑, instance relation
-
-data Bound
-  = Rigid     -- ∀(α=υ).τ means τ where α is as polymorphic as υ
-  | Flexible  -- ∀(α≽υ).τ means τ where α is equal to or is an instance of υ
-  | Bottom    -- ∀α.τ     means τ where α is equal to or is an instance of ⊥
-
-data Predicate
-  = MemberOf Type
-  deriving (Eq)
-
-data Stack
-  = SEmpty
-  | SBottom Id
-  | SPush Stack Type
-  deriving (Eq)
-
-data Kind
-  = KStack
-  | KType
-  | KConstructor Kind Kind
-  deriving (Eq)
-
----------------------------------------------------------------------
-
-class HasKind t where
-  kind :: t -> Kind
-
-instance HasKind Kind where
-  kind k = k
-
-instance HasKind Stack where
-  kind t = KStack
-
-instance HasKind Type where
-  kind (TVariable _ k)    = k
-  kind (TConstructor _ k) = k
-  kind (TStack _)         = KStack
-  kind (TForall _ _ _ t)  = kind t
-  kind (TQualified _ t)   = kind t
-  kind (TApplication i _) = let (KConstructor _ k) = kind i in k
-
-instance (HasKind b) => HasKind (a,b) where
-  kind (_,k) = kind k
-
----------------------------------------------------------------------
-
-data EUnify
-  = EOccursCheck
-  | EKindMismatch
-  | EExprMismatch
+  = TyVariable Id Kind
+  | TyConstructor String Kind
+  | TyApplication Type Type
+  | TyGeneric Int
+  | TyStack Stack
   deriving (Eq, Show)
 
-instance Monad (Either EUnify) where
-  return x      = Right x
-  Right r >>= f = f r
-  Left l  >>= _ = Left l
+-- Stacks have the kind KiStack and are distinguished from Type because
+-- they cannot be used to describe first-class values.
+data Stack
+  = StEmpty
+  | StBottom Id
+  | StPush Stack Type
+  deriving (Eq, Show)
 
-class CanUnify t where
-  match   :: t -> t -> Either EUnify Substitution
-  unify   :: t -> t -> Either EUnify Substitution
-  bindvar :: Variable -> t -> Either EUnify Substitution
+-- t ∈ Eq
+-- t ∈ Num
+data Predicate
+  = MemberOf Id Type
+  deriving (Eq, Show)
 
-instance CanUnify Type where
-  unify (TStack s) (TStack s') = unify s s'
-  unify (TVariable id k) t     = bindvar (id,k) t
-  unify t (TVariable id k)     = bindvar (id,k) t
-  unify (TConstructor id k) (TConstructor id' k')
-    | id == id' && k == k'     = return empty
-  unify (TQualified ps t) (TQualified ps' t')
-                               = undefined
-  unify (TForall id k b t) (TForall id' k' b' t')
-                               = undefined
-  unify (TApplication i o) (TApplication i' o')
-                               = do a <- unify i i'
-                                    b <- unify (substitute a o) (substitute a o')
-                                    return (a @@ b)
-  unify _ _                    = Left EExprMismatch
+-- Qualified types antecedents => consequent
+data Qualified h
+  = [Predicate] :=> h
+  deriving (Eq, Show)
 
-  match (TStack s) (TStack s') = match s s'
-  match (TVariable id k) t     = bindvar (id,k) t
-  match (TConstructor id k) (TConstructor id' k')
-    | id == id' && k == k'     = return empty
-  match (TQualified ps t) (TQualified ps' t')
-                               = undefined
-  match (TForall id k b t) (TForall id' k' b' t')
-                               = undefined
-  match (TApplication i o) (TApplication i' o')
-                               = do a <- match i i'
-                                    b <- match (substitute a o) (substitute a o')
-                                    merge a b
-  match _ _                    = Left EExprMismatch
+showId id alphabet =(alphabet !! n) : (replicate k '\'')
+  where k = id `div` length alphabet
+        n = id `mod` length alphabet
 
-  bindvar v@(id,k) t
-    | t == TVariable id k = return empty
-    | v `elem` freeVars t = Left EOccursCheck
-    | k /= kind t         = Left EKindMismatch
-    | otherwise           = return (v +-> t)
+showType :: Type -> String
+showType (TyConstructor id k) = id
+showType (TyApplication (TyApplication f i) o)
+  | f == tFunc                = "(" ++ showType i ++ " -> " ++ showType o ++ ")"
+showType (TyApplication f x)  = "(" ++ showType f ++ " " ++ showType x ++ ")"
+showType (TyStack s) =
+  case s of
+    StEmpty      -> showStack s
+    (StBottom _) -> showStack s
+    _            -> showStack s
+showType (TyVariable id k)    = showId id alphabet
+  where
+    alphabet = "abcdefghijklmnopqrtsuvwxyz"
 
-instance CanUnify Stack where
-  match (SBottom id) t = bindvar (id,KStack) t
-  match SEmpty SEmpty  = return empty
-  match (SPush t s) (SPush t' s')
-                       = do a <- match t t'
-                            b <- match (substitute a s) (substitute a s')
-                            merge a b
+showStack :: Stack -> String
+showStack StEmpty       = "|"
+showStack (StPush s s') = showStack s ++ " " ++ showType s'
+showStack (StBottom id) = showId id alphabet
+  where alphabet = "ABCDEFGHIJKLMNOPQRTSUVWXYZ"
 
-  unify (SBottom id) t = bindvar (id,KStack) t
-  unify t (SBottom id) = bindvar (id,KStack) t
-  unify SEmpty SEmpty  = return empty
-  unify (SPush t s) (SPush t' s')
-                       = do a <- unify t t'
-                            b <- unify (substitute a s) (substitute a s')
-                            return (a @@ b)
-  unify _ _            = Left EExprMismatch
+-- Primitive types
+tInt    = TyConstructor "int"    KiType  -- LiInt
+tRatn   = TyConstructor "ratn"   KiType  -- LiRatn
+tChar   = TyConstructor "char"   KiType  -- LiChar
+tBool   = TyConstructor "bool"   KiType
+tString = TyConstructor "string" KiType  -- LiString
 
-  bindvar v@(id,KStack) t = return (v +-> TStack t)
-  bindvar _ _             = Left EOccursCheck
+-- Composite types
+tPair   = TyConstructor "(,)"    (KiConstructor KiType (KiConstructor KiType KiType))
+tList   = TyConstructor "[]"     (KiConstructor KiType KiType)
+tFunc   = TyConstructor "(->)"   (KiConstructor KiStack (KiConstructor KiStack KiType))
 
----------------------------------------------------------------------
+mkVar :: Id -> Type
+mkVar id = TyVariable id KiType
 
-class CanSubstitute t where
-  substitute :: Substitution -> t -> t
-  freeVars   :: t -> [Variable]
+mkFunc :: Stack -> Stack -> Type
+mkFunc inp out = TyApplication (TyApplication tFunc (TyStack inp)) (TyStack out)
 
-instance CanSubstitute a => CanSubstitute [a] where
-  substitute s = map (substitute s)
-  freeVars     = nub . concat . map freeVars
+mkList :: Type -> Type
+mkList t = TyApplication tList t
 
-instance CanSubstitute Type where
-  substitute s (TApplication i o) = TApplication (substitute s i) (substitute s o)
-  substitute s (TStack t)         = TStack (substitute s t)
-  substitute s (TForall id k b t) = TForall id k b (substitute (filter (\(v,_) -> (id,k) /= v) s) t)
-  substitute s (TQualified ps t)  = TQualified ps (substitute s t)
-  substitute s (TVariable id k)   = case lookup (id,k) s of
-                                      Just t  -> t
-                                      Nothing -> TVariable id k
-  substitute _ t                  = t
+mkPair :: Type -> Type -> Type
+mkPair fst snd = TyApplication (TyApplication tPair fst) snd
 
-  freeVars (TApplication i o) = freeVars i `union` freeVars o
-  freeVars (TStack t)         = freeVars t
-  freeVars (TVariable id k)   = [(id,k)]
-  freeVars (TForall id k b t) = freeVars t \\ [(id,k)]
-  freeVars (TQualified ps t)  = freeVars t
-  freeVars _                  = []
+-- TODO: Free type variable
+quote :: Type -> Type
+quote t = (StBottom 0) `mkFunc` (StPush (StBottom  0) t)
 
-instance CanSubstitute Stack where
-  substitute s (SPush t h)  = SPush (substitute s t) (substitute s h)
-  substitute s (SBottom id) = case lookup (id,KStack) s of
-                                 Just (TStack t) -> t
-                                 Just t  -> SBottom id
-                                 Nothing -> SBottom id
-  substitute _ t            = t
+--instance Show Type where
+--  show = showType
+--
+--instance Show Stack where
+--  show = showStack
 
-  freeVars (SBottom id) = [(id,KStack)]
-  freeVars (SPush t h)  = freeVars t `union` freeVars h
-  freeVars _            = []
+instance HasKind Type where
+  kind (TyVariable _ k)     = k
+  kind (TyConstructor _ k)  = k
+  kind (TyStack _)          = KiStack
+  kind (TyApplication i _)  = let (KiConstructor _ k) = kind i in k
 
----------------------------------------------------------------------
-
--- Composition of substitutions
-merge :: Substitution -> Substitution -> Either EUnify Substitution
-merge a b = if all match (map fst a `intersect` map fst b)
-            then return (a ++ b)
-            else Left EExprMismatch
-  where match (id,KStack) = substitute a (SBottom id)     == substitute b (SBottom id)
-        match (id,k)      = substitute a (TVariable id k) == substitute b (TVariable id k)
-
--- Composition of substitutions
---   substitute (a @@ b) = substitute a . substitute b
-infixr 4 @@
-(@@) :: Substitution -> Substitution -> Substitution
-(@@) a b = [(v, substitute a t) | (v, t) <- b] ++ a
-
--- Empty subtitution
-empty :: Substitution
-empty = []
-
--- Singleton substitution
---   kind preserving iff (kind v) == (kind t)
-(+->) :: Variable -> Type -> Substitution
-(+->) v t = [(v, t)]
-
----------------------------------------------------------------------
+instance HasKind Stack where
+  kind t = KiStack
