@@ -46,6 +46,7 @@ instance Pretty Literal where
       formatChar '\r' = "\\r"
       formatChar '\\' = "\\\\"
       formatChar '"'  = "\\\""
+      formatChar ' '  = " "
       formatChar c
         | not $ isPrint c = '\\' : show (ord c) ++ ";"
         | not $ isAscii c = '\\' : show (ord c) ++ ";"

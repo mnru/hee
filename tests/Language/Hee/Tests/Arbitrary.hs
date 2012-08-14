@@ -239,6 +239,7 @@ instance Arbitrary SrcString where
     where
       format = cons '"' . flip snoc '"' . foldr (append . encode) ""
       escape = cons '\\' . flip append ";" . pack . show . ord
+      encode ' '  = " "
       encode '"'  = "\\\""
       encode '\n' = "\\n"
       encode '\r' = "\\r"
