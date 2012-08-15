@@ -1,27 +1,30 @@
 sqrt_
-  : frac frac
-  = 1.0
-    [bury
-     dup2
-     dup * -
-     dup 0.0 < [-1.0 *] [id] if
+  : frac → frac
+  "
+  " Write-only monolithic definition that works without having to
+  " define any other terms (uses anonymous recursion)
+  "
+  = 1.0                         -- initial guess
+    [bury                       -- recursive function
+     dup2                       -- [rec] x guess → [rec] x guess x guess
+     dup * -                    -- distance from correct answer
+     dup 0.0 < [-1.0 *] [id] if -- absolute value
      0.001 <
-       [[pop pop] dip]
-       [[dup] both [/] dip
-        + 2.0 /
-        dig u]
+       [[pop pop] dip]          -- [rec] x guess → guess DONE
+       [[dup] both              -- [rec] x guess → [rec] x x guess guess
+        [/] dip                 -- [rec] x (x/guess) guess
+        + 2.0 /                 -- [rec] x avg(x/guess, guess)
+        dig u]                  -- x guess' REC
      if] u
-
-1.0 [bury dup2 dup * - dup 0.0 < [-1.0 *] [id] if 0.001 < [swap pop swap pop] [[dup] both [/] dip + 2.0 / dig u] if] u
 
 sqrt
   : frac → frac
   "
   " Newton's method of successive approximations:
-  "   From a guess y for the valu of the square root of a number x,
+  "   From a guess y for the value of the square root of a number x;
   "   we can improve our guess by averaging y with x/y. For example,
-  "   we compute the square root of 2 as follows: suppose our first
-  "   guess is 1.
+  "   supposing our first guess is 1, we compute the square root of
+  "   2 as follows:
   "
   "     Guess   Quotient           Average
   "     -----------------------------------------------------
@@ -32,47 +35,64 @@ sqrt
   "
   "   Continuing this process, we obtain a better approximation of
   "   the square root.
-  = 1 swap [sqrt'] u
+  "
+  = 1.0 swap [sqrt'] u
 
 sqrt'
-  " x guess sqrt'
-  "
   : frac frac RECURSIVE → frac
+  "
+  " x guess [sqrt'] sqrt'
+  "
   = bury
-    [dup] both dig good-enough?
-      [swap pop swap pop]
-      [over improve dig u]
+    dup2 good-enough?
+      [[pop pop] dip]       -- [RECURSIVE] x guess → guess
+      [over improve dig u]  -- [RECURSIVE] x guess → x guess' RECURSIVE
     if
 
 good-enough?
+  : frac frac → bool
+  "
   " The answer should be improved until its square differs from the
   " radicand by less than a predetermined tolerance (here, 0.001).
   "
   " Example:
-  "   >> 10 3 good-enough?
+  "   >> 10.0 3.0 good-enough?
   "   => false
   "
-  "   >> 10 3.1624 good-enough?
+  "   >> 10.0 3.1624 good-enough?
   "   => true
   "
-  : frac frac → bool
   = square - abs 0.001 <
 
+square
+  : frac frac → frac
+  = dup *
+
+abs
+  : frac → frac
+  = dup 0.0 < [negate] [id] if
+
+negate
+  : frac → frac
+  = -1.0 *
+
 improve
+  : frac frac → frac
+  "
   " A guess is improved by averaging it with the quotient of the
   " radicand and the old guess
   "
   " Example:
-  "   >> 10 3 improve
-  "   =>
+  "   >> 10.0 1.0 improve
+  "   => 5.5
   "
-  : frac frac → frac
   = dup [/] dip average
 
 average
-  " Example:
-  "   >> 10 20 average
-  "   => 15
+  : frac frac → frac
   "
-  : num num → num
-  = + 2 /
+  " Example:
+  "   >> 10.0 20.0 average
+  "   => 15.0
+  "
+  = + 2.0 /
