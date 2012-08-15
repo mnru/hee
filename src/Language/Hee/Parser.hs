@@ -14,11 +14,11 @@ module Language.Hee.Parser
 
 import Language.Hee.Syntax
 
-import Prelude hiding (takeWhile)
+import Prelude hiding (takeWhile, length)
 import Control.Applicative hiding (empty)
 import Data.Bits (Bits, shiftL, (.|.))
-import Data.Char (isSpace, isOctDigit, chr, ord)
-import Data.Text (Text, cons, pack, empty, foldl')
+import Data.Char (isSpace, isOctDigit, isDigit, chr, ord)
+import Data.Text (Text, cons, pack, empty, foldl', length)
 import Data.Attoparsec.Text hiding (parseOnly, Partial)
 
 data ParseError a
@@ -87,15 +87,16 @@ parseLiteral :: Parser Literal
 parseLiteral
   =   parseChar
   <|> parseString
-  <|> parseNumber
+  <|> parseFloat
+  <|> parseInteger
   <|> parseBool
 
 parseBool :: Parser Literal
 parseBool
   = LBool <$> (true <|> false)
   where
-    true  = string "true"  *> pure True
-    false = string "false" *> pure False
+    true  = "true"  .*> pure True
+    false = "false" .*> pure False
 
 parseChar :: Parser Literal
 parseChar
@@ -103,14 +104,28 @@ parseChar
   where
     delim = char '\''
 
-parseNumber :: Parser Literal
-parseNumber
+parseFloat :: Parser Literal
+parseFloat
+  = LFloat <$> (build <$> integer <*> fraction <*> exponent)
+  where
+    integer  = signed decimal
+    fraction = parse <$> (char '.' *> takeWhile isDigit)
+    parse xs = case parseOnly number xs of
+                 Right n -> fromRational (toRational n) / 10 ^^ (length xs)
+                 _       -> 0
+    exponent = ((char 'e' <|> char 'E') *> signed decimal) <|> pure 0
+    build a b c
+      | c == 0    = fromIntegral a + b
+      | otherwise = (fromIntegral a + b) * 10 ^^ c
+
+parseInteger :: Parser Literal
+parseInteger
   = bin <|> oct <|> hex <|> dec
   where
-    bin = LNumber Binary      <$> signed (string "0b" *> binary)
-    oct = LNumber Octal       <$> signed (string "0o" *> octal)
-    hex = LNumber Hexadecimal <$> signed (string "0x" *> hexadecimal)
-    dec = LNumber Decimal     <$> signed decimal
+    bin = LInteger Binary      <$> signed ("0b" .*> binary)
+    oct = LInteger Octal       <$> signed ("0o" .*> octal)
+    hex = LInteger Hexadecimal <$> signed ("0x" .*> hexadecimal)
+    dec = LInteger Decimal     <$> signed decimal
 
 parseString :: Parser Literal
 parseString
@@ -143,9 +158,9 @@ escapedChar
   = char '\\' *> ((number <* char ';') <|> named)
   where
     number = chr <$> digits
-    digits = (string "0b" *> binary)
-         <|> (string "0o" *> octal)
-         <|> (string "0x" *> hexadecimal)
+    digits = ("0b" .*> binary)
+         <|> ("0o" .*> octal)
+         <|> ("0x" .*> hexadecimal)
          <|> decimal
     named  = char 'r' *> pure '\r'
          <|> char 'n' *> pure '\n'

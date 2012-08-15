@@ -21,13 +21,13 @@ tests =
   [ testGroup "ast -> string -> ast"
     [ testProperty "char"     $ reparse . lChar
     , testProperty "string"   $ reparse . lString
-    , testProperty "number"   $ reparse . lNumber
+    , testProperty "number"   $ reparse . lInteger
     , testProperty "empty"    $ reparse EEmpty
     , testProperty "name"     $ reparse . eName
     , testProperty "quote"    $ reparse . eQuote
     , testProperty "literal"  $ reparse . eLiteral
     , testProperty "compose"  $ reparse . eCompose
-  ],
+    ],
   testGroup "string -> ast -> string"
     [ testProperty "char named"   $ reprint (parser :: Parser Literal) . srcNamed
     , testProperty "char plain"   $ reprint (parser :: Parser Literal) . srcPlain

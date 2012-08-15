@@ -1,0 +1,78 @@
+sqrt_
+  : frac frac
+  = 1.0
+    [bury
+     dup2
+     dup * -
+     dup 0.0 < [-1.0 *] [id] if
+     0.001 <
+       [[pop pop] dip]
+       [[dup] both [/] dip
+        + 2.0 /
+        dig u]
+     if] u
+
+1.0 [bury dup2 dup * - dup 0.0 < [-1.0 *] [id] if 0.001 < [swap pop swap pop] [[dup] both [/] dip + 2.0 / dig u] if] u
+
+sqrt
+  : frac → frac
+  "
+  " Newton's method of successive approximations:
+  "   From a guess y for the valu of the square root of a number x,
+  "   we can improve our guess by averaging y with x/y. For example,
+  "   we compute the square root of 2 as follows: suppose our first
+  "   guess is 1.
+  "
+  "     Guess   Quotient           Average
+  "     -----------------------------------------------------
+  "     1       2/1      = 2       (2+1)/2           = 1.5
+  "     1.5     2/1.5    = 1.3333  (1.3333+1.5)/2    = 1.4167
+  "     1.4167  2/1.4167 = 1.4118  (1.4167+1.4118)/2 = 1.4142
+  "     1.4142  ...
+  "
+  "   Continuing this process, we obtain a better approximation of
+  "   the square root.
+  = 1 swap [sqrt'] u
+
+sqrt'
+  " x guess sqrt'
+  "
+  : frac frac RECURSIVE → frac
+  = bury
+    [dup] both dig good-enough?
+      [swap pop swap pop]
+      [over improve dig u]
+    if
+
+good-enough?
+  " The answer should be improved until its square differs from the
+  " radicand by less than a predetermined tolerance (here, 0.001).
+  "
+  " Example:
+  "   >> 10 3 good-enough?
+  "   => false
+  "
+  "   >> 10 3.1624 good-enough?
+  "   => true
+  "
+  : frac frac → bool
+  = square - abs 0.001 <
+
+improve
+  " A guess is improved by averaging it with the quotient of the
+  " radicand and the old guess
+  "
+  " Example:
+  "   >> 10 3 improve
+  "   =>
+  "
+  : frac frac → frac
+  = dup [/] dip average
+
+average
+  " Example:
+  "   >> 10 20 average
+  "   => 15
+  "
+  : num num → num
+  = + 2 /
