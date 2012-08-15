@@ -57,6 +57,7 @@ eval (EName "compose")         s = heeCompose s
 eval (EName "apply")           s = heeApply s
 eval (EName "dip")             s = heeDip s
 eval (EName "u")               s = heeU s
+eval (EName "both")            s = heeBoth s
 eval (EName "+")               s = heeAdd s
 eval (EName "-")               s = heeSub s
 eval (EName "*")               s = heeMul s
@@ -206,3 +207,17 @@ heeGte (VString x:VString y:zs)   = Success EEmpty ((VBool $ y >= x):zs)
 heeGte (VFloat x:VFloat y:zs)     = Success EEmpty ((VBool $ y >= x):zs)
 heeGte (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y >= x):zs)
 heeGte s                          = Failure (EName ">=") s
+
+-- dup [swap [apply] dip] dip apply
+heeBoth :: Stack -> Result
+heeBoth = eval
+ (ECompose
+   (EName "dup")
+   (ECompose
+     (EQuote
+       (ECompose
+         (EName "swap")
+         (ECompose
+           (EQuote (EName "apply"))
+           (EName "dip"))))
+     (ECompose (EName "dip") (EName "apply"))))
