@@ -27,7 +27,7 @@ tests =
     , testProperty "quote"    $ reparse . eQuote
     , testProperty "literal"  $ reparse . eLiteral
     , testProperty "compose"  $ reparse . eCompose
-  ],
+    ],
   testGroup "string -> ast -> string"
     [ testProperty "char named"   $ reprint (parser :: Parser Literal) . srcNamed
     , testProperty "char plain"   $ reprint (parser :: Parser Literal) . srcPlain
