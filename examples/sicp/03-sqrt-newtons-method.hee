@@ -1,16 +1,18 @@
 sqrt_
   : frac frac
   = 1.0
-    [swap [swap] dip
-     [dup] both dig swap
+    [bury
+     dup2
      dup * -
      dup 0.0 < [-1.0 *] [id] if
      0.001 <
-       [swap pop swap pop]
-       [[dup] dip dup [/] dip
+       [[pop pop] dip]
+       [[dup] both [/] dip
         + 2.0 /
         dig u]
      if] u
+
+1.0 [bury dup2 dup * - dup 0.0 < [-1.0 *] [id] if 0.001 < [swap pop swap pop] [[dup] both [/] dip + 2.0 / dig u] if] u
 
 sqrt
   : frac → frac

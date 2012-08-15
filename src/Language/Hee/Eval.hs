@@ -50,8 +50,10 @@ eval (ELiteral (LBool x))      s = Success EEmpty    (VBool x:s)
 eval (EName "id")              s = heeId s
 eval (EName "pop")             s = heePop s
 eval (EName "dup")             s = heeDup s
+eval (EName "dup2")            s = heeDup2 s
 eval (EName "dig")             s = heeDig s
 eval (EName "swap")            s = heeSwap s
+eval (EName "bury")            s = heeBury s
 eval (EName "quote")           s = heeQuote s
 eval (EName "compose")         s = heeCompose s
 eval (EName "apply")           s = heeApply s
@@ -86,6 +88,10 @@ heeDup :: Stack -> Result
 heeDup (x:xs) = Success EEmpty (x:x:xs)
 heeDup s      = Failure (EName "dup") s
 
+heeDup2 :: Stack -> Result
+heeDup2 (x:y:zs) = Success EEmpty (x:y:x:y:zs)
+heeDup2 s        = Failure (EName "dup2") s
+
 heeDig :: Stack -> Result
 heeDig (w:x:y:zs) = Success EEmpty (y:w:x:zs)
 heeDig s          = Failure (EName "dig") s
@@ -93,6 +99,10 @@ heeDig s          = Failure (EName "dig") s
 heeSwap :: Stack -> Result
 heeSwap (x:y:zs) = Success EEmpty (y:x:zs)
 heeSwap s        = Failure (EName "swap") s
+
+heeBury :: Stack -> Result
+heeBury (w:x:y:zs) = Success EEmpty (x:y:w:zs)
+heeBury s          = Failure (EName "bury") s
 
 heeQuote :: Stack -> Result
 heeQuote (x:xs) = Success EEmpty (VQuote (quote x):xs)
