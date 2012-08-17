@@ -1,7 +1,7 @@
-import System.Environment
+import Prelude hiding (getContents)
 import Control.Applicative ((<$>))
+import Data.Text.IO (getContents)
 import Data.List (intercalate)
-import Data.Text (pack)
 
 import Language.Hee.Syntax
 import Language.Hee.Parser
@@ -11,7 +11,7 @@ main :: IO ()
 main
   = putStrLn =<< printResult . result . parse <$> input
   where
-    input  = pack . intercalate " " <$> getArgs
+    input  = getContents
     parse  = parseOnly parseExpr
     result = either (const $ Failure EEmpty []) (`eval` [])
 
