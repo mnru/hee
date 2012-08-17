@@ -17,7 +17,7 @@ import Language.Hee.Syntax
 import Prelude hiding (takeWhile, length)
 import Control.Applicative hiding (empty)
 import Data.Bits (Bits, shiftL, (.|.))
-import Data.Char (isSpace, isOctDigit, isDigit, chr, ord)
+import Data.Char (isOctDigit, isDigit, chr, ord)
 import Data.Text (Text, cons, pack, empty, foldl', length)
 import Data.Attoparsec.Text hiding (parseOnly, Partial)
 
@@ -76,12 +76,21 @@ parseExpr :: Parser Expression
 parseExpr
   = pruneExpr <$> (skipSpace *> scan)
   where
-    scan  = ECompose <$> expr <*> ((space *> scan) <|> parseEmpty)
-    space = takeWhile1 isSpace
+    scan  = ECompose <$> expr <*> (exprSpace *> scan <|> parseEmpty)
     expr  = parseQuote
         <|> ELiteral <$> parseLiteral
         <|> parseName
         <|> parseEmpty
+
+-- Whitespace such that the next term does not begin flush with a new line
+exprSpace :: Parser ()
+exprSpace
+  =              vSpace *> exprSpace
+  <|> takeWhile1 hSpace *> exprSpace'
+  where
+    vSpace     = string "\n" <|> string "\r\n"
+    hSpace c   = c == ' ' || c == '\t'
+    exprSpace' = exprSpace <|> pure ()
 
 parseLiteral :: Parser Literal
 parseLiteral
