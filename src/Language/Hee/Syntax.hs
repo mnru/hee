@@ -1,5 +1,6 @@
 module Language.Hee.Syntax
   ( Expression(..)
+  , Declaration(..)
   , Radix(..)
   , Literal(..)
   , Kind(..)
@@ -12,6 +13,10 @@ module Language.Hee.Syntax
   ) where
 
 import Data.Text
+
+data Declaration
+  = DNameBind Text (Maybe Text) (Maybe Text) Expression -- bind an expression to a name
+  deriving (Eq, Show)
 
 data Expression
   = EEmpty

@@ -7,18 +7,19 @@ module Language.Hee.Parser
   , parseSome
   , parseMore
   , parseDone
+  , parseDecl     -- Parser Declaration
   , parseExpr     -- Parser Expression
   , parseLiteral  -- Parser Literal
-  , pruneExpr
+  , pruneExpr     -- Expression -> Expression
   ) where
 
 import Language.Hee.Syntax
 
-import Prelude hiding (takeWhile, length)
+import Prelude hiding (takeWhile, length, unlines)
 import Control.Applicative hiding (empty)
 import Data.Bits (Bits, shiftL, (.|.))
 import Data.Char (isOctDigit, isDigit, chr, ord)
-import Data.Text (Text, cons, pack, empty, foldl', length)
+import Data.Text (Text, cons, pack, empty, foldl', length, unlines)
 import Data.Attoparsec.Text hiding (parseOnly, Partial)
 
 data ParseError a
@@ -72,6 +73,19 @@ parseDone r
 
 ---------------------------------------------------------------------------
 
+parseDecl :: Parser Declaration
+parseDecl
+  = DNameBind
+    <$> (newline *> parseNameId <* newline)
+    <*> optional (parseDesc <* newline)
+    <*> optional (parseType <* newline)
+    <*> (exprSpace *> "= " .*> parseExpr)
+  where
+    newline    = string "\n" <|> string "\r\n"
+    parseDesc  = unlines <$> many1 parseDesc'
+    parseDesc' = exprSpace *> char '"' *> takeTill isVerticalSpace
+    parseType  = exprSpace *> char ':' *> takeTill isVerticalSpace
+
 parseExpr :: Parser Expression
 parseExpr
   = pruneExpr <$> (skipSpace *> scan)
@@ -85,11 +99,9 @@ parseExpr
 -- Whitespace such that the next term does not begin flush with a new line
 exprSpace :: Parser ()
 exprSpace
-  =              vSpace *> exprSpace
-  <|> takeWhile1 hSpace *> exprSpace'
+  =   takeWhile1 isVerticalSpace   *> exprSpace
+  <|> takeWhile1 isHorizontalSpace *> exprSpace'
   where
-    vSpace     = string "\n" <|> string "\r\n"
-    hSpace c   = c == ' ' || c == '\t'
     exprSpace' = exprSpace <|> pure ()
 
 parseLiteral :: Parser Literal
@@ -121,7 +133,7 @@ parseFloat
     integer     = signed decimal
     fraction    = parse <$> (char '.' *> takeWhile isDigit)
     parse xs    = case parseOnly number xs of
-                    Right n -> fromRational (toRational n) / 10 ^^ (length xs)
+                    Right n -> fromRational (toRational n) / 10 ^^ length xs
                     _       -> 0
     exponent    = ((char 'e' <|> char 'E') *> integer) <|> pure 0
     build a b c = (fromIntegral a + b) * 10 ^^ c
@@ -142,12 +154,16 @@ parseString
     delim  = char '"'
     inside = manyTill (escapedChar <|> anyChar) delim
 
-parseName :: Parser Expression
-parseName
-  = EName <$> (cons <$> satisfy startChar <*> takeWhile otherChar)
+parseNameId :: Parser Text
+parseNameId
+  = cons <$> satisfy startChar <*> takeWhile otherChar
   where
     startChar = notInClass " \t\r\n\f\v[]\"'"
     otherChar = notInClass " \t\r\n\f\v[]"
+
+parseName :: Parser Expression
+parseName
+  = EName <$> parseNameId
 
 parseQuote :: Parser Expression
 parseQuote
@@ -178,6 +194,9 @@ escapedChar
          <|> char '"'
 
 ---------------------------------------------------------------------------
+
+isVerticalSpace :: Char -> Bool
+isVerticalSpace c = c == '\n' || c == '\r'
 
 parenthesized :: Applicative f => f a -> f b -> f c -> f b
 parenthesized open inside close
