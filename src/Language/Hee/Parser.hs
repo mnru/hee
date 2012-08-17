@@ -117,15 +117,14 @@ parseFloat :: Parser Literal
 parseFloat
   = LFloat <$> (build <$> integer <*> fraction <*> exponent)
   where
-    integer  = signed decimal
-    fraction = parse <$> (char '.' *> takeWhile isDigit)
-    parse xs = case parseOnly number xs of
-                 Right n -> fromRational (toRational n) / 10 ^^ (length xs)
-                 _       -> 0
-    exponent = ((char 'e' <|> char 'E') *> signed decimal) <|> pure 0
-    build a b c
-      | c == 0    = fromIntegral a + b
-      | otherwise = (fromIntegral a + b) * 10 ^^ c
+    integer :: Parser Int
+    integer     = signed decimal
+    fraction    = parse <$> (char '.' *> takeWhile isDigit)
+    parse xs    = case parseOnly number xs of
+                    Right n -> fromRational (toRational n) / 10 ^^ (length xs)
+                    _       -> 0
+    exponent    = ((char 'e' <|> char 'E') *> integer) <|> pure 0
+    build a b c = (fromIntegral a + b) * 10 ^^ c
 
 parseInteger :: Parser Literal
 parseInteger
@@ -167,9 +166,9 @@ escapedChar
   = char '\\' *> ((number <* char ';') <|> named)
   where
     number = chr <$> digits
-    digits = ("0b" .*> binary)
-         <|> ("0o" .*> octal)
-         <|> ("0x" .*> hexadecimal)
+    digits = "0b" .*> binary
+         <|> "0o" .*> octal
+         <|> "0x" .*> hexadecimal
          <|> decimal
     named  = char 'r' *> pure '\r'
          <|> char 'n' *> pure '\n'
@@ -187,12 +186,10 @@ parenthesized open inside close
 octal :: (Integral a, Bits a) => Parser a
 octal = foldl' step 0 <$> takeWhile1 isOctDigit
   where
-    step a c  = (a `shiftL` 3) .|. fromIntegral (w - 48)
-      where w = ord c
+    step a c  = (a `shiftL` 3) .|. fromIntegral (ord c - 48)
 
 binary :: (Integral a, Bits a) => Parser a
 binary = foldl' step 0 <$> takeWhile1 isDigit
   where
     isDigit c = c == '0' || c == '1'
-    step a c  = (a `shiftL` 1) .|. fromIntegral (w - 48)
-      where w = ord c
+    step a c  = (a `shiftL` 1) .|. fromIntegral (ord c - 48)
