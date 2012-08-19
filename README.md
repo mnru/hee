@@ -305,7 +305,7 @@ definitions (not expressions) can bind values to names.
 
 ### Example 
 
-Consider the term `swap compose apply 1 +`. We'll perform type inference
+Consider the expression `swap compose apply 1 +`. We'll perform type inference
 on this expression by evaluating one type judgement at a time.
 
 First, `swap`. This is viewed as a composition with the empty term, so we'll

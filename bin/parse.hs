@@ -10,4 +10,4 @@ main
   where
     input = getContents
     toStr = either show show
-    parse = parseOnly parseExpr
+    parse = parseOnly parseFile

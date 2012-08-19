@@ -12,8 +12,8 @@ main
   = putStrLn =<< printResult . result . parse <$> input
   where
     input  = getContents
-    parse  = parseOnly parseExpr
-    result = either (const $ Failure EEmpty []) (`eval` [])
+    parse  = parseOnly parseFile
+    result = either (const $ Failure EEmpty []) (`evalMain` [])
 
     printResult (Success _ s) = printStack s
     printResult (Failure e s) = "(" ++ show e ++ ", " ++ printStack s ++ ")"

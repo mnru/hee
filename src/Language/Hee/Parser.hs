@@ -7,6 +7,7 @@ module Language.Hee.Parser
   , parseSome
   , parseMore
   , parseDone
+  , parseFile     -- Parser [Declaration]
   , parseDecl     -- Parser Declaration
   , parseExpr     -- Parser Expression
   , parseLiteral  -- Parser Literal
@@ -54,15 +55,13 @@ pruneExpr (ECompose a b)              = case (pruneExpr a, pruneExpr b) of
 pruneExpr e                           = e
 
 parseOnly :: Parser a -> Text -> Either (ParseError a) a
-parseOnly p s
-  = parseDone (parse p s)
+parseOnly p s = parseDone (parse p s)
 
 parseSome :: Parser a -> Text -> Result a
 parseSome = parse
 
 parseMore :: Result a -> Text -> Result a
-parseMore
-  = feed
+parseMore = feed
 
 parseDone :: Result a -> Either (ParseError a) a
 parseDone r
@@ -73,36 +72,47 @@ parseDone r
 
 ---------------------------------------------------------------------------
 
+parseFile :: Parser [Declaration]
+parseFile
+  = many1 parseDecl <* skipSpace
+
 parseDecl :: Parser Declaration
 parseDecl
   = DNameBind
-    <$> (newline *> parseNameId <* newline)
-    <*> optional (parseDesc <* newline)
-    <*> optional (parseType <* newline)
-    <*> (exprSpace *> "= " .*> parseExpr)
+    <$> (optional flushLine *> parseNameId)
+    <*> optional parseDesc
+    <*> optional parseType
+    <*> (indentLine *> "= " .*> parseExpr)
   where
-    newline    = string "\n" <|> string "\r\n"
     parseDesc  = unlines <$> many1 parseDesc'
-    parseDesc' = exprSpace *> char '"' *> takeTill isVerticalSpace
-    parseType  = exprSpace *> char ':' *> takeTill isVerticalSpace
+    parseDesc' = flushLine *> indentLine *> "\" " .*> takeTill isVerticalSpace
+    parseType  =              indentLine *> ": "  .*> takeTill isVerticalSpace
 
 parseExpr :: Parser Expression
 parseExpr
   = pruneExpr <$> (skipSpace *> scan)
   where
-    scan  = ECompose <$> expr <*> (exprSpace *> scan <|> parseEmpty)
-    expr  = parseQuote
-        <|> ELiteral <$> parseLiteral
-        <|> parseName
-        <|> parseEmpty
+    scan = ECompose <$> expr <*> (indentLine *> scan <|> parseEmpty)
+    expr = parseQuote
+       <|> ELiteral <$> parseLiteral
+       <|> parseName
+       <|> parseEmpty
 
--- Whitespace such that the next term does not begin flush with a new line
-exprSpace :: Parser ()
-exprSpace
-  =   takeWhile1 isVerticalSpace   *> exprSpace
-  <|> takeWhile1 isHorizontalSpace *> exprSpace'
+-- Whitespace such that the following text does begin flush with a new line
+flushLine :: Parser ()
+flushLine
+  =   takeWhile1 isVerticalSpace   *> flushLine'
+  <|> takeWhile1 isHorizontalSpace *> flushLine
   where
-    exprSpace' = exprSpace <|> pure ()
+    flushLine' = flushLine <|> pure ()
+
+-- Whitespace such that the following text does not begin flush with a new line
+indentLine :: Parser ()
+indentLine
+  =   takeWhile1 isVerticalSpace   *> indentLine
+  <|> takeWhile1 isHorizontalSpace *> indentLine'
+  where
+    indentLine' = indentLine <|> pure ()
 
 parseLiteral :: Parser Literal
 parseLiteral

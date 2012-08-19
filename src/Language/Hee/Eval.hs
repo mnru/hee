@@ -2,6 +2,7 @@
 
 module Language.Hee.Eval
   ( eval
+  , evalMain
   , Value(..)
   , Result(..)
   ) where
@@ -35,47 +36,62 @@ instance Show Value where
 type Stack
   = [Value]
 
-eval :: Expression -> Stack -> Result
-eval EEmpty                    s = Success EEmpty s
-eval (ECompose x y)            s = case eval x s of
-                                     Success EEmpty s' -> eval y s'
-                                     Success x'     s' -> eval (ECompose x' y) s'
-                                     failure           -> failure
-eval (EQuote x)                s = Success EEmpty   (VQuote x:s)
-eval (ELiteral (LChar x))      s = Success EEmpty    (VChar x:s)
-eval (ELiteral (LString x))    s = Success EEmpty  (VString x:s)
-eval (ELiteral (LInteger _ x)) s = Success EEmpty (VInteger x:s)
-eval (ELiteral (LFloat x))     s = Success EEmpty   (VFloat x:s)
-eval (ELiteral (LBool x))      s = Success EEmpty    (VBool x:s)
-eval (EName "id")              s = heeId s
-eval (EName "pop")             s = heePop s
-eval (EName "dup")             s = heeDup s
-eval (EName "dup2")            s = heeDup2 s
-eval (EName "dig")             s = heeDig s
-eval (EName "swap")            s = heeSwap s
-eval (EName "bury")            s = heeBury s
-eval (EName "quote")           s = heeQuote s
-eval (EName "compose")         s = heeCompose s
-eval (EName "apply")           s = heeApply s
-eval (EName "dip")             s = heeDip s
-eval (EName "u")               s = heeU s
-eval (EName "both")            s = heeBoth s
-eval (EName "+")               s = heeAdd s
-eval (EName "-")               s = heeSub s
-eval (EName "*")               s = heeMul s
-eval (EName "/")               s = heeDiv s
-eval (EName "%")               s = heeMod s
-eval (EName "if")              s = heeIf s
-eval (EName "or")              s = heeOr s
-eval (EName "and")             s = heeAnd s
-eval (EName "not")             s = heeNot s
-eval (EName "==")              s = heeEq s
-eval (EName "/=")              s = heeNe s
-eval (EName "<")               s = heeLt s
-eval (EName ">")               s = heeGt s
-eval (EName "<=")              s = heeLte s
-eval (EName ">=")              s = heeGte s
-eval e s                         = Failure e s
+type Environment
+  = Text -> Maybe Expression
+
+readEnv :: [Declaration] -> Environment
+readEnv (DNameBind id' _ _ e:rest) id
+  | id == id' = Just e
+  | otherwise = readEnv rest id
+readEnv [] _  = Nothing
+
+evalMain :: [Declaration] -> Stack -> Result
+evalMain ds = eval (readEnv ds) (EName "main")
+
+eval :: Environment -> Expression -> Stack -> Result
+eval _   EEmpty                    s = Success EEmpty s
+eval env (ECompose x y)            s = case eval env x s of
+                                         Success EEmpty s' -> eval env y s'
+                                         Success x'     s' -> eval env (ECompose x' y) s'
+                                         failure           -> failure
+eval _   (EQuote x)                s = Success EEmpty   (VQuote x:s)
+eval _   (ELiteral (LChar x))      s = Success EEmpty    (VChar x:s)
+eval _   (ELiteral (LString x))    s = Success EEmpty  (VString x:s)
+eval _   (ELiteral (LInteger _ x)) s = Success EEmpty (VInteger x:s)
+eval _   (ELiteral (LFloat x))     s = Success EEmpty   (VFloat x:s)
+eval _   (ELiteral (LBool x))      s = Success EEmpty    (VBool x:s)
+eval _   (EName "id")              s = heeId      s
+eval _   (EName "pop")             s = heePop     s
+eval _   (EName "dup")             s = heeDup     s
+eval _   (EName "dup2")            s = heeDup2    s
+eval _   (EName "dig")             s = heeDig     s
+eval _   (EName "swap")            s = heeSwap    s
+eval _   (EName "bury")            s = heeBury    s
+eval _   (EName "quote")           s = heeQuote   s
+eval _   (EName "compose")         s = heeCompose s
+eval env (EName "apply")           s = heeApply   env s
+eval env (EName "dip")             s = heeDip     env s
+eval env (EName "u")               s = heeU       env s
+eval env (EName "both")            s = heeBoth    env s
+eval _   (EName "+")               s = heeAdd     s
+eval _   (EName "-")               s = heeSub     s
+eval _   (EName "*")               s = heeMul     s
+eval _   (EName "/")               s = heeDiv     s
+eval _   (EName "%")               s = heeMod     s
+eval env (EName "if")              s = heeIf      env s
+eval _   (EName "or")              s = heeOr      s
+eval _   (EName "and")             s = heeAnd     s
+eval _   (EName "not")             s = heeNot     s
+eval _   (EName "==")              s = heeEq      s
+eval _   (EName "/=")              s = heeNe      s
+eval _   (EName "<")               s = heeLt      s
+eval _   (EName ">")               s = heeGt      s
+eval _   (EName "<=")              s = heeLte     s
+eval _   (EName ">=")              s = heeGte     s
+eval env (EName name)              s = case env name of
+                                         Just e  -> eval env e s
+                                         Nothing -> Failure (EName name) s
+eval _   e s                         = Failure e s
 
 heeId :: Stack -> Result
 heeId = Success EEmpty
@@ -120,18 +136,18 @@ heeCompose :: Stack -> Result
 heeCompose (VQuote g:VQuote f:xs) = Success EEmpty (VQuote (ECompose f g):xs)
 heeCompose s                      = Failure (EName "compose") s
 
-heeApply :: Stack -> Result
-heeApply (VQuote e:xs) = eval e xs
-heeApply s             = Failure (EName "apply") s
+heeApply :: Environment -> Stack -> Result
+heeApply env (VQuote e:xs) = eval env e xs
+heeApply _   s             = Failure (EName "apply") s
 
-heeDip :: Stack -> Result
-heeDip (VQuote e:x:ys) = case eval e ys of
-                           Success e' ys' -> Success e' (x:ys')
-                           failure        -> failure
-heeDip s               = Failure (EName "dip") s
+heeDip :: Environment -> Stack -> Result
+heeDip env (VQuote e:x:ys) = case eval env e ys of
+                               Success e' ys' -> Success e' (x:ys')
+                               failure        -> failure
+heeDip _   s               = Failure (EName "dip") s
 
-heeU :: Stack -> Result
-heeU = eval (ECompose (EName "dup") (EName "apply"))
+heeU :: Environment -> Stack -> Result
+heeU env = eval env (ECompose (EName "dup") (EName "apply"))
 
 heeAdd :: Stack -> Result
 heeAdd (VInteger x:VInteger y:zs) = Success EEmpty ((VInteger $ y + x):zs)
@@ -157,10 +173,10 @@ heeMod :: Stack -> Result
 heeMod (VInteger x:VInteger y:zs) = Success EEmpty ((VInteger $ y `mod` x):zs)
 heeMod s                        = Failure (EName "%") s
 
-heeIf :: Stack -> Result
-heeIf (VQuote _:VQuote t:VBool True :zs) = eval t zs
-heeIf (VQuote f:VQuote _:VBool False:zs) = eval f zs
-heeIf s                                  = Failure (EName "if") s
+heeIf :: Environment -> Stack -> Result
+heeIf env (VQuote _:VQuote t:VBool True :zs) = eval env t zs
+heeIf env (VQuote f:VQuote _:VBool False:zs) = eval env f zs
+heeIf _   s                                  = Failure (EName "if") s
 
 heeOr :: Stack -> Result
 heeOr (VBool x:VBool y:zs) = Success EEmpty ((VBool $ y || x):zs)
@@ -219,8 +235,8 @@ heeGte (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y >= x):zs)
 heeGte s                          = Failure (EName ">=") s
 
 -- dup [swap [apply] dip] dip apply
-heeBoth :: Stack -> Result
-heeBoth = eval
+heeBoth :: Environment -> Stack -> Result
+heeBoth env = eval env
  (ECompose
    (EName "dup")
    (ECompose
