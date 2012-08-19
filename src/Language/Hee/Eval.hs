@@ -208,17 +208,17 @@ evalEq op (VBool   x:VBool   y:zs) = put ((VBool $ x `op` y):zs)
 evalEq _ _                         = throwError "equality-op"
 
 evalOrd :: (forall a. Ord a => a -> a -> Bool) -> Stack -> Eval ()
-evalOrd op (VChar   x:VChar   y:zs) = put ((VBool $ x `op` y):zs)
-evalOrd op (VString x:VString y:zs) = put ((VBool $ x `op` y):zs)
-evalOrd op (VInt    x:VInt    y:zs) = put ((VBool $ x `op` y):zs)
-evalOrd op (VFloat  x:VFloat  y:zs) = put ((VBool $ x `op` y):zs)
-evalOrd op (VBool   x:VBool   y:zs) = put ((VBool $ x `op` y):zs)
+evalOrd op (VChar   x:VChar   y:zs) = put ((VBool $ y `op` x):zs)
+evalOrd op (VString x:VString y:zs) = put ((VBool $ y `op` x):zs)
+evalOrd op (VInt    x:VInt    y:zs) = put ((VBool $ y `op` x):zs)
+evalOrd op (VFloat  x:VFloat  y:zs) = put ((VBool $ y `op` x):zs)
+evalOrd op (VBool   x:VBool   y:zs) = put ((VBool $ y `op` x):zs)
 evalOrd _ _                         = throwError "compare-op"
 
 evalInt :: (forall a. Integral a => a -> a -> a) -> Stack -> Eval ()
-evalInt op (VInt x:VInt y:zs) = put ((VInt $ x `op` y):zs)
+evalInt op (VInt x:VInt y:zs) = put ((VInt $ y `op` x):zs)
 evalInt _ _                   = throwError "integral-op"
 
 evalFrac :: (forall a. Fractional a => a -> a -> a) -> Stack -> Eval ()
-evalFrac op (VFloat   x:VFloat   y:zs) = put ((VFloat $ x `op` y):zs)
+evalFrac op (VFloat   x:VFloat   y:zs) = put ((VFloat $ y `op` x):zs)
 evalFrac _ _                           = throwError "fractional-op"

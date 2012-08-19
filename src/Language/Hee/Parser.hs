@@ -70,13 +70,13 @@ parseDecl :: Parser Declaration
 parseDecl
   = DNameBind
     <$> (optional flushLine *> parseNameId)
-    <*> optional parseDesc
     <*> optional parseType
+    <*> optional parseDesc
     <*> (indentLine *> "= " .*> parseExpr)
   where
     parseDesc  = unlines <$> many1 parseDesc'
-    parseDesc' = flushLine *> indentLine *> "\" " .*> takeTill isVerticalSpace
-    parseType  =              indentLine *> ": "  .*> takeTill isVerticalSpace
+    parseDesc' = flushLine *> indentLine *> "\"" .*> takeTill isVerticalSpace
+    parseType  =              indentLine *> ": " .*> takeTill isVerticalSpace
 
 pruneExpr :: Expression -> Expression
 pruneExpr (EQuote a)      = EQuote $ pruneExpr a

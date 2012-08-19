@@ -1,21 +1,10 @@
-sqrt_
-  : frac → frac
-  "
-  " Write-only monolithic definition that works without having to
-  " define any other terms (uses anonymous recursion)
-  "
-  = 1.0                         -- initial guess
-    [bury                       -- recursive function
-     dup2                       -- [rec] x guess → [rec] x guess x guess
-     dup * -                    -- distance from correct answer
-     dup 0.0 < [-1.0 *] [id] if -- absolute value
-     0.001 <
-       [[pop pop] dip]          -- [rec] x guess → guess DONE
-       [[dup] both              -- [rec] x guess → [rec] x x guess guess
-        [/] dip                 -- [rec] x (x/guess) guess
-        + 2.0 /                 -- [rec] x avg(x/guess, guess)
-        dig u]                  -- x guess' REC
-     if] u
+main
+  : frac
+  = 2.0 sqrt
+
+over
+  : a b → a b a
+  = [dup] dip swap
 
 sqrt
   : frac → frac
@@ -36,7 +25,7 @@ sqrt
   "   Continuing this process, we obtain a better approximation of
   "   the square root.
   "
-  = 1.0 swap [sqrt'] u
+  = 1.0 [sqrt'] u
 
 sqrt'
   : frac frac RECURSIVE → frac
@@ -45,15 +34,15 @@ sqrt'
   "
   = bury
     dup2 good-enough?
-      [[pop pop] dip]       -- [RECURSIVE] x guess → guess
-      [over improve dig u]  -- [RECURSIVE] x guess → x guess' RECURSIVE
+      [[pop pop] dip]
+      [over swap improve dig u]
     if
 
 good-enough?
   : frac frac → bool
   "
   " The answer should be improved until its square differs from the
-  " radicand by less than a predetermined tolerance (here, 0.001).
+  " radicand by less than a predetermined tolerance (here, 0.0001).
   "
   " Example:
   "   >> 10.0 3.0 good-enough?
@@ -62,7 +51,7 @@ good-enough?
   "   >> 10.0 3.1624 good-enough?
   "   => true
   "
-  = square - abs 0.001 <
+  = square - abs 0.0001 <
 
 square
   : frac frac → frac
