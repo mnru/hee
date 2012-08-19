@@ -1,0 +1,13 @@
+inc
+  " doc string
+  : num -> num
+  = 1 +
+
+dec
+  " types are ignored
+  : num -> num
+  = 1 -
+
+main
+  : bool
+  = 10 inc dec 10 ==

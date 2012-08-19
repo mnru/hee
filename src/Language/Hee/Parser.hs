@@ -44,16 +44,6 @@ instance Parsable Expression where
 
 ---------------------------------------------------------------------------
 
-pruneExpr :: Expression -> Expression
-pruneExpr (ECompose (ECompose a b) c) = pruneExpr $ ECompose a (ECompose b c)
-pruneExpr (EQuote a)                  = EQuote $ pruneExpr a
-pruneExpr (EAnnotate e t)             = EAnnotate (pruneExpr e) t
-pruneExpr (ECompose a b)              = case (pruneExpr a, pruneExpr b) of
-                                         (EEmpty, b') -> b'
-                                         (a', EEmpty) -> a'
-                                         (a', b')      -> ECompose a' b'
-pruneExpr e                           = e
-
 parseOnly :: Parser a -> Text -> Either (ParseError a) a
 parseOnly p s = parseDone (parse p s)
 
@@ -87,6 +77,17 @@ parseDecl
     parseDesc  = unlines <$> many1 parseDesc'
     parseDesc' = flushLine *> indentLine *> "\" " .*> takeTill isVerticalSpace
     parseType  =              indentLine *> ": "  .*> takeTill isVerticalSpace
+
+pruneExpr :: Expression -> Expression
+pruneExpr (EQuote a)      = EQuote $ pruneExpr a
+pruneExpr (EAnnotate e t) = EAnnotate (pruneExpr e) t
+pruneExpr (ECompose (ECompose a b) c)
+                          = pruneExpr $ ECompose a (ECompose b c)
+pruneExpr (ECompose a b)  = case (pruneExpr a, pruneExpr b) of
+                             (EEmpty, b') -> b'
+                             (a', EEmpty) -> a'
+                             (a', b')      -> ECompose a' b'
+pruneExpr e               = e
 
 parseExpr :: Parser Expression
 parseExpr

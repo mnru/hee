@@ -1,25 +1,26 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, Rank2Types #-}
 
 module Language.Hee.Eval
-  ( eval
-  , evalMain
+  ( runFile
   , Value(..)
-  , Result(..)
   ) where
 
-import Data.Text (Text)
+import Prelude hiding (lookup)
+import Data.Map hiding (map)
+import Data.Text (Text, append, pack)
+import Control.Monad.Identity
+import Control.Monad.Reader
+import Control.Monad.Writer
+import Control.Monad.State
+import Control.Monad.Error
+
 import Language.Hee.Pretty (renderString)
 import Language.Hee.Syntax hiding (Stack)
-
-data Result
-  = Success Expression Stack
-  | Failure Expression Stack
-  deriving (Eq, Show)
 
 data Value
   = VChar Char
   | VString Text
-  | VInteger Int
+  | VInt Int
   | VFloat Float
   | VQuote Expression
   | VBool Bool
@@ -28,222 +29,196 @@ data Value
 instance Show Value where
   show (VChar v)    = renderString (LChar v)
   show (VString v)  = renderString (LString v)
-  show (VInteger v) = renderString (LInteger Decimal v)
+  show (VInt v)     = renderString (LInteger Decimal v)
   show (VFloat v)   = renderString (LFloat v)
   show (VQuote v)   = renderString (EQuote v)
   show (VBool v)    = renderString (LBool v)
 
+instance Error Text where
+  noMsg  = ""
+  strMsg = pack
+
+-- Things
+--------------------------------------------------------------------------------
+
 type Stack
   = [Value]
 
+defaultStack :: Stack
+defaultStack = []
+
 type Environment
-  = Text -> Maybe Expression
+  = Map Text Expression
 
-readEnv :: [Declaration] -> Environment
-readEnv (DNameBind id' _ _ e:rest) id
-  | id == id' = Just e
-  | otherwise = readEnv rest id
-readEnv [] _  = Nothing
+buildEnv :: [Declaration] -> Environment
+buildEnv = fromList . map (\(DNameBind name _ _ expr) -> (name, expr))
 
-evalMain :: [Declaration] -> Stack -> Result
-evalMain ds = eval (readEnv ds) (EName "main")
+mergeEnv :: Environment -> Environment -> Environment
+mergeEnv = union
 
-eval :: Environment -> Expression -> Stack -> Result
-eval _   EEmpty                    s = Success EEmpty s
-eval env (ECompose x y)            s = case eval env x s of
-                                         Success EEmpty s' -> eval env y s'
-                                         Success x'     s' -> eval env (ECompose x' y) s'
-                                         failure           -> failure
-eval _   (EQuote x)                s = Success EEmpty   (VQuote x:s)
-eval _   (ELiteral (LChar x))      s = Success EEmpty    (VChar x:s)
-eval _   (ELiteral (LString x))    s = Success EEmpty  (VString x:s)
-eval _   (ELiteral (LInteger _ x)) s = Success EEmpty (VInteger x:s)
-eval _   (ELiteral (LFloat x))     s = Success EEmpty   (VFloat x:s)
-eval _   (ELiteral (LBool x))      s = Success EEmpty    (VBool x:s)
-eval _   (EName "id")              s = heeId      s
-eval _   (EName "pop")             s = heePop     s
-eval _   (EName "dup")             s = heeDup     s
-eval _   (EName "dup2")            s = heeDup2    s
-eval _   (EName "dig")             s = heeDig     s
-eval _   (EName "swap")            s = heeSwap    s
-eval _   (EName "bury")            s = heeBury    s
-eval _   (EName "quote")           s = heeQuote   s
-eval _   (EName "compose")         s = heeCompose s
-eval env (EName "apply")           s = heeApply   env s
-eval env (EName "dip")             s = heeDip     env s
-eval env (EName "u")               s = heeU       env s
-eval env (EName "both")            s = heeBoth    env s
-eval _   (EName "+")               s = heeAdd     s
-eval _   (EName "-")               s = heeSub     s
-eval _   (EName "*")               s = heeMul     s
-eval _   (EName "/")               s = heeDiv     s
-eval _   (EName "%")               s = heeMod     s
-eval env (EName "if")              s = heeIf      env s
-eval _   (EName "or")              s = heeOr      s
-eval _   (EName "and")             s = heeAnd     s
-eval _   (EName "not")             s = heeNot     s
-eval _   (EName "==")              s = heeEq      s
-eval _   (EName "/=")              s = heeNe      s
-eval _   (EName "<")               s = heeLt      s
-eval _   (EName ">")               s = heeGt      s
-eval _   (EName "<=")              s = heeLte     s
-eval _   (EName ">=")              s = heeGte     s
-eval env (EName name)              s = case env name of
-                                         Just e  -> eval env e s
-                                         Nothing -> Failure (EName name) s
-eval _   e s                         = Failure e s
+defaultEnv :: Environment
+defaultEnv = fromList
+  [("u",    ECompose (EName "dup") (EName "apply"))
+  ,("both", ECompose
+              (EName "dup")
+              (ECompose
+                (EQuote
+                  (ECompose
+                    (EName "swap")
+                    (ECompose
+                      (EQuote (EName "apply"))
+                      (EName "dip"))))
+                (ECompose (EName "dip") (EName "apply"))))]
 
-heeId :: Stack -> Result
-heeId = Success EEmpty
 
-heePop :: Stack -> Result
-heePop (_:xs) = Success EEmpty xs
-heePop s      = Failure (EName "pop") s
+-- Evaluation
+--------------------------------------------------------------------------------
 
-heeDup :: Stack -> Result
-heeDup (x:xs) = Success EEmpty (x:x:xs)
-heeDup s      = Failure (EName "dup") s
+type Eval a
+  = ReaderT Environment (ErrorT Text (WriterT [Text] (StateT Stack Identity))) a
 
-heeDup2 :: Stack -> Result
-heeDup2 (x:y:zs) = Success EEmpty (x:y:x:y:zs)
-heeDup2 s        = Failure (EName "dup2") s
+runEval :: Environment -> Stack -> Eval a -> ((Either Text a, [Text]), Stack)
+runEval env stack computation
+  = runIdentity (runStateT (runWriterT (runErrorT (runReaderT computation env))) stack)
 
-heeDig :: Stack -> Result
-heeDig (w:x:y:zs) = Success EEmpty (y:w:x:zs)
-heeDig s          = Failure (EName "dig") s
-
-heeSwap :: Stack -> Result
-heeSwap (x:y:zs) = Success EEmpty (y:x:zs)
-heeSwap s        = Failure (EName "swap") s
-
-heeBury :: Stack -> Result
-heeBury (w:x:y:zs) = Success EEmpty (x:y:w:zs)
-heeBury s          = Failure (EName "bury") s
-
-heeQuote :: Stack -> Result
-heeQuote (x:xs) = Success EEmpty (VQuote (quote x):xs)
+runFile :: [Declaration] -> ((Either Text (), [Text]), Stack)
+runFile ds = runEval env stack (evalExpr $ EName "main")
   where
-    quote :: Value -> Expression
-    quote (VChar   c)  = ELiteral (LChar c)
-    quote (VString c)  = ELiteral (LString c)
-    quote (VInteger c) = ELiteral (LInteger Decimal c)
-    quote (VFloat c)   = ELiteral (LFloat c)
-    quote (VQuote  c)  = EQuote c
-    quote (VBool   c)  = ELiteral (LBool c)
-heeQuote s      = Failure (EName "quote") s
+    env   = mergeEnv defaultEnv (buildEnv ds)
+    stack = defaultStack
 
-heeCompose :: Stack -> Result
-heeCompose (VQuote g:VQuote f:xs) = Success EEmpty (VQuote (ECompose f g):xs)
-heeCompose s                      = Failure (EName "compose") s
+evalExpr :: Expression -> Eval ()
+evalExpr EEmpty            = return ()
+evalExpr (ECompose f g)    = evalExpr f >> evalExpr g
+evalExpr (EQuote e)        = modify (VQuote e:)
+evalExpr (ELiteral e)      = evalLit e
+evalExpr (EName "id")      = evalId        =<< get
+evalExpr (EName "pop")     = evalPop       =<< get
+evalExpr (EName "dup")     = evalDup       =<< get
+evalExpr (EName "dup2")    = evalDup2      =<< get
+evalExpr (EName "dig")     = evalDig       =<< get
+evalExpr (EName "swap")    = evalSwap      =<< get
+evalExpr (EName "bury")    = evalBury      =<< get
+evalExpr (EName "quote")   = evalQuote     =<< get
+evalExpr (EName "compose") = evalCompose   =<< get
+evalExpr (EName "apply")   = evalApply     =<< get
+evalExpr (EName "dip")     = evalDip       =<< get
+evalExpr (EName "+")       = evalOp (+)    =<< get
+evalExpr (EName "-")       = evalOp (-)    =<< get
+evalExpr (EName "*")       = evalOp (*)    =<< get
+evalExpr (EName "/")       = evalFrac (/)  =<< get
+evalExpr (EName "%")       = evalInt mod   =<< get
+evalExpr (EName "if")      = evalIf        =<< get
+evalExpr (EName "not")     = evalNot       =<< get
+evalExpr (EName "or")      = evalBool (||) =<< get
+evalExpr (EName "and")     = evalBool (&&) =<< get
+evalExpr (EName "==")      = evalEq  (==)  =<< get
+evalExpr (EName "/=")      = evalEq  (/=)  =<< get
+evalExpr (EName "<")       = evalOrd (<)   =<< get
+evalExpr (EName ">")       = evalOrd (>)   =<< get
+evalExpr (EName "<=")      = evalOrd (<=)  =<< get
+evalExpr (EName ">=")      = evalOrd (>=)  =<< get
+evalExpr (EName name)
+  = do env <- ask
+       case lookup name env of
+         Just expr -> evalExpr expr
+         Nothing   -> throwError (append "undefined: " name)
 
-heeApply :: Environment -> Stack -> Result
-heeApply env (VQuote e:xs) = eval env e xs
-heeApply _   s             = Failure (EName "apply") s
+evalLit :: Literal -> Eval ()
+evalLit (LChar x)       = modify (VChar x:)
+evalLit (LString x)     = modify (VString x:)
+evalLit (LInteger _ x)  = modify (VInt x:)
+evalLit (LFloat x)      = modify (VFloat x:)
+evalLit (LBool x)       = modify (VBool x:)
 
-heeDip :: Environment -> Stack -> Result
-heeDip env (VQuote e:x:ys) = case eval env e ys of
-                               Success e' ys' -> Success e' (x:ys')
-                               failure        -> failure
-heeDip _   s               = Failure (EName "dip") s
+evalId :: Stack -> Eval ()
+evalId _ = return ()
 
-heeU :: Environment -> Stack -> Result
-heeU env = eval env (ECompose (EName "dup") (EName "apply"))
+evalPop :: Stack -> Eval ()
+evalPop (_:zs) = put zs
+evalPop  _     = throwError "pop: stack underflow"
 
-heeAdd :: Stack -> Result
-heeAdd (VInteger x:VInteger y:zs) = Success EEmpty ((VInteger $ y + x):zs)
-heeAdd (VFloat x:VFloat y:zs)     = Success EEmpty ((VFloat   $ y + x):zs)
-heeAdd s                          = Failure (EName "+") s
+evalDup :: Stack -> Eval ()
+evalDup (y:zs) = put (y:y:zs)
+evalDup _      = throwError "dup: stack underflow"
 
-heeSub :: Stack -> Result
-heeSub (VInteger x:VInteger y:zs) = Success EEmpty ((VInteger $ y - x):zs)
-heeSub (VFloat x:VFloat y:zs)     = Success EEmpty ((VFloat   $ y - x):zs)
-heeSub s                          = Failure (EName "-") s
+evalDup2 :: Stack -> Eval ()
+evalDup2 (x:y:zs) = put (x:y:x:y:zs)
+evalDup2 _        = throwError "dup2: stack underflow"
 
-heeMul :: Stack -> Result
-heeMul (VInteger x:VInteger y:zs) = Success EEmpty ((VInteger $ y * x):zs)
-heeMul (VFloat x:VFloat y:zs)     = Success EEmpty ((VFloat   $ y * x):zs)
-heeMul s                          = Failure (EName "*") s
+evalDig :: Stack -> Eval ()
+evalDig (w:x:y:zs) = put (y:w:x:zs)
+evalDig _          = throwError "dig: stack underflow"
 
-heeDiv :: Stack -> Result
-heeDiv (VInteger x:VInteger y:zs) = Success EEmpty ((VInteger $ y `div` x):zs)
-heeDiv (VFloat x:VFloat y:zs)     = Success EEmpty ((VFloat   $     y / x):zs)
-heeDiv s                          = Failure (EName "/") s
+evalSwap :: Stack -> Eval ()
+evalSwap (x:y:zs) = put (y:x:zs)
+evalSwap _        = throwError "swap: stack underflow"
 
-heeMod :: Stack -> Result
-heeMod (VInteger x:VInteger y:zs) = Success EEmpty ((VInteger $ y `mod` x):zs)
-heeMod s                        = Failure (EName "%") s
+evalBury :: Stack -> Eval ()
+evalBury (w:x:y:zs) = put (x:y:w:zs)
+evalBury _          = throwError "bury: stack underflow"
 
-heeIf :: Environment -> Stack -> Result
-heeIf env (VQuote _:VQuote t:VBool True :zs) = eval env t zs
-heeIf env (VQuote f:VQuote _:VBool False:zs) = eval env f zs
-heeIf _   s                                  = Failure (EName "if") s
+evalQuote :: Stack -> Eval ()
+evalQuote (y:zs) = put (VQuote (quote y):zs)
+  where
+    quote (VChar   c) = ELiteral (LChar c)
+    quote (VString c) = ELiteral (LString c)
+    quote (VInt c)    = ELiteral (LInteger Decimal c)
+    quote (VFloat c)  = ELiteral (LFloat c)
+    quote (VQuote  c) = EQuote c
+    quote (VBool   c) = ELiteral (LBool c)
+evalQuote _ = throwError "quote: stack underflow"
 
-heeOr :: Stack -> Result
-heeOr (VBool x:VBool y:zs) = Success EEmpty ((VBool $ y || x):zs)
-heeOr s                    = Failure (EName "or") s
+evalCompose :: Stack -> Eval ()
+evalCompose (VQuote x:VQuote y:zs) = put (VQuote (ECompose x y):zs)
+evalCompose _                      = throwError "compose"
 
-heeAnd :: Stack -> Result
-heeAnd (VBool x:VBool y:zs) = Success EEmpty ((VBool $ y && x):zs)
-heeAnd s                    = Failure (EName "&&") s
+evalApply :: Stack -> Eval ()
+evalApply (VQuote y:zs) = put zs >> evalExpr y
+evalApply _             = throwError "apply"
 
-heeNot :: Stack -> Result
-heeNot (VBool x:ys) = Success EEmpty ((VBool $ not x):ys)
-heeNot s            = Failure (EName "not") s
+evalDip :: Stack -> Eval ()
+evalDip (VQuote x:y:zs) = put zs >> evalExpr x >> modify (y:)
+evalDip _               = throwError "dip"
 
-heeEq :: Stack -> Result
-heeEq (VBool x:VBool y:zs)       = Success EEmpty ((VBool $ y == x):zs)
-heeEq (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y == x):zs)
-heeEq (VInteger x:VInteger y:zs) = Success EEmpty ((VBool $ y == x):zs)
-heeEq (VFloat x:VFloat y:zs)     = Success EEmpty ((VBool $ y == x):zs)
-heeEq (VString x:VString y:zs)   = Success EEmpty ((VBool $ y == x):zs)
-heeEq s                          = Failure (EName "==") s
+evalIf :: Stack -> Eval ()
+evalIf (VQuote _:VQuote t:VBool True :zs) = put zs >> evalExpr t
+evalIf (VQuote f:VQuote _:VBool False:zs) = put zs >> evalExpr f
+evalIf _                                  = throwError "if"
 
-heeNe :: Stack -> Result
-heeNe (VBool x:VBool y:zs)       = Success EEmpty ((VBool $ y /= x):zs)
-heeNe (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y /= x):zs)
-heeNe (VInteger x:VInteger y:zs) = Success EEmpty ((VBool $ y /= x):zs)
-heeNe (VFloat x:VFloat y:zs)     = Success EEmpty ((VBool $ y /= x):zs)
-heeNe (VString x:VString y:zs)   = Success EEmpty ((VBool $ y /= x):zs)
-heeNe s                          = Failure (EName "/=") s
+evalOp :: (forall a. Num a => a -> a -> a) -> Stack -> Eval ()
+evalOp op (VInt   x:VInt   y:zs) = put ((VInt   $ y `op` x):zs)
+evalOp op (VFloat x:VFloat y:zs) = put ((VFloat $ y `op` x):zs)
+evalOp _ _                       = throwError "numeric-op"
 
-heeLt :: Stack -> Result
-heeLt (VInteger x:VInteger y:zs) = Success EEmpty ((VBool $ y < x):zs)
-heeLt (VString x:VString y:zs)   = Success EEmpty ((VBool $ y < x):zs)
-heeLt (VFloat x:VFloat y:zs)     = Success EEmpty ((VBool $ y < x):zs)
-heeLt (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y < x):zs)
-heeLt s                          = Failure (EName "<") s
+evalNot :: Stack -> Eval ()
+evalNot (VBool y:zs) = put ((VBool $ not y):zs)
+evalNot _            = throwError "not"
 
-heeGt :: Stack -> Result
-heeGt (VInteger x:VInteger y:zs) = Success EEmpty ((VBool $ y > x):zs)
-heeGt (VString x:VString y:zs)   = Success EEmpty ((VBool $ y > x):zs)
-heeGt (VFloat x:VFloat y:zs)     = Success EEmpty ((VBool $ y > x):zs)
-heeGt (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y > x):zs)
-heeGt s                          = Failure (EName ">") s
+evalBool :: (Bool -> Bool -> Bool) -> Stack -> Eval ()
+evalBool op (VBool x:VBool y:zs) = put ((VBool $ x `op` y):zs)
+evalBool _ _                     = throwError "boolean-op"
 
-heeLte :: Stack -> Result
-heeLte (VInteger x:VInteger y:zs) = Success EEmpty ((VBool $ y <= x):zs)
-heeLte (VString x:VString y:zs)   = Success EEmpty ((VBool $ y <= x):zs)
-heeLte (VFloat x:VFloat y:zs)     = Success EEmpty ((VBool $ y <= x):zs)
-heeLte (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y <= x):zs)
-heeLte s                          = Failure (EName "<=") s
+evalEq :: (forall a. Eq a => a -> a -> Bool) -> Stack -> Eval ()
+evalEq op (VChar   x:VChar   y:zs) = put ((VBool $ x `op` y):zs)
+evalEq op (VString x:VString y:zs) = put ((VBool $ x `op` y):zs)
+evalEq op (VInt    x:VInt    y:zs) = put ((VBool $ x `op` y):zs)
+evalEq op (VFloat  x:VFloat  y:zs) = put ((VBool $ x `op` y):zs)
+evalEq op (VBool   x:VBool   y:zs) = put ((VBool $ x `op` y):zs)
+evalEq _ _                         = throwError "equality-op"
 
-heeGte :: Stack -> Result
-heeGte (VInteger x:VInteger y:zs) = Success EEmpty ((VBool $ y >= x):zs)
-heeGte (VString x:VString y:zs)   = Success EEmpty ((VBool $ y >= x):zs)
-heeGte (VFloat x:VFloat y:zs)     = Success EEmpty ((VBool $ y >= x):zs)
-heeGte (VChar x:VChar y:zs)       = Success EEmpty ((VBool $ y >= x):zs)
-heeGte s                          = Failure (EName ">=") s
+evalOrd :: (forall a. Ord a => a -> a -> Bool) -> Stack -> Eval ()
+evalOrd op (VChar   x:VChar   y:zs) = put ((VBool $ x `op` y):zs)
+evalOrd op (VString x:VString y:zs) = put ((VBool $ x `op` y):zs)
+evalOrd op (VInt    x:VInt    y:zs) = put ((VBool $ x `op` y):zs)
+evalOrd op (VFloat  x:VFloat  y:zs) = put ((VBool $ x `op` y):zs)
+evalOrd op (VBool   x:VBool   y:zs) = put ((VBool $ x `op` y):zs)
+evalOrd _ _                         = throwError "compare-op"
 
--- dup [swap [apply] dip] dip apply
-heeBoth :: Environment -> Stack -> Result
-heeBoth env = eval env
- (ECompose
-   (EName "dup")
-   (ECompose
-     (EQuote
-       (ECompose
-         (EName "swap")
-         (ECompose
-           (EQuote (EName "apply"))
-           (EName "dip"))))
-     (ECompose (EName "dip") (EName "apply"))))
+evalInt :: (forall a. Integral a => a -> a -> a) -> Stack -> Eval ()
+evalInt op (VInt x:VInt y:zs) = put ((VInt $ x `op` y):zs)
+evalInt _ _                   = throwError "integral-op"
+
+evalFrac :: (forall a. Fractional a => a -> a -> a) -> Stack -> Eval ()
+evalFrac op (VFloat   x:VFloat   y:zs) = put ((VFloat $ x `op` y):zs)
+evalFrac _ _                           = throwError "fractional-op"
