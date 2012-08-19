@@ -54,7 +54,7 @@ good-enough?
   = square - abs 0.0001 <
 
 square
-  : frac frac → frac
+  : frac → frac
   = dup *
 
 abs
