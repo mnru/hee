@@ -1,13 +1,14 @@
-inc
-  " doc string
+increment
   : num -> num
+  " doc string follows type (and is optional)
   = 1 +
 
-dec
-  " types are ignored
-  : num -> num
+decrement
+  " types declarations are optional
   = 1 -
 
 main
-  : bool
-  = 10 inc dec 10 ==
+  = 10
+      increment
+      decrement
+    10 ==

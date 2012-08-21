@@ -3,8 +3,8 @@
 Point-free style is a paradigm in which function definitions do not include
 information about its arguments. Instead, functions are defined in terms of
 combinators and composition (Wikipedia). **Hee** is a concatenative, functional
-programming language built for no practical purpose in mind -- my goal is to
-use it as a vehicle for understanding PL topics. 
+programming language built for no practical purpose -- my goal is to use it as
+a vehicle for understanding PL topics.
 
 ## Development Status [![Build Status](https://secure.travis-ci.org/kputnam/hee.png)](http://travis-ci.org/kputnam/hee)
 
@@ -18,11 +18,13 @@ The preliminary type system is not usable. Several issues must be addressed
 before certain simple terms can be correctly typed. Some terms that pose
 interesting problems are:
 
-* `dup apply`, the U-combinator, requires recursive types and perhaps should be
-  ill-typed to guarantee termination.
+* `dup apply`, the U-combinator, requires recursive types. This permits general
+  recursion.
 
-* `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general. We
-  should be able to derive a principle type for it that admits `[+] dup compose`
+* `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general.
+  This is the type inferred by HM for the analogous lambda calculus expression
+  `λx.x x`. We should be able to derive a principle type for it that admits
+  expressions like `[+] dup compose` and `[33] dup compose`.
 
 * `dup` itself which seems to break concatenativity without impredicative
   polymorphism. That is, `[id] [id]` has the type `(∀ T . T → T) (∀ U . U → U)`,
@@ -38,17 +40,57 @@ haskell-platform 2012.
     $ cd hee
     $ cabal install
 
-Printing parse the tree
+#### Writing a small program
 
-    $ hee-parse [1 +]
-    EQuote (ECompose (ELiteral (LNumber Decimal 1)) (EName "+"))
+    $ cat examples/test.hee
+    increment
+      : num -> num
+      " doc string follows type (and is optional)
+      = 1 +
 
-Evaluating a program (factorial)
+    decrement
+      " types declarations are optional
+      = 1 -
 
-    $ hee-eval '5 [swap dup 1 <= [pop pop 1] [dup 1 - dig u *] if] u'
+    main
+      = 10
+          increment
+          decrement
+        10 ==
+
+
+#### Printing parse the tree
+
+    $ cat examples/test.hee | hee-eval
+    [DNameBind "inc"
+      (Just "num -> num")
+      (Just " doc string follows type (and is optional)\n")
+      (ECompose (ELiteral (LInteger Decimal 1)) (EName "+"))
+    ,DNameBind "decrement"
+      (Just " type declarations are optional\n")
+      (ECompose (ELiteral (LInteger Decimal 1)) (EName "-"))
+    ,DNameBind "main"
+      Nothing
+      Nothing
+      (ECompose
+        (ELiteral (LInteger Decimal 10))
+        (ECompose
+          (EName "increment")
+          (ECompose
+            (EName "decrement")
+            (ECompose
+              (ELiteral (LInteger Decimal 10))
+              (EName "==")))))]
+
+#### Evaluating a program
+
+Programs must be a set of top-level declarations (no top-level expressions
+will be parsed). The `main` definition will be executed.
+
+    $ echo 'main = 5 [swap dup 1 <= [pop pop 1] [dup 1 - dig u *] if] u' | hee-eval
     120
 
-Running tests
+#### Running tests
 
     $ cabal configure --enable-tests
     $ cabal build
@@ -303,7 +345,7 @@ The type context Γ is elided from most rules for brevity, and also because
 expressions cannot extend it during computation. That is, only top-level
 definitions (not expressions) can bind values to names.
 
-### Example 
+### Example
 
 Consider the expression `swap compose apply 1 +`. We'll perform type inference
 on this expression by evaluating one type judgement at a time.
