@@ -92,37 +92,41 @@ evalExpr EEmpty            = return ()
 evalExpr (ECompose f g)    = evalExpr f >> evalExpr g
 evalExpr (EQuote e)        = modify (VQuote e:)
 evalExpr (ELiteral e)      = evalLit e
-evalExpr (EName "id")      = evalId        =<< get
-evalExpr (EName "pop")     = evalPop       =<< get
-evalExpr (EName "dup")     = evalDup       =<< get
-evalExpr (EName "dup2")    = evalDup2      =<< get
-evalExpr (EName "dig")     = evalDig       =<< get
-evalExpr (EName "swap")    = evalSwap      =<< get
-evalExpr (EName "bury")    = evalBury      =<< get
-evalExpr (EName "quote")   = evalQuote     =<< get
-evalExpr (EName "compose") = evalCompose   =<< get
-evalExpr (EName "apply")   = evalApply     =<< get
-evalExpr (EName "dip")     = evalDip       =<< get
-evalExpr (EName "+")       = evalOp (+)    =<< get
-evalExpr (EName "-")       = evalOp (-)    =<< get
-evalExpr (EName "*")       = evalOp (*)    =<< get
-evalExpr (EName "/")       = evalFrac (/)  =<< get
-evalExpr (EName "%")       = evalInt mod   =<< get
-evalExpr (EName "if")      = evalIf        =<< get
-evalExpr (EName "not")     = evalNot       =<< get
-evalExpr (EName "or")      = evalBool (||) =<< get
-evalExpr (EName "and")     = evalBool (&&) =<< get
-evalExpr (EName "==")      = evalEq  (==)  =<< get
-evalExpr (EName "/=")      = evalEq  (/=)  =<< get
-evalExpr (EName "<")       = evalOrd (<)   =<< get
-evalExpr (EName ">")       = evalOrd (>)   =<< get
-evalExpr (EName "<=")      = evalOrd (<=)  =<< get
-evalExpr (EName ">=")      = evalOrd (>=)  =<< get
+evalExpr (EName "id")      = evalId
+evalExpr (EName "pop")     = evalPop
+evalExpr (EName "dup")     = evalDup
+evalExpr (EName "dup2")    = evalDup2
+evalExpr (EName "dig")     = evalDig
+evalExpr (EName "swap")    = evalSwap
+evalExpr (EName "bury")    = evalBury
+evalExpr (EName "quote")   = evalQuote
+evalExpr (EName "compose") = evalCompose
+evalExpr (EName "apply")   = evalApply
+evalExpr (EName "dip")     = evalDip
+evalExpr (EName "+")       = evalOp (+)
+evalExpr (EName "-")       = evalOp (-)
+evalExpr (EName "*")       = evalOp (*)
+evalExpr (EName "/")       = evalFrac (/)
+evalExpr (EName "%")       = evalInt mod
+evalExpr (EName "//")      = evalInt div
+evalExpr (EName "^")       = evalExp
+evalExpr (EName "round")   = evalRound
+evalExpr (EName "if")      = evalIf
+evalExpr (EName "not")     = evalNot
+evalExpr (EName "or")      = evalBool (||)
+evalExpr (EName "and")     = evalBool (&&)
+evalExpr (EName "==")      = evalEq  (==)
+evalExpr (EName "/=")      = evalEq  (/=)
+evalExpr (EName "<")       = evalOrd (<)
+evalExpr (EName ">")       = evalOrd (>)
+evalExpr (EName "<=")      = evalOrd (<=)
+evalExpr (EName ">=")      = evalOrd (>=)
 evalExpr (EName name)
   = do env <- ask
        case lookup name env of
          Just expr -> evalExpr expr
          Nothing   -> throwError (append "undefined: " name)
+evalExpr e = throwError (pack (show e))
 
 evalLit :: Literal -> Eval ()
 evalLit (LChar x)       = modify (VChar x:)
@@ -131,94 +135,122 @@ evalLit (LInteger _ x)  = modify (VInt x:)
 evalLit (LFloat x)      = modify (VFloat x:)
 evalLit (LBool x)       = modify (VBool x:)
 
-evalId :: Stack -> Eval ()
-evalId _ = return ()
+evalId :: Eval ()
+evalId = return ()
 
-evalPop :: Stack -> Eval ()
-evalPop (_:zs) = put zs
-evalPop  _     = throwError "pop: stack underflow"
+evalPop :: Eval ()
+evalPop = f =<< get
+  where f (_:zs) = put zs
+        f  _     = throwError "pop: stack underflow"
 
-evalDup :: Stack -> Eval ()
-evalDup (y:zs) = put (y:y:zs)
-evalDup _      = throwError "dup: stack underflow"
+evalDup :: Eval ()
+evalDup = f =<< get
+  where f (y:zs) = put (y:y:zs)
+        f _      = throwError "dup: stack underflow"
 
-evalDup2 :: Stack -> Eval ()
-evalDup2 (x:y:zs) = put (x:y:x:y:zs)
-evalDup2 _        = throwError "dup2: stack underflow"
+evalDup2 :: Eval ()
+evalDup2 = f =<< get
+  where f (x:y:zs) = put (x:y:x:y:zs)
+        f _        = throwError "dup2: stack underflow"
 
-evalDig :: Stack -> Eval ()
-evalDig (w:x:y:zs) = put (y:w:x:zs)
-evalDig _          = throwError "dig: stack underflow"
+evalDig :: Eval ()
+evalDig = f =<< get
+  where f (w:x:y:zs) = put (y:w:x:zs)
+        f _          = throwError "dig: stack underflow"
 
-evalSwap :: Stack -> Eval ()
-evalSwap (x:y:zs) = put (y:x:zs)
-evalSwap _        = throwError "swap: stack underflow"
+evalSwap :: Eval ()
+evalSwap = f =<< get
+  where f (x:y:zs) = put (y:x:zs)
+        f _        = throwError "swap: stack underflow"
 
-evalBury :: Stack -> Eval ()
-evalBury (w:x:y:zs) = put (x:y:w:zs)
-evalBury _          = throwError "bury: stack underflow"
+evalBury :: Eval ()
+evalBury = f =<< get
+  where f (w:x:y:zs) = put (x:y:w:zs)
+        f _          = throwError "bury: stack underflow"
 
-evalQuote :: Stack -> Eval ()
-evalQuote (y:zs) = put (VQuote (quote y):zs)
-  where
-    quote (VChar   c) = ELiteral (LChar c)
-    quote (VString c) = ELiteral (LString c)
-    quote (VInt c)    = ELiteral (LInteger Decimal c)
-    quote (VFloat c)  = ELiteral (LFloat c)
-    quote (VQuote  c) = EQuote c
-    quote (VBool   c) = ELiteral (LBool c)
-evalQuote _ = throwError "quote: stack underflow"
+evalQuote :: Eval ()
+evalQuote = f =<< get
+  where f (y:zs) = put (VQuote (quote y):zs)
+        f _      = throwError "quote: stack underflow"
+        quote (VChar   c) = ELiteral (LChar c)
+        quote (VString c) = ELiteral (LString c)
+        quote (VInt c)    = ELiteral (LInteger Decimal c)
+        quote (VFloat c)  = ELiteral (LFloat c)
+        quote (VQuote  c) = EQuote c
+        quote (VBool   c) = ELiteral (LBool c)
 
-evalCompose :: Stack -> Eval ()
-evalCompose (VQuote x:VQuote y:zs) = put (VQuote (ECompose x y):zs)
-evalCompose _                      = throwError "compose"
+evalCompose :: Eval ()
+evalCompose = f =<< get
+  where f (VQuote x:VQuote y:zs) = put (VQuote (ECompose x y):zs)
+        f _                      = throwError "compose"
 
-evalApply :: Stack -> Eval ()
-evalApply (VQuote y:zs) = put zs >> evalExpr y
-evalApply _             = throwError "apply"
+evalApply :: Eval ()
+evalApply = f =<< get
+  where f (VQuote y:zs) = put zs >> evalExpr y
+        f _             = throwError "apply"
 
-evalDip :: Stack -> Eval ()
-evalDip (VQuote x:y:zs) = put zs >> evalExpr x >> modify (y:)
-evalDip _               = throwError "dip"
+evalDip :: Eval ()
+evalDip = f =<< get
+  where f (VQuote x:y:zs) = put zs >> evalExpr x >> modify (y:)
+        f _               = throwError "dip"
 
-evalIf :: Stack -> Eval ()
-evalIf (VQuote _:VQuote t:VBool True :zs) = put zs >> evalExpr t
-evalIf (VQuote f:VQuote _:VBool False:zs) = put zs >> evalExpr f
-evalIf _                                  = throwError "if"
+evalIf :: Eval ()
+evalIf = f =<< get
+  where f (VQuote   _:VQuote tru:VBool True :zs) = put zs >> evalExpr tru
+        f (VQuote fls:VQuote   _:VBool False:zs) = put zs >> evalExpr fls
+        f _                                      = throwError "if"
 
-evalOp :: (forall a. Num a => a -> a -> a) -> Stack -> Eval ()
-evalOp op (VInt   x:VInt   y:zs) = put ((VInt   $ y `op` x):zs)
-evalOp op (VFloat x:VFloat y:zs) = put ((VFloat $ y `op` x):zs)
-evalOp _ _                       = throwError "numeric-op"
+evalOp :: (forall a. Num a => a -> a -> a) -> Eval ()
+evalOp op = f =<< get
+  where f (VInt   x:VInt   y:zs) = put ((VInt   $ y `op` x):zs)
+        f (VFloat x:VFloat y:zs) = put ((VFloat $ y `op` x):zs)
+        f _                      = throwError "numeric-op"
 
-evalNot :: Stack -> Eval ()
-evalNot (VBool y:zs) = put ((VBool $ not y):zs)
-evalNot _            = throwError "not"
+evalNot :: Eval ()
+evalNot = f =<< get
+  where f (VBool y:zs) = put ((VBool $ not y):zs)
+        f _            = throwError "not"
 
-evalBool :: (Bool -> Bool -> Bool) -> Stack -> Eval ()
-evalBool op (VBool x:VBool y:zs) = put ((VBool $ x `op` y):zs)
-evalBool _ _                     = throwError "boolean-op"
+evalBool :: (Bool -> Bool -> Bool) -> Eval ()
+evalBool op = f =<< get
+  where f (VBool x:VBool y:zs) = put ((VBool $ x `op` y):zs)
+        f _                    = throwError "boolean-op"
 
-evalEq :: (forall a. Eq a => a -> a -> Bool) -> Stack -> Eval ()
-evalEq op (VChar   x:VChar   y:zs) = put ((VBool $ x `op` y):zs)
-evalEq op (VString x:VString y:zs) = put ((VBool $ x `op` y):zs)
-evalEq op (VInt    x:VInt    y:zs) = put ((VBool $ x `op` y):zs)
-evalEq op (VFloat  x:VFloat  y:zs) = put ((VBool $ x `op` y):zs)
-evalEq op (VBool   x:VBool   y:zs) = put ((VBool $ x `op` y):zs)
-evalEq _ _                         = throwError "equality-op"
+evalEq :: (forall a. Eq a => a -> a -> Bool) -> Eval ()
+evalEq op = f =<< get
+  where f (VChar   x:VChar   y:zs) = put ((VBool $ x `op` y):zs)
+        f (VString x:VString y:zs) = put ((VBool $ x `op` y):zs)
+        f (VInt    x:VInt    y:zs) = put ((VBool $ x `op` y):zs)
+        f (VFloat  x:VFloat  y:zs) = put ((VBool $ x `op` y):zs)
+        f (VBool   x:VBool   y:zs) = put ((VBool $ x `op` y):zs)
+        f _                        = throwError "equality-op"
 
-evalOrd :: (forall a. Ord a => a -> a -> Bool) -> Stack -> Eval ()
-evalOrd op (VChar   x:VChar   y:zs) = put ((VBool $ y `op` x):zs)
-evalOrd op (VString x:VString y:zs) = put ((VBool $ y `op` x):zs)
-evalOrd op (VInt    x:VInt    y:zs) = put ((VBool $ y `op` x):zs)
-evalOrd op (VFloat  x:VFloat  y:zs) = put ((VBool $ y `op` x):zs)
-evalOrd op (VBool   x:VBool   y:zs) = put ((VBool $ y `op` x):zs)
-evalOrd _ _                         = throwError "compare-op"
+evalOrd :: (forall a. Ord a => a -> a -> Bool) -> Eval ()
+evalOrd op = f =<< get
+  where f (VChar   x:VChar   y:zs) = put ((VBool $ y `op` x):zs)
+        f (VString x:VString y:zs) = put ((VBool $ y `op` x):zs)
+        f (VInt    x:VInt    y:zs) = put ((VBool $ y `op` x):zs)
+        f (VFloat  x:VFloat  y:zs) = put ((VBool $ y `op` x):zs)
+        f (VBool   x:VBool   y:zs) = put ((VBool $ y `op` x):zs)
+        f _                        = throwError "compare-op"
 
-evalInt :: (forall a. Integral a => a -> a -> a) -> Stack -> Eval ()
-evalInt op (VInt x:VInt y:zs) = put ((VInt $ y `op` x):zs)
-evalInt _ _                   = throwError "integral-op"
+evalInt :: (forall a. Integral a => a -> a -> a) -> Eval ()
+evalInt op = f =<< get
+  where f (VInt x:VInt y:zs) = put ((VInt $ y `op` x):zs)
+        f _                  = throwError "integral-op"
 
-evalFrac :: (forall a. Fractional a => a -> a -> a) -> Stack -> Eval ()
-evalFrac op (VFloat   x:VFloat   y:zs) = put ((VFloat $ y `op` x):zs)
-evalFrac _ _                           = throwError "fractional-op"
+evalExp :: Eval ()
+evalExp = f =<< get
+  where f (VInt x:VInt   y:zs) = put ((VInt   $ y ^ x):zs)
+        f (VInt x:VFloat y:zs) = put ((VFloat $ y ^ x):zs)
+        f _                    = throwError "^"
+
+evalRound :: Eval ()
+evalRound = f =<< get
+  where f (VFloat y:zs) = put ((VInt $ round y):zs)
+        f _             = throwError "round"
+
+evalFrac :: (forall a. Fractional a => a -> a -> a) -> Eval ()
+evalFrac op = f =<< get
+  where f (VFloat   x:VFloat   y:zs) = put ((VFloat $ y `op` x):zs)
+        f _                          = throwError "fractional-op"
