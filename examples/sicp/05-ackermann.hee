@@ -1,0 +1,26 @@
+main
+  : int
+  = 10 1 A
+
+A : int int → int
+  "
+  "
+  " (define (A x y)
+  "   (cond ((= y 0) 0)
+  "         ((= x 0) (* 2 y))
+  "         ((= y 1) 2)
+  "         (else (A (- x 1)
+  "                  (A x (- y 1))))))
+  "
+  " y x A
+  "
+  = swap dup 0 ==
+      [ swap pop ]
+      [ swap dup 0 ==
+          [ pop 2 *]
+          [ swap dup 1 ==
+              [ pop pop 2 ]
+              [ 1 - swap dup 1 - [A] dip A ]
+            if ]
+        if ]
+    if

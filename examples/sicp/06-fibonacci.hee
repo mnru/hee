@@ -1,0 +1,115 @@
+main
+  = 7 fib.a
+    7 fib.b
+    7 fib.c
+
+fib.a
+  : int → int
+  "
+  " The Fibonacci numbers can be defined by the rule
+  "
+  "            / 0                        if n = 0
+  "            |
+  "   Fib(n) = < 1                        if n = 1
+  "            |
+  "            \ Fib(n-1) + Fib(n-2)      otherwise
+  "
+  " We can immediately translate this definition into a recursive
+  " procedure for computing Fibonacci numbers. This procedure is
+  " instructive as a prototypical recursion tree, but it is a terr-
+  " ible way to compute Fibonacci numbers because it does so much
+  " redundant computation. Notice, to compute 5 fib, that the entire
+  " computation of 3 fib -- almost half the work -- is duplicated.
+  "
+  = dup 0 ==
+      [id]
+      [dup 1 ==
+          [id]
+          [dup
+            [2 - fib.a] dip
+            [1 - fib.a] apply +]
+        if]
+    if
+
+fib.b
+  : frac → frac
+  "
+  " Fib(n) is the closest integer to (φ^n) / sqrt(5)
+  "
+  = φ swap ^ 5.0 sqrt / round
+
+φ : frac
+  "
+  " The golden ratio, φ, satisfies the equation
+  "   φ^2 = φ + 1
+  "
+  = 1.0 5.0 sqrt + 2.0 /
+
+sqrt
+  : frac → frac
+  "
+  " See 03-sqrt-newtons-method.hee for a more readable definition
+  " of this function.
+  "
+  = 1.0
+     [bury
+      dup2
+      dup * -
+      dup 0.0 < [-1.0 *] [id] if
+      0.0001 <
+        [[pop pop] dip]
+        [[dup] dip swap swap
+         dup [/] dip
+         + 2.0 /
+         dig u]
+      if] u
+
+fib.c
+  "
+  " We can also formulate an iterative process for computing the
+  " Fibonacci numbers. The idea is to use a pair of integers a and
+  " b, initialized to Fib(1) = 0 and Fib(0) = 0, and to repeatedly
+  " apply the simultaneous transformations
+  "
+  "   a <- a + b
+  "   b <- a
+  "
+  = 1 0 dig [fib.c'] u
+
+fib.c'
+  : a b count [RECURSIVE] → b
+  = swap dup 0 ==
+      [_b__]
+      [dec [fib.c-iterate] dip2 swap u]
+    if
+
+dec
+  : int → int
+  "
+  " Decrement a number by 1
+  "
+  = 1 -
+
+_b__
+  : a b c d → b
+  "
+  " From the four top-most values on the stack, discard all except the third
+  " from the top.
+  "
+  = pop pop swap pop
+
+dip2
+  : S a b (S → T) → T a b
+  "
+  " Applies the function (S → T) two levels below the top of the stack.
+  "
+  = quote [dip] swap compose dip
+
+fib.c-iterate
+  : a b → a+b a
+  "
+  " Applies the transformations
+  "   a <- a + b
+  "   b <- a
+  "
+  = [dup] dip + swap

@@ -1,0 +1,62 @@
+main
+  : bool
+  = 9 !.2
+    9 !.1
+    ==
+
+!.1
+  : int → int
+  "
+  " One way to compute a factorial is to make use of the observation
+  " than n! is equal to n times (n - 1)! for any positive integer n:
+  "
+  "   n! = n * (n - 1) * (n - 2) ... 3 * 2 * 1 = n (n - 1)!
+  "
+  " We can use the substitution model to watch this procedure in action
+  " computing 5!
+  "
+  "   5 !
+  "   5 4 ! *
+  "   5 4 3 ! * *
+  "   5 4 3 2 ! * * *
+  "   5 4 3 2 1 ! * * * *
+  "   5 4 3 2 1 * * * *
+  "   5 4 3 2 * * *
+  "   5 4 6 * *
+  "   5 24 *
+  "   120
+  "
+  = [swap dup 1 <=
+      [pop pop 1]
+      [dup 1 - dig u *]
+    if] u
+
+!.2
+  : int → int
+  "
+  " Now let's take a different perspective on computing factorials. We
+  " could describe a rule for computing n! by specifying that we first
+  " multiply 1 by 2, then multiple the result by 3, then by 4, and so
+  " on until we reach n. More formally, we maintain a running product
+  " together with a counter that counts down from n to 1. We can describe
+  " the computation by saying that the counter and product simultaneously
+  " change from one step to the next according to the rule
+  "
+  "   product <- counter * product
+  "   counter <- counter - 1
+  "
+  " and stipulating that n! is the value of the product when the counter
+  " reaches 1. As before, we can use the substitution model to visualize
+  " the process of computing 5!
+  "
+  "   1   5 !
+  "   5   4 !
+  "   20  3 !
+  "   60  2 !
+  "   120 1 !
+  "   120
+  "
+  = 1 swap [bury dup 1 <=
+        [pop swap pop]
+        [dup [*] dip 1 - dig u]
+      if] u
