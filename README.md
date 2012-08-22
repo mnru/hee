@@ -18,8 +18,8 @@ The preliminary type system is not usable. Several issues must be addressed
 before certain simple terms can be correctly typed. Some terms that pose
 interesting problems are:
 
-* `dup apply`, the U-combinator, requires recursive types. This permits general
-  recursion.
+* `dup unquote`, the U-combinator, requires recursive types. This permits
+  general recursion.
 
 * `dup compose`, because `A (B → B) → A (B → B)` is not sufficiently general.
   This is the type inferred by HM for the analogous lambda calculus expression
@@ -186,17 +186,21 @@ function `+` that pops the top two stack elements and pushes their sum.
 These combinators are used to manipulate abstractions (function values). Here
 are some of the type signatures:
 
-    quote   " convert a value to an abstraction that yields that value
-    quote   : S a → S (T → T a)
+    quote
+      : S a → S (T → T a)
+      " convert a value to an abstraction that yields that value
 
-    compose " composes two abstractions, eg [3] [4] compose ==> [3 4]
-    compose : S (T → U) (U → V) → S (T → V)
+    compose
+      : S (T → U) (U → V) → S (T → V)
+      " composes two abstractions, eg [3] [4] compose ==> [3 4]
 
-    apply   " applies an abstraction, eg [3] apply ==> 3
-    apply   : S (S → T) → T
+    unquote
+      : S (S → T) → T
+      " applies an abstraction, eg [3] unquote ==> 3
 
-    dip     " applies an abstraction, eg 4 [3] dip ==> 3 4
-    dip     : S a (S → T) → T a
+    dip
+      : S a (S → T) → T a
+      " applies an abstraction, eg 4 [3] dip ==> 3 4
 
 Because arguments aren't explicitly named, they must be accessed according to
 their position on the stack. Several stack-shuffling combinators are provided
@@ -304,10 +308,10 @@ Using this technique we have hidden the list of unbound ids from the caller.
 
     bound-vars        -- [2,4,5]
       generate-free   -- [...]
-      apply           -- 0 [...]
-      apply           -- 0 1 [...]
-      apply           -- 0 1 3 [...]
-      apply           -- 0 1 3 6 [...]
+      unquote         -- 0 [...]
+      unquote         -- 0 1 [...]
+      unquote         -- 0 1 3 [...]
+      unquote         -- 0 1 3 6 [...]
 
 Each time the function is applied, it produces the next free variable and also
 produces the next *function* which embeds any necessary state to generate the
@@ -347,7 +351,7 @@ definitions (not expressions) can bind values to names.
 
 ### Example
 
-Consider the expression `swap compose apply 1 +`. We'll perform type inference
+Consider the expression `swap compose unquote 1 +`. We'll perform type inference
 on this expression by evaluating one type judgement at a time.
 
 First, `swap`. This is viewed as a composition with the empty term, so we'll
@@ -392,14 +396,14 @@ rule: `A c b` with `D (E → F) (F → G)`, resulting in the substitution:
 Then we can apply that substitution to `S → T`, the conclusion of `T-COMPOSE`,
 which gives us `swap compose : A (F → G) (E → F) → A (E → G)`.
 
-Next, compose the term `swap compose` with the term `apply`:
+Next, compose the term `swap compose` with the term `unquote`:
 
-                            S         →     T                    T     → U
-                    .---------------.   .-------.            .-------.   -
+                            S         →     T                      T     → U
+                    .---------------.   .-------.              .-------.   -
 
-     swap compose : A (F → G) (E → F) → A (E → G)    apply : H (H → I) → I
+     swap compose : A (F → G) (E → F) → A (E → G)    unquote : H (H → I) → I
     ----------------------------------------------------------------------- T-COMPOSE
-                  swap compose apply : A (F → G) (A → F) → G
+                  swap compose unquote : A (F → G) (A → F) → G
 
 Here we unify `A (E → G)` with `H (H → I)`, resulting in the substitution
 
@@ -413,14 +417,14 @@ function at the top of the stack must have the domain `A`, matching the stack
 below the second element. Previously, its domain was `E` which was unrelated
 to `A`.
 
-Lastly, we compose the term `swap compose apply` with the term `+`:
+Lastly, we compose the term `swap compose unquote` with the term `+`:
 
-                                  S         → T            T     →   U
-                          .---------------.   -        .-------.   .---.
+                                    S         → T            T     →   U
+                            .---------------.   -        .-------.   .---.
 
-     swap compose apply : A (F → G) (A → F) → G    + : K int int → K int
+     swap compose unquote : A (F → G) (A → F) → G    + : K int int → K int
     --------------------------------------------------------------------- T-COMPOSE
-         swap compose apply + : A (F → K int int) (A → F) → K int
+         swap compose unquote + : A (F → K int int) (A → F) → K int
 
 Like before, we unify `G` with `K int int`, resulting in the substitution:
 

@@ -58,7 +58,7 @@ mergeEnv = union
 
 defaultEnv :: Environment
 defaultEnv = fromList
-  [("u",    ECompose (EName "dup") (EName "apply"))
+  [("u",    ECompose (EName "dup") (EName "unquote"))
   ,("both", ECompose
               (EName "dup")
               (ECompose
@@ -66,9 +66,9 @@ defaultEnv = fromList
                   (ECompose
                     (EName "swap")
                     (ECompose
-                      (EQuote (EName "apply"))
+                      (EQuote (EName "unquote"))
                       (EName "dip"))))
-                (ECompose (EName "dip") (EName "apply"))))]
+                (ECompose (EName "dip") (EName "unquote"))))]
 
 
 -- Evaluation
@@ -92,6 +92,8 @@ evalExpr EEmpty            = return ()
 evalExpr (ECompose f g)    = evalExpr f >> evalExpr g
 evalExpr (EQuote e)        = modify (VQuote e:)
 evalExpr (ELiteral e)      = evalLit e
+
+-- Stack operators
 evalExpr (EName "id")      = evalId
 evalExpr (EName "pop")     = evalPop
 evalExpr (EName "dup")     = evalDup
@@ -99,10 +101,14 @@ evalExpr (EName "dup2")    = evalDup2
 evalExpr (EName "dig")     = evalDig
 evalExpr (EName "swap")    = evalSwap
 evalExpr (EName "bury")    = evalBury
+
+-- Function operators
 evalExpr (EName "quote")   = evalQuote
 evalExpr (EName "compose") = evalCompose
-evalExpr (EName "apply")   = evalApply
+evalExpr (EName "unquote") = evalUnquote
 evalExpr (EName "dip")     = evalDip
+
+-- Numeric operators
 evalExpr (EName "+")       = evalOp (+)
 evalExpr (EName "-")       = evalOp (-)
 evalExpr (EName "*")       = evalOp (*)
@@ -111,10 +117,14 @@ evalExpr (EName "%")       = evalInt mod
 evalExpr (EName "//")      = evalInt div
 evalExpr (EName "^")       = evalExp
 evalExpr (EName "round")   = evalRound
+
+-- Boolean operators
 evalExpr (EName "if")      = evalIf
 evalExpr (EName "not")     = evalNot
 evalExpr (EName "or")      = evalBool (||)
 evalExpr (EName "and")     = evalBool (&&)
+
+-- Comparison operators
 evalExpr (EName "==")      = evalEq  (==)
 evalExpr (EName "/=")      = evalEq  (/=)
 evalExpr (EName "<")       = evalOrd (<)
@@ -184,10 +194,10 @@ evalCompose = f =<< get
   where f (VQuote x:VQuote y:zs) = put (VQuote (ECompose x y):zs)
         f _                      = throwError "compose"
 
-evalApply :: Eval ()
-evalApply = f =<< get
+evalUnquote :: Eval ()
+evalUnquote = f =<< get
   where f (VQuote y:zs) = put zs >> evalExpr y
-        f _             = throwError "apply"
+        f _             = throwError "unquote"
 
 evalDip :: Eval ()
 evalDip = f =<< get

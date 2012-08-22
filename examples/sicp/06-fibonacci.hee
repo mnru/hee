@@ -27,7 +27,7 @@ fib.a
           [id]
           [dup
             [2 - fib.a] dip
-            [1 - fib.a] apply +]
+            [1 - fib.a] unquote +]
         if]
     if
 
