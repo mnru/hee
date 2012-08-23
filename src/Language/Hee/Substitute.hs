@@ -7,6 +7,7 @@ module Language.Hee.Substitute
   , (<+>)
   ) where
 
+import Prelude hiding (id)
 import Data.List (intersect, nub, (\\))
 import Data.Monoid
 import Data.Maybe

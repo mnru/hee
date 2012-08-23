@@ -3,6 +3,7 @@ module Language.Hee.Unify
   , UnifyError(..)
   ) where
 
+import Prelude hiding (id)
 import Language.Hee.Syntax
 import Language.Hee.Substitute
 
