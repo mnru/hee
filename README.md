@@ -58,10 +58,9 @@ haskell-platform 2012.
           decrement
         10 ==
 
-
 #### Printing parse the tree
 
-    $ cat examples/test.hee | hee-eval
+    $ cat examples/test.hee | hee-parse
     [DNameBind "inc"
       (Just "num -> num")
       (Just " doc string follows type (and is optional)\n")
@@ -90,6 +89,9 @@ will be parsed). The `main` definition will be executed.
     $ echo 'main = 5 [swap dup 1 <= [pop pop 1] [dup 1 - dig u *] if] u' | hee-eval
     120
 
+Note that type declarations are currently ignored and there are no static
+type checks.
+
 #### Running tests
 
     $ cabal configure --enable-tests
@@ -97,6 +99,17 @@ will be parsed). The `main` definition will be executed.
     $ cabal test
 
 ### Attic
+
+There is a type checker that serves as a proof of concept in
+[`attic/src/main/haskell`](hee/tree/master/attic/src/main/haskell). You can
+infer the type of expressions like so:
+
+    attic$ rake hee:check 'swap cons swap cons swap cons'
+    "swap cons swap cons swap cons"
+    "(A a a a ([] a) -> A ([] a))"
+
+The above type states, given a stack with three elements (of the same type `a`)
+and a list of elements, the expression will produce a list of `a` elements.
 
 There's a REPL written in Ruby, in [`attic/bin/bee.rb`](hee/blob/master/attic/bin/bee.rb).
 This includes a few features like tab-completion, execution traces, and the
@@ -412,7 +425,7 @@ Here we unify `A (E → G)` with `H (H → I)`, resulting in the substitution
     H = A
     E = A
 
-This time, the constraints propogated *backward* to the input `S`. Now the
+This time, the constraints propagated *backward* to the input `S`. Now the
 function at the top of the stack must have the domain `A`, matching the stack
 below the second element. Previously, its domain was `E` which was unrelated
 to `A`.
@@ -431,7 +444,7 @@ Like before, we unify `G` with `K int int`, resulting in the substitution:
     G = K int int
 
 Then we apply this substitution to `S → U`, which is `A (F → G) (A → F) → K int`
-in this case. Notice again that constraints propogated so we've restricted the
+in this case. Notice again that constraints propagated so we've restricted the
 type of the input merely by composing with another term.
 
 ## Related Links
