@@ -128,7 +128,7 @@ by the parser. The parser only reads *definitions* from files.
 
 ### Goals
 
-Since my primary motivation for developing **hee** is to develop a deeper
+My primary motivations for developing **hee** are to gain a deeper
 theoretical and practical understanding of programming languages and type
 systems. I am less concerned with developing a practically *usable* language.
 
@@ -449,6 +449,7 @@ type of the input merely by composing with another term.
 
 ## Related Links
 
+* [Why Concatenative Programming Matters](http://evincarofautumn.blogspot.com/2012/02/why-concatenative-programming-matters.html)
 * [The Joy Programming Language](http://www.latrobe.edu.au/phimvt/joy.html)
 * [Stack machine](http://en.wikipedia.org/wiki/Stack_machine)
 * [Stack-oriented programming language](http://en.wikipedia.org/Stack-oriented_programming_language)
