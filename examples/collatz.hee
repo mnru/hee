@@ -1,0 +1,35 @@
+over
+  : a b → a b a
+  = [dup] dip swap
+
+even?
+  : int → bool
+  = 2 % 0 ==
+
+half-or-triple-plus-one
+  : int → int
+  = dup even?
+      [2 //]
+      [3 * 1 +]
+    if
+
+collatz
+  : nat → nat [RECURSIVE]
+  = [dup collatz' collatz]
+
+collatz'
+  : nat → nat
+  = dup 0 ==
+      [id]
+      [half-or-triple-plus-one]
+    if
+
+main
+  = 3 collatz
+    apply
+    apply
+    apply
+    apply
+    apply
+    apply
+    apply
