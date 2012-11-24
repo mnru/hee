@@ -107,8 +107,8 @@ instance Arbitrary LInteger where
 
 instance Arbitrary Kind where
   arbitrary
-    = frequency [(1, pure KStack)
-                ,(2, pure KType)
+    = frequency [(2, pure KStack)
+                ,(3, pure KType)
                 ,(1, KConstructor <$> arbitrary <*> arbitrary)]
 
 -- Stacks
